@@ -1,0 +1,53 @@
+dsh-plugin-desktop/src/client/styles.ts
+  s_b9cb9fcacb5b8b::t_1709350fd77f2a 28-30
+  s_e9964b1dc8315c::t_21bb35806f1a0b 27,31
+dsh-plugin-desktop-beta/src/client/styles.ts
+  s_e9964b1dc8315c::t_7430bb2dba1afb 27,31
+  s_b9cb9fcacb5b8b::t_1709350fd77f2a 28-30
+dsh-plugin-desktop/src/desktop-git-ai-config.ts
+  s_f198f6dc79c376::t_1f56f45a1eb21d 34-50,54,94-111,125-131,180-217,380
+dsh-plugin-desktop/src/main.ts
+  s_f198f6dc79c376::t_1f56f45a1eb21d 886-888
+dsh-plugin-desktop/tests/desktop-git-ai-config.spec.ts
+  s_f198f6dc79c376::t_1f56f45a1eb21d 2,39-68,226-277
+  s_f198f6dc79c376::t_550b96f87db584 278
+dsh-plugin-desktop-beta/src/desktop-git-ai-config.ts
+  s_f198f6dc79c376::t_1f56f45a1eb21d 34-50,54,94-111,125-131,180-217,380
+dsh-plugin-desktop-beta/src/main.ts
+  s_f198f6dc79c376::t_1f56f45a1eb21d 886-888
+dsh-plugin-desktop-beta/tests/desktop-git-ai-config.spec.ts
+  s_f198f6dc79c376::t_1f56f45a1eb21d 2,39-68,226-277
+  s_f198f6dc79c376::t_96ef3809e51f54 278
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8c995efa2cbc9d5771b8570ed9d3a511a99351e5",
+  "prompts": {},
+  "sessions": {
+    "s_b9cb9fcacb5b8b": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "9ba8e947-7564-48d5-b423-9541aca4c0b9",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    },
+    "s_e9964b1dc8315c": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-5fd07c1d-7519-48da-830b-c3d481892869",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": null
+    },
+    "s_f198f6dc79c376": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-e732ff07-819f-4f26-80eb-164fe584fb26",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}

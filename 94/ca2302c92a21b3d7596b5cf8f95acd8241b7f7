@@ -1,0 +1,21 @@
+dsh-desktop-next/scripts/verify-sidebar-browser.mjs
+  s_edb677fdb0f835::t_d037d2a0783f0f 151-166
+  s_edb677fdb0f835::t_6f693fc237b261 52-56,58,60,63,66-67,69,71,73
+  s_edb677fdb0f835::t_0c068c71d8618e 79,83
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "94ca2302c92a21b3d7596b5cf8f95acd8241b7f7",
+  "prompts": {},
+  "sessions": {
+    "s_edb677fdb0f835": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-22070bd3-4b9b-433a-964d-a8c021fa5a84",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}

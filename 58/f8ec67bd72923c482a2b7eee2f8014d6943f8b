@@ -1,0 +1,79 @@
+dsh-plugin-desktop/src/main.ts
+  s_edb677fdb0f835::t_6390fb673cc789 851-877
+  s_edb677fdb0f835::t_3e52e96293c3ad 1869-1874
+  s_edb677fdb0f835::t_fd61cb870d6cd5 931,964
+  s_edb677fdb0f835::t_bcfdca1dd8ddb1 49-52,57
+  s_edb677fdb0f835::t_9ef3b49e7e7c36 878-897
+  s_edb677fdb0f835::t_f08e12f199ec11 48
+dsh-plugin-desktop/scripts/mac-universal.ts
+  s_edb677fdb0f835::t_441f157b111f09 154
+dsh-plugin-desktop-beta/tests/desktop-git-ai-config.spec.ts
+  s_edb677fdb0f835::t_7c6dcba562952d 1-328
+dsh-plugin-desktop-beta/src/desktop-cli-publication.ts
+  s_edb677fdb0f835::t_7c6dcba562952d 44-45,80-86
+  s_edb677fdb0f835::t_c7c9235cfedc41 87-88
+dsh-plugin-desktop/package.json
+  s_edb677fdb0f835::t_50295f83089087 138-143,383-386,442
+scripts/prepare-git-ai.mjs
+  s_edb677fdb0f835::t_784adc4dc4e00e 12,22,27,29-45,82,84-86,89,101-102,108-109,112-113,117-118,124-125,208,214,233-252,296-297,305,307-317,321-323,326,330-333,336,338,348,351-354,356,363-365,367,369-372,386,395-396,398,403-404,431
+  s_edb677fdb0f835::t_97901dedc5c4cb 1-11,13-21,23-26,28,46-81,83,87-88,90-100,103-107,110-111,114-116,119-123,126-207,209-213,215-232,253-295,298-304,306,318-320,324-325,327-329,334-335,337,339-347,349-350,355,357-362,366,368,373-385,387-394,397,399-402,405-418,430
+  s_edb677fdb0f835::t_955d18af3fb6a2 419-429
+dsh-plugin-desktop-beta/scripts/mac-universal.ts
+  s_edb677fdb0f835::t_7c6dcba562952d 154
+dsh-plugin-desktop/src/desktop-git-ai-config.ts
+  s_edb677fdb0f835::t_959e343e03f470 1-35,38-63,72-193,197-229,237-267,287-305,307-312,315-333,335-340,457
+  s_edb677fdb0f835::t_5e70725e201b06 36-37,64-71,343-456
+  s_edb677fdb0f835::t_d93e469b0f0593 268-286,306,313-314,334,341-342
+  s_edb677fdb0f835::t_d61f1737f4aa9a 194-196,230-236
+dsh-plugin-desktop/src/desktop-cli-publication.ts
+  s_edb677fdb0f835::t_83f2c0eee40173 44-45,80-86
+  s_edb677fdb0f835::t_9e064ad49dc7fe 87-88
+dsh-plugin-desktop-beta/tests/mac-universal.spec.ts
+  s_edb677fdb0f835::t_7c6dcba562952d 67,72
+dsh-plugin-desktop-beta/src/desktop-runtime-environment.ts
+  s_edb677fdb0f835::t_7c6dcba562952d 113-123,836-873
+  s_edb677fdb0f835::t_671ba990d4afe7 874
+dsh-plugin-desktop-beta/package.json
+  s_edb677fdb0f835::t_a6e59d8d29eb70 140-145,384-387,445
+dsh-plugin-desktop-beta/tests/package.spec.ts
+  s_edb677fdb0f835::t_4083fa47c5d00f 961-964
+  s_edb677fdb0f835::t_0dd0f258670f94 952
+  s_edb677fdb0f835::t_4c49470f90905e 1005
+dsh-plugin-desktop/tests/desktop-git-ai-config.spec.ts
+  s_edb677fdb0f835::t_53369ff248ffb1 1-194,221-328
+  s_edb677fdb0f835::t_dc55e883a9aab6 195-220
+dsh-plugin-desktop-beta/src/main.ts
+  s_edb677fdb0f835::t_7c6dcba562952d 49-52,57,851-897,931,964,1869-1872
+  s_edb677fdb0f835::t_3921bde3c2fdde 48,1873-1874
+.gitignore
+  s_edb677fdb0f835::t_f497f6712dd2ab 29-32
+dsh-plugin-desktop/src/desktop-runtime-environment.ts
+  s_edb677fdb0f835::t_e7910a9d4d6381 113-123
+  s_edb677fdb0f835::t_378bfd06b4dde6 836-874
+dsh-plugin-desktop/tests/package.spec.ts
+  s_edb677fdb0f835::t_50f111fa2bbd51 949,953
+  s_edb677fdb0f835::t_ab929b47458a17 902,908-911
+  s_edb677fdb0f835::t_9f313229a52ac4 935
+dsh-plugin-desktop-beta/src/desktop-git-ai-config.ts
+  s_edb677fdb0f835::t_7c6dcba562952d 1-457
+dsh-plugin-desktop/tests/mac-universal.spec.ts
+  s_edb677fdb0f835::t_d6246e38537da7 67,72
+vendor/git-ai/SHA256SUMS
+  s_edb677fdb0f835::t_2c238c568390d0 1-13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "58f8ec67bd72923c482a2b7eee2f8014d6943f8b",
+  "prompts": {},
+  "sessions": {
+    "s_edb677fdb0f835": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-22070bd3-4b9b-433a-964d-a8c021fa5a84",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
