@@ -1,4 +1,4 @@
-/** Headless version checks against the public DSH Desktop release service. */
+/** Headless version checks for the custom Evo edition; the upstream release service is disabled. */
 
 import {
   assertDesktopInstallationId,
@@ -6,8 +6,15 @@ import {
   type DesktopInstallationId,
 } from './desktop-installation-id.ts'
 
-/** Public endpoint returning the latest DSH Desktop version for a requested channel. */
-export const DESKTOP_VERSION_ENDPOINT = 'https://www.dshdesktop.cn/api/desktop/version'
+/**
+ * Deliberately unroutable. This is the custom Evo edition, so it must never
+ * query the upstream DSH Desktop release service: the value uses the reserved
+ * `.invalid` TLD (RFC 6761), which cannot resolve, so every check settles as
+ * "no update" instead of advertising an upstream release that would replace
+ * this build. The scheduled background check is disabled separately in
+ * `cordis.patch.yml`.
+ */
+export const DESKTOP_VERSION_ENDPOINT = 'https://updates.invalid/dsh-desktop-evo/version'
 
 /** Header carrying the installed Desktop version to the fixed version endpoint. */
 export const DESKTOP_CURRENT_VERSION_HEADER = 'X-DSH-Desktop-Version'
