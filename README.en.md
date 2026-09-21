@@ -4,6 +4,9 @@
 
 <h1 align="center">DSH Desktop</h1>
 
+<p align="center"><strong>⚠️ This repository is a personal customized build</strong>, modified from an upstream fork. It is <strong>not an upstream release</strong>.<br>
+See <a href="CHANGELOG.md">CHANGELOG.md</a> for the change list and <a href="docs/build-custom-client.zh.md">docs/build-custom-client.zh.md</a> for build and preinstall notes.</p>
+
 <p align="center">
   <strong>An open-source desktop client for Windows and macOS, built on DeepSeek Harness.</strong>
 </p>

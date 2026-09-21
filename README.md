@@ -4,6 +4,9 @@
 
 <h1 align="center">DSH Desktop</h1>
 
+<p align="center"><strong>⚠️ 本仓库是个人定制版</strong>，由上游 fork 修改而来，<strong>不是上游官方发行版</strong>。<br>
+改动清单见 <a href="CHANGELOG.md">CHANGELOG.md</a>　·　构建与预装说明见 <a href="docs/build-custom-client.zh.md">docs/build-custom-client.zh.md</a></p>
+
 <p align="center">
   <strong>基于 DeepSeek Harness 构建的 Windows 和 macOS 开源桌面客户端。</strong>
 </p>
