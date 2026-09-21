@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [master]
   push:
-    branches: [master]
+    branches: [master, evo]
   workflow_dispatch:
 
 permissions:
@@ -49,7 +49,13 @@ jobs:
           node scripts/verify-bilingual-docs.mjs
           node --test scripts/market-dependency-direction.test.mjs
           node scripts/verify-market-dependency-direction.mjs
-          if [[ "$EVENT_NAME" == "workflow_dispatch" || -z "$BASE_SHA" || "$BASE_SHA" =~ ^0+$ ]]; then
+          # `github.event.before` is unreachable after a force-push and is
+          # all-zeroes on branch creation. Neither can be diffed, so classify as
+          # product instead of failing with git's exit 128 — otherwise every
+          # rewritten history (a rebase onto upstream, for instance) turns the
+          # whole run red before any real gate gets a chance to run.
+          if [[ "$EVENT_NAME" == "workflow_dispatch" || -z "$BASE_SHA" || "$BASE_SHA" =~ ^0+$ ]] \
+            || ! git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then
             product=true
           else
             git diff --check "$BASE_SHA" "$HEAD_SHA"
@@ -118,7 +124,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        workspace: [dsh-plugin-desktop, dsh-plugin-desktop-beta]
+        # Beta is exercised by the `check` job; packaging it too doubles the
+        # Windows/macOS runner cost for an edition this fork does not ship.
+        workspace: [dsh-plugin-desktop]
     steps:
       - uses: actions/checkout@v6
         with:
@@ -146,6 +154,19 @@ jobs:
         env:
           DSH_PACKAGE_CHECK_ALREADY_RAN: '1'
         run: yarn workspace ${{ matrix.workspace }} dist:win-portable
+      # The upstream job stopped at packaging, so its artifacts were discarded
+      # when the runner was torn down. Uploading them is what makes an unsigned
+      # Windows build downloadable without a Windows machine of your own.
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-${{ matrix.workspace }}
+          path: |
+            ${{ matrix.workspace }}/dist/*.exe
+            ${{ matrix.workspace }}/dist/*.zip
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
 
   # macOS-only universal packaging smoke on a real macOS runner: the signed
   # release is built manually on a credentialed machine, so an unsigned DMG
@@ -159,7 +180,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        workspace: [dsh-plugin-desktop, dsh-plugin-desktop-beta]
+        # Beta is exercised by the `check` job; packaging it too doubles the
+        # Windows/macOS runner cost for an edition this fork does not ship.
+        workspace: [dsh-plugin-desktop]
     steps:
       - uses: actions/checkout@v6
         with:
@@ -183,6 +206,14 @@ jobs:
         env:
           DSH_PACKAGE_CHECK_ALREADY_RAN: '1'
         run: yarn workspace ${{ matrix.workspace }} dist:mac-smoke
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-${{ matrix.workspace }}
+          path: ${{ matrix.workspace }}/dist/mac-smoke/*.dmg
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
 
   # Upstream toolchain smoke: the portable-shell scripts must resolve the
   # pinned submodule's own Yarn/pnpm release on Windows.
@@ -202,3 +233,117 @@ jobs:
       - run: corepack enable
       - run: yarn check:layout
       - run: yarn upstream:version
+
+  # Release assets are the only part of a run that is downloadable without an
+  # authenticated session: `actions/upload-artifact` returns 401/403 to an
+  # anonymous client even on a public repository. Publishing here gives the
+  # unsigned Windows and macOS builds a stable public URL instead.
+  publish:
+    needs: [changes, desktop-windows, desktop-macos]
+    if: needs.changes.outputs.product == 'true'
+    runs-on: ubuntu-latest
+    # The only job that writes; every other job keeps the top-level read-only grant.
+    permissions:
+      contents: write
+    steps:
+      # Needed only to read the package version for the tag name.
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Publish this build
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          # Versioned releases kept for history, newest first. The rolling
+          # release is never counted here.
+          KEEP: '2'
+        run: |
+          set -euo pipefail
+          mapfile -t assets < <(find artifacts -type f | sort)
+          printf 'asset: %s\n' "${assets[@]}"
+
+          short=${SHA:0:8}
+          version=$(node -p "require('./dsh-plugin-desktop/package.json').version")
+          # The short SHA is required: the package version does not change on
+          # every push, and two builds must not share a tag.
+          versioned="evo-${version}-${short}"
+          rolling="evo-latest"
+
+          # --target matters: GitHub builds the "Source code" archives from
+          # wherever the tag points, and without it the tag would land on the
+          # default branch's HEAD instead of this commit.
+          gh release create "$versioned" --repo "$REPO" --target "$SHA" \
+            --title "DSH Desktop Evo ${version}（${short}）" \
+            --notes "未签名构建。Windows：\`DSH-Desktop-Evo-*-Setup.exe\` 与便携版 ZIP；macOS：universal DMG。
+
+          提交：\`${SHA}\`" \
+            "${assets[@]}"
+
+          # The rolling release deliberately carries no assets: it would store
+          # the same bytes as the newest versioned release, and a second copy
+          # costs a full gigabyte for nothing. It stays a stable entry point
+          # whose notes link straight to the files.
+          rolling_title="DSH Desktop Evo — 最新构建（滚动更新）"
+          rolling_notes=$(
+            printf '最新构建（提交 `%s`）：\n\n' "$short"
+            for asset in "${assets[@]}"; do
+              name=$(basename "$asset")
+              printf -- '- [%s](https://github.com/%s/releases/download/%s/%s)\n' \
+                "$name" "$REPO" "$versioned" "$name"
+            done
+            printf '\n历史版本见 `evo-*` 标签。本页不存放文件，只做固定入口；\n'
+            printf '上面的链接直接指向当前构建的文件。\n'
+          )
+
+          if gh release view "$rolling" --repo "$REPO" >/dev/null 2>&1; then
+            # Keep the tag on this commit so the auto-generated source snapshot
+            # stays current; a rolling release never moves it by itself.
+            gh api --method PATCH "repos/$REPO/git/refs/tags/$rolling" \
+              -f sha="$SHA" -F force=true >/dev/null
+            # Earlier runs uploaded assets here. Drop them so the entry point
+            # becomes asset-free; a no-op once there is nothing left.
+            while read -r stale; do
+              [ -n "$stale" ] || continue
+              gh release delete-asset "$rolling" "$stale" --repo "$REPO" --yes
+            done < <(gh release view "$rolling" --repo "$REPO" --json assets --jq '.assets[].name')
+            # Refresh the wording every run: the title only used to be written
+            # once, so it still described a Windows-only release.
+            gh release edit "$rolling" --repo "$REPO" \
+              --title "$rolling_title" --notes "$rolling_notes"
+          else
+            gh release create "$rolling" --repo "$REPO" --target "$SHA" \
+              --title "$rolling_title" --notes "$rolling_notes"
+          fi
+
+          # A leftover from the retired custom branch, which no longer exists.
+          # No `gh release view` guard: on the previous run it reported failure
+          # for a release that was plainly still there, so the branch never ran
+          # and the leftover survived. Deleting unconditionally is correct for
+          # both outcomes, and the check below turns a silent no-op into a
+          # visible warning annotation instead of leaving it undetected.
+          gh release delete custom-final --repo "$REPO" --yes --cleanup-tag 2>/dev/null || true
+          if gh release list --repo "$REPO" --limit 100 --json tagName \
+            --jq '.[].tagName' | grep -qx custom-final; then
+            echo "::warning::custom-final 未能删除，遗留 release 仍在"
+          fi
+
+          # Retention: keep only the newest $KEEP versioned releases. Assets run
+          # about 1 GB per release, so this bounds the repository size.
+          while read -r old; do
+            [ -n "$old" ] || continue
+            gh release delete "$old" --repo "$REPO" --yes --cleanup-tag
+            echo "removed $old"
+          done < <(gh release list --repo "$REPO" --limit 100 --json tagName,createdAt \
+            --jq "[.[] | select(.tagName | startswith(\"evo-\")) | select(.tagName != \"$rolling\")] | sort_by(.createdAt) | reverse | .[$KEEP:] | .[].tagName")
+
+          {
+            echo "### 下载"
+            echo ""
+            echo "- 最新：https://github.com/$REPO/releases/tag/$rolling"
+            echo "- 本版：https://github.com/$REPO/releases/tag/$versioned"
+          } >> "$GITHUB_STEP_SUMMARY"
