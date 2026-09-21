@@ -21,6 +21,7 @@ import verifyNsisAbPrepackagedBuild, {
   NSIS_AB_HOOK_TOKEN_ENV,
 } from '../scripts/verify-nsis-ab-prepackaged.ts'
 import type { PackagedElectronSmoke } from '../scripts/verify-packaged-runtime.ts'
+import { DESKTOP_ARTIFACT_STEM } from '../src/product-identity.ts'
 import {
   identifyWindowsNsisAbTree,
   normalizeWindowsNsisAbRelativePath,
@@ -117,7 +118,7 @@ function fixture(mutateStaged = false): { options: WindowsNsisAbBuildOptions, ca
         return
       }
       mkdirSync(output, { recursive: true })
-      writeFileSync(join(output, 'DSH-Desktop-9.8.7-x64-Setup.exe'), pe())
+      writeFileSync(join(output, `${DESKTOP_ARTIFACT_STEM}-9.8.7-x64-Setup.exe`), pe())
       const prepackaged = args.find(value => value.startsWith('--prepackaged='))?.slice('--prepackaged='.length)
         ?? /--prepackaged=(?:"([^"]+)"|([^ ]+))/u.exec(args.at(-1) ?? '')?.slice(1).find(Boolean)
       if (prepackaged !== undefined) {

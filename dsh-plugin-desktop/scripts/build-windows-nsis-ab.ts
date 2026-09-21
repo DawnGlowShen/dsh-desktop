@@ -1,5 +1,6 @@
 /** Build direct-extract and upstream-default NSIS installers from one app directory. */
 
+import { DESKTOP_ARTIFACT_STEM } from '../src/product-identity.ts'
 import { spawnSync } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
 import {
@@ -305,7 +306,7 @@ export function buildWindowsNsisAb(options: WindowsNsisAbBuildOptions): WindowsN
     )
   }
 
-  const installerName = `DSH-Desktop-${version}-x64-Setup.exe`
+  const installerName = `${DESKTOP_ARTIFACT_STEM}-${version}-x64-Setup.exe`
   const directInstaller = join(directOutput, installerName)
   const stagedInstaller = join(stagedOutput, installerName)
   assertPortableExecutable(directInstaller, 'direct-extract NSIS installer')

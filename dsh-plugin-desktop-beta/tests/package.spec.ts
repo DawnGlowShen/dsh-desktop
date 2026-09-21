@@ -30,6 +30,7 @@ const manifest = JSON.parse(readFileSync(new URL('package.json', packageRoot), '
     productName?: unknown
     appId?: unknown
     asar?: unknown
+    extraResources?: unknown
     afterPack?: unknown
     afterAllArtifactBuild?: unknown
     npmRebuild?: unknown
@@ -915,7 +916,7 @@ describe('published package surface', () => {
     expect(manifest.scripts?.['prepare:electron-native']).toBe('node scripts/prepare-fs-ext.ts')
     expect(manifest.scripts?.dev).toContain('yarn run prepare:electron-native')
     expect(manifest.scripts?.['package:dir'])
-      .toBe('yarn run build && yarn run prepare:electron-native && node scripts/package-dir.mjs')
+      .toBe('node ../scripts/prepare-codegraph.mjs && yarn run build && yarn run prepare:electron-native && node scripts/package-dir.mjs')
     expect(packageDir).toContain("CSC_IDENTITY_AUTO_DISCOVERY: 'false'")
     expect(packageDir).toContain("'--config.forceCodeSigning=false'")
     expect(packageDir).toContain("'--config.mac.identity=null'")
@@ -924,10 +925,10 @@ describe('published package surface', () => {
     expect(packageDir).toContain("require.resolve('electron/package.json')")
     expect(packageDir).toContain('--config.electronDist=')
     expect(packageDir).toContain('electronBuilderEnvironment')
-    expect(manifest.scripts?.['dist:mac']).toBe('node scripts/release-mac.ts')
-    expect(manifest.scripts?.['dist:mac-smoke']).toBe('node scripts/package-mac.ts')
-    expect(manifest.scripts?.['dist:win']).toBe('node scripts/package-win.ts')
-    expect(manifest.scripts?.['dist:win-portable']).toBe('node scripts/package-win-portable.ts')
+    expect(manifest.scripts?.['dist:mac']).toBe('node ../scripts/prepare-codegraph.mjs && node scripts/release-mac.ts')
+    expect(manifest.scripts?.['dist:mac-smoke']).toBe('node ../scripts/prepare-codegraph.mjs && node scripts/package-mac.ts')
+    expect(manifest.scripts?.['dist:win']).toBe('node ../scripts/prepare-codegraph.mjs && node scripts/package-win.ts')
+    expect(manifest.scripts?.['dist:win-portable']).toBe('node ../scripts/prepare-codegraph.mjs && node scripts/package-win-portable.ts')
     expect(manifest.scripts?.['check:win-package']).toContain('yarn workspace dsh-community-market build')
     expect(manifest.scripts?.['check:win-package']).toContain('yarn run build')
     expect(manifest.scripts?.['check:win-package']).toContain('yarn run typecheck')
@@ -957,6 +958,13 @@ describe('published package surface', () => {
       .toBe('yarn aa:prepare-release && yarn workspace dsh-community-market build && yarn workspace dsh-plugin-desktop-beta dist:win')
     expect(workspaceManifest.scripts?.['dist:win-portable:beta'])
       .toBe('yarn aa:prepare-release && yarn workspace dsh-community-market build && yarn workspace dsh-plugin-desktop-beta dist:win-portable')
+    // The vendored CodeGraph CLI must reach the installer as extraResources, not as a
+    // Yarn dependency: a platform package carrying "cpu": ["arm64"] can be dropped from
+    // the x64 slice of the universal build and break @electron/universal.
+    expect(manifest.build?.extraResources).toEqual([
+      { from: 'build/codegraph/host', to: 'codegraph' },
+      { from: 'build/dream-skin-default.json', to: 'dream-skin-default.json' },
+    ])
     expect(manifest.build?.afterPack).toBe('./scripts/verify-packaged-runtime.ts')
     expect(manifest.build?.afterAllArtifactBuild).toBe('./scripts/verify-electron-fuses.ts')
     expect(manifest.build?.mac).toEqual(expect.objectContaining({
@@ -992,13 +1000,13 @@ describe('published package surface', () => {
     )
 
     expect(windowsJob).not.toContain('- run: yarn check')
-    expect(windowsJob).toContain('workspace: [dsh-plugin-desktop, dsh-plugin-desktop-beta]')
+    expect(windowsJob).toContain('workspace: [dsh-plugin-desktop]')
     expect(windowsJob).toContain('- run: yarn workspace ${{ matrix.workspace }} check:win-package')
     expect(windowsJob).toContain('run: yarn workspace ${{ matrix.workspace }} dist:win')
     expect(windowsJob).toContain('run: yarn workspace ${{ matrix.workspace }} dist:win-portable')
     expect(windowsJob).toContain('DSH_PACKAGE_CHECK_ALREADY_RAN: \'1\'')
     expect(macosJob).not.toContain('- run: yarn check')
-    expect(macosJob).toContain('workspace: [dsh-plugin-desktop, dsh-plugin-desktop-beta]')
+    expect(macosJob).toContain('workspace: [dsh-plugin-desktop]')
     expect(macosJob).toContain('- run: yarn workspace ${{ matrix.workspace }} check:mac-package')
     expect(macosJob).toContain('run: yarn workspace ${{ matrix.workspace }} dist:mac-smoke')
     expect(macosJob).toContain('DSH_PACKAGE_CHECK_ALREADY_RAN: \'1\'')

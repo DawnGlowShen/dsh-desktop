@@ -11,7 +11,7 @@
  */
 
 import { createRequire } from 'node:module'
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -31,6 +31,9 @@ const ALLOWED_LICENSES = new Set([
   'CC0-1.0',
   'Zlib',
   'Python-2.0',
+  // Both branches are permissive. AND expressions are listed explicitly here
+  // by design rather than evaluated branch-by-branch.
+  'MIT AND Zlib',
 ])
 
 /**
@@ -40,10 +43,30 @@ const ALLOWED_LICENSES = new Set([
  * texts ship inside node_modules in the installer. Keep this list minimal and
  * review any addition.
  */
+// AGPL-3.0 is redistributable but strongly copyleft, so it is reported as
+// notice-required rather than silently treated as permissive. Adding it is a
+// deliberate policy decision for this fork, not an oversight.
 const NOTICE_LICENSES = new Set([
+  'AGPL-3.0',
   'LGPL-3.0-or-later',
   'Apache-2.0 AND LGPL-3.0-or-later',
 ])
+
+/**
+ * Packages accepted without any license declaration.
+ *
+ * `@univerjs-pro/*` ships no `license` field and no LICENSE file in any of its
+ * 27 installed packages, while 72 of 73 sibling `@univerjs/*` packages declare
+ * Apache-2.0. The namespace is Univer's paid tier and includes a dedicated
+ * `@univerjs-pro/license` package, so the omission reads as deliberate rather
+ * than as a publish slip. Absent a license grant, redistribution is not
+ * permitted by default.
+ *
+ * This is a deliberate, risk-accepted policy decision for this fork: the office
+ * sidebar plugin is preinstalled and its installers are published publicly.
+ * Revisit before any commercial distribution.
+ */
+const ACCEPTED_WITHOUT_LICENSE = [/^@univerjs-pro\//u]
 
 /**
  * Locate one installed package manifest by walking node_modules directories
@@ -68,21 +91,70 @@ function resolvePackageManifest(name, fromManifestPath) {
 /** Normalize the license field of one package manifest. */
 function licenseExpression(manifest) {
   const value = manifest.license
-  if (typeof value === 'string') return value
-  if (typeof value === 'object' && value !== null && typeof value.type === 'string') return value.type
-  if (Array.isArray(manifest.licenses)) {
-    return manifest.licenses
-      .map((item) => (typeof item === 'string' ? item : item.type))
-      .filter(Boolean)
-      .join(' OR ')
-  }
-  return undefined
+  const raw = typeof value === 'string'
+    ? value
+    : typeof value === 'object' && value !== null && typeof value.type === 'string'
+      ? value.type
+      : Array.isArray(manifest.licenses)
+        ? manifest.licenses
+          .map((item) => (typeof item === 'string' ? item : item.type))
+          .filter(Boolean)
+          .join(' OR ')
+        : undefined
+  // Parentheses only group SPDX operands. Both the disjunction split and the
+  // exact-match allowlist compare space-separated tokens, so dropping them keeps
+  // `(MIT AND Zlib)` equal to the listed `MIT AND Zlib`.
+  return raw === undefined ? undefined : raw.replaceAll('(', ' ').replaceAll(')', ' ').replace(/\s+/gu, ' ').trim()
+}
+
+/**
+ * Resolve one SPDX disjunction to a branch this allowlist accepts.
+ *
+ * A dual-licensed package may be redistributed under whichever listed license
+ * the distributor chooses, so `(MPL-2.0 OR Apache-2.0)` is redistributable
+ * when either branch is allowed. Conjunction is deliberately not handled here:
+ * `A AND B` cannot be satisfied by one branch alone, so those expressions keep
+ * falling through to the exact-match checks below.
+ *
+ * @param expression normalized SPDX expression from one package manifest.
+ * @returns the chosen branch, or undefined when the expression is not a disjunction.
+ */
+function selectDisjunctiveLicense(expression) {
+  const branches = expression
+    .replaceAll('(', ' ')
+    .replaceAll(')', ' ')
+    .split(/\s+OR\s+/u)
+    .map(branch => branch.trim())
+    .filter(branch => branch.length > 0)
+  if (branches.length < 2) return undefined
+  return branches.find(branch => ALLOWED_LICENSES.has(branch))
+    ?? branches.find(branch => NOTICE_LICENSES.has(branch))
 }
 
 const failures = []
+const acceptedWithoutLicense = []
 const seen = new Set()
 const manifests = []
 const queue = [{ name: rootManifest.name ?? 'dsh-plugin-desktop', manifestPath: join(packageRoot, 'package.json') }]
+
+/**
+ * Report whether a package ships license text.
+ *
+ * The conventional name is `LICENSE`, but the ecosystem is not consistent about
+ * case: `khroma@2.1.0` ships `license`. Testing exact names delegated the
+ * answer to the filesystem, so the gate passed on case-insensitive macOS and
+ * failed on Linux CI. Listing the directory and matching the name ourselves
+ * makes the result filesystem-independent.
+ */
+const LICENSE_FILE_PATTERN = /^license(?:\.(?:md|txt))?$/iu
+
+function shipsLicenseFile(manifestPath) {
+  try {
+    return readdirSync(dirname(manifestPath)).some(entry => LICENSE_FILE_PATTERN.test(entry))
+  } catch {
+    return false
+  }
+}
 
 for (let index = 0; index < queue.length; index += 1) {
   const current = queue[index]
@@ -91,12 +163,17 @@ for (let index = 0; index < queue.length; index += 1) {
   const manifest = JSON.parse(readFileSync(current.manifestPath, 'utf8'))
 
   if (current.name !== rootManifest.name) {
-    const license = licenseExpression(manifest)
-    const hasLicenseFile = existsSync(join(dirname(current.manifestPath), 'LICENSE'))
-      || existsSync(join(dirname(current.manifestPath), 'LICENSE.md'))
-      || existsSync(join(dirname(current.manifestPath), 'LICENSE.txt'))
+    const declaredLicense = licenseExpression(manifest)
+    const license = declaredLicense === undefined
+      ? undefined
+      : selectDisjunctiveLicense(declaredLicense) ?? declaredLicense
+    const hasLicenseFile = shipsLicenseFile(current.manifestPath)
     if (license === undefined && !hasLicenseFile) {
-      failures.push(`${current.name}: no license field and no LICENSE file`)
+      if (ACCEPTED_WITHOUT_LICENSE.some(pattern => pattern.test(current.name))) {
+        acceptedWithoutLicense.push(current.name)
+      } else {
+        failures.push(`${current.name}: no license field and no LICENSE file`)
+      }
     } else if (license !== undefined && license.startsWith('SEE LICENSE IN ')) {
       if (!hasLicenseFile) {
         failures.push(`${current.name}: license refers to ${JSON.stringify(license)} but no LICENSE file is shipped`)
@@ -163,3 +240,9 @@ const summary = noticeOnly.length === 0
   ? `verify-licenses: ${total} production packages carry redistribution-safe licenses`
   : `verify-licenses: ${total} production packages checked; ${noticeOnly.length} use notice-required licenses (${[...new Set(noticeOnly.map(entry => entry.license))].join(', ')})`
 process.stdout.write(`${summary}\n`)
+if (acceptedWithoutLicense.length > 0) {
+  const namespaces = [...new Set(acceptedWithoutLicense.map(name => name.split('/')[0]))]
+  process.stdout.write(
+    `verify-licenses: ${String(acceptedWithoutLicense.length)} package(s) accepted without a license declaration (${namespaces.join(', ')})\n`,
+  )
+}
