@@ -22,6 +22,7 @@ import {
   selectDesktopDataDirectory,
 } from '../src/desktop-data-directory.ts'
 import { acquireDesktopDataOperationLock } from '../src/desktop-data-operation-lock.ts'
+import { DESKTOP_PROFILE_NAME } from '../src/product-identity.ts'
 
 const temporaryDirectories: string[] = []
 
@@ -36,8 +37,8 @@ afterEach(() => {
 })
 
 function createDesktopHome(home: string, marker: string): void {
-  mkdirSync(join(home, 'profiles', 'desktop'), { recursive: true })
-  writeFileSync(join(home, 'profiles', 'desktop', 'package.json'), `${JSON.stringify({
+  mkdirSync(join(home, 'profiles', DESKTOP_PROFILE_NAME), { recursive: true })
+  writeFileSync(join(home, 'profiles', DESKTOP_PROFILE_NAME, 'package.json'), `${JSON.stringify({
     name: 'dsh-profile-desktop',
     private: true,
     dsh: { profile: { bundles: [] } },

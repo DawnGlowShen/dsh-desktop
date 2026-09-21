@@ -22,6 +22,7 @@ import {
   type DesktopPluginsBootstrap,
 } from '../src/desktop-plugins.ts'
 import {
+  DESKTOP_PROFILE_NAME,
   desktopInstallAnchor,
   ensureDesktopProfile,
   prepareDesktopProfile,
@@ -91,7 +92,7 @@ function addBundle(home: string, packageName: string, copies = 1): void {
 
 function bootstrap(root: string, now?: () => number): DesktopPluginsBootstrap {
   return {
-    profileName: 'desktop',
+    profileName: DESKTOP_PROFILE_NAME,
     homeDir: join(root, 'dsh-home'),
     statePath: join(root, 'desktop-private', 'plugin-management', 'state.json'),
     installAnchor: desktopInstallAnchor(),
@@ -159,7 +160,7 @@ describe('desktop direct bundle management', () => {
     )
     const preview = harness.service.previewDisable(target.bundleId)
     expect(preview).toEqual(expect.objectContaining({
-      profileName: 'desktop',
+      profileName: DESKTOP_PROFILE_NAME,
       packageName: 'third-party-plugin',
       previewId: expect.stringMatching(/^disable_[A-Za-z0-9_-]{43}$/u),
     }))
@@ -179,7 +180,7 @@ describe('desktop direct bundle management', () => {
     }
     expect(JSON.parse(readFileSync(options.statePath, 'utf8'))).toEqual({
       version: 1,
-      profiles: [{ profileName: 'desktop', disabledBundles: ['third-party-plugin'] }],
+      profiles: [{ profileName: DESKTOP_PROFILE_NAME, disabledBundles: ['third-party-plugin'] }],
     })
     await harness.dispose()
   })
@@ -208,7 +209,7 @@ describe('desktop direct bundle management', () => {
     )
     const preview = harness.service.previewEnable(disabled.bundleId)
     expect(preview).toEqual(expect.objectContaining({
-      profileName: 'desktop',
+      profileName: DESKTOP_PROFILE_NAME,
       packageName: 'third-party-plugin',
       previewId: expect.stringMatching(/^enable_[A-Za-z0-9_-]{43}$/u),
     }))
@@ -283,7 +284,7 @@ describe('desktop direct bundle management', () => {
     await expect(harness.service.executeEnable(missingManifestPreview.previewId)).rejects.toSatisfy(
       (cause: unknown) => errorCode(cause) === 'invalid-target',
     )
-    expect(readDesktopDisabledBundles(options.statePath, 'desktop').has('third-party-plugin')).toBe(true)
+    expect(readDesktopDisabledBundles(options.statePath, DESKTOP_PROFILE_NAME).has('third-party-plugin')).toBe(true)
 
     manifest.value.dsh.profile.bundles.push('third-party-plugin')
     writeProfileManifest(manifest.path, manifest.value)
@@ -307,7 +308,7 @@ describe('desktop direct bundle management', () => {
     writeFileSync(options.statePath, JSON.stringify({
       version: 1,
       profiles: [{
-        profileName: 'desktop',
+        profileName: DESKTOP_PROFILE_NAME,
         disabledBundles: ['third-party-plugin', 'z-stale-plugin', 'a-stale-plugin'],
       }],
     }))
@@ -319,7 +320,7 @@ describe('desktop direct bundle management', () => {
     expect(JSON.parse(readFileSync(options.statePath, 'utf8'))).toEqual({
       version: 1,
       profiles: [{
-        profileName: 'desktop',
+        profileName: DESKTOP_PROFILE_NAME,
         disabledBundles: ['a-stale-plugin', 'z-stale-plugin'],
       }],
     })
@@ -337,7 +338,7 @@ describe('desktop direct bundle management', () => {
     const preview = harness.service.previewDisable(target.bundleId)
     await harness.service.executeDisable(preview.previewId)
 
-    const prepared = prepareDesktopProfile(undefined, options.homeDir, 'darwin', 'desktop', options.statePath, {
+    const prepared = prepareDesktopProfile(undefined, options.homeDir, 'darwin', DESKTOP_PROFILE_NAME, options.statePath, {
       requested: 'community-market',
       effective: 'community-market',
       legacyDefaulted: false,
@@ -352,7 +353,7 @@ describe('desktop direct bundle management', () => {
     expect(harness.service.list().some(item => item.packageName === 'third-party-plugin')).toBe(false)
     expect(harness.service.isDisabled('third-party-plugin')).toBe(true)
     expect(harness.service.disabledPackageNames()).toEqual(['third-party-plugin'])
-    expect(readDesktopDisabledBundles(options.statePath, 'desktop').has('third-party-plugin')).toBe(true)
+    expect(readDesktopDisabledBundles(options.statePath, DESKTOP_PROFILE_NAME).has('third-party-plugin')).toBe(true)
     await harness.dispose()
   })
 
@@ -365,7 +366,7 @@ describe('desktop direct bundle management', () => {
     writeFileSync(options.statePath, JSON.stringify({
       version: 1,
       profiles: [{
-        profileName: 'desktop',
+        profileName: DESKTOP_PROFILE_NAME,
         disabledBundles: ['z-stale-plugin', 'a-stale-plugin', 'z-stale-plugin'],
       }],
     }))
@@ -377,7 +378,7 @@ describe('desktop direct bundle management', () => {
     expect(JSON.parse(readFileSync(options.statePath, 'utf8'))).toEqual({
       version: 1,
       profiles: [{
-        profileName: 'desktop',
+        profileName: DESKTOP_PROFILE_NAME,
         disabledBundles: ['a-stale-plugin', 'third-party-plugin', 'z-stale-plugin'],
       }],
     })
@@ -404,7 +405,7 @@ describe('desktop direct bundle management', () => {
     await expect(harness.service.executeDisable(preview.previewId)).rejects.toSatisfy(
       (cause: unknown) => errorCode(cause) === 'invalid-target',
     )
-    expect(readDesktopDisabledBundles(options.statePath, 'desktop').size).toBe(0)
+    expect(readDesktopDisabledBundles(options.statePath, DESKTOP_PROFILE_NAME).size).toBe(0)
     await harness.dispose()
   })
 
@@ -430,23 +431,23 @@ describe('desktop direct bundle management', () => {
   it('treats only a missing state as empty and fails loud for invalid state files', () => {
     const root = temporaryRoot()
     const options = bootstrap(root)
-    expect(readDesktopDisabledBundles(options.statePath, 'desktop').size).toBe(0)
+    expect(readDesktopDisabledBundles(options.statePath, DESKTOP_PROFILE_NAME).size).toBe(0)
     mkdirSync(dirname(options.statePath), { recursive: true })
 
     writeFileSync(options.statePath, '{broken')
-    expect(() => readDesktopDisabledBundles(options.statePath, 'desktop')).toThrow('invalid plugin-management state')
+    expect(() => readDesktopDisabledBundles(options.statePath, DESKTOP_PROFILE_NAME)).toThrow('invalid plugin-management state')
 
     writeFileSync(options.statePath, JSON.stringify({ version: 2, profiles: [] }))
-    expect(() => readDesktopDisabledBundles(options.statePath, 'desktop')).toThrow('version or profiles')
+    expect(() => readDesktopDisabledBundles(options.statePath, DESKTOP_PROFILE_NAME)).toThrow('version or profiles')
 
     writeFileSync(options.statePath, JSON.stringify({
       version: 1,
       profiles: [
-        { profileName: 'desktop', disabledBundles: [] },
-        { profileName: 'desktop', disabledBundles: [] },
+        { profileName: DESKTOP_PROFILE_NAME, disabledBundles: [] },
+        { profileName: DESKTOP_PROFILE_NAME, disabledBundles: [] },
       ],
     }))
-    expect(() => readDesktopDisabledBundles(options.statePath, 'desktop')).toThrow('duplicate profile')
+    expect(() => readDesktopDisabledBundles(options.statePath, DESKTOP_PROFILE_NAME)).toThrow('duplicate profile')
 
     writeFileSync(options.statePath, JSON.stringify({
       version: 1,
@@ -455,30 +456,30 @@ describe('desktop direct bundle management', () => {
         disabledBundles: [],
       })),
     }))
-    expect(() => readDesktopDisabledBundles(options.statePath, 'desktop')).toThrow('too many profiles')
+    expect(() => readDesktopDisabledBundles(options.statePath, DESKTOP_PROFILE_NAME)).toThrow('too many profiles')
 
     writeFileSync(options.statePath, JSON.stringify({
       version: 1,
       profiles: [{
-        profileName: 'desktop',
+        profileName: DESKTOP_PROFILE_NAME,
         disabledBundles: Array.from({ length: 513 }, (_, index) => `plugin-${String(index)}`),
       }],
     }))
-    expect(() => readDesktopDisabledBundles(options.statePath, 'desktop')).toThrow('disabledBundles')
+    expect(() => readDesktopDisabledBundles(options.statePath, DESKTOP_PROFILE_NAME)).toThrow('disabledBundles')
 
     writeFileSync(options.statePath, 'x'.repeat(64 * 1024 + 1))
-    expect(() => readDesktopDisabledBundles(options.statePath, 'desktop')).toThrow('too large')
+    expect(() => readDesktopDisabledBundles(options.statePath, DESKTOP_PROFILE_NAME)).toThrow('too large')
 
     rmSync(options.statePath)
     const target = join(root, 'real-state.json')
     writeFileSync(target, JSON.stringify({ version: 1, profiles: [] }))
     symlinkSync(target, options.statePath)
-    expect(() => readDesktopDisabledBundles(options.statePath, 'desktop')).toThrow('regular file')
+    expect(() => readDesktopDisabledBundles(options.statePath, DESKTOP_PROFILE_NAME)).toThrow('regular file')
 
     rmSync(options.statePath)
     const parentFile = join(root, 'not-a-directory')
     writeFileSync(parentFile, 'file')
-    expect(() => readDesktopDisabledBundles(join(parentFile, 'state.json'), 'desktop')).toThrow()
+    expect(() => readDesktopDisabledBundles(join(parentFile, 'state.json'), DESKTOP_PROFILE_NAME)).toThrow()
   })
 
   it('rejects a symlinked private state directory before persistence', async () => {
@@ -516,7 +517,7 @@ describe('desktop direct bundle management', () => {
       undefined,
       options.homeDir,
       'darwin',
-      'desktop',
+      DESKTOP_PROFILE_NAME,
       options.statePath,
       { requested: 'community-market', effective: 'community-market', legacyDefaulted: false },
     )).not.toThrow()

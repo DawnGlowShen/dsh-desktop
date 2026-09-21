@@ -126,11 +126,11 @@
     "start": "node lib/bin.js",
     "start:isolated": "DSH_DESKTOP_ISOLATED_HOST=1 node lib/bin.js",
     "dev": "yarn run build && yarn run prepare:electron-native && node lib/bin.js",
-    "package:dir": "yarn run build && yarn run prepare:electron-native && node scripts/package-dir.mjs",
-    "dist:mac": "node scripts/release-mac.ts",
-    "dist:mac-smoke": "node scripts/package-mac.ts",
-    "dist:win": "node scripts/package-win.ts",
-    "dist:win-portable": "node scripts/package-win-portable.ts",
+    "package:dir": "node ../scripts/prepare-codegraph.mjs && yarn run build && yarn run prepare:electron-native && node scripts/package-dir.mjs",
+    "dist:mac": "node ../scripts/prepare-codegraph.mjs && node scripts/release-mac.ts",
+    "dist:mac-smoke": "node ../scripts/prepare-codegraph.mjs && node scripts/package-mac.ts",
+    "dist:win": "node ../scripts/prepare-codegraph.mjs && node scripts/package-win.ts",
+    "dist:win-portable": "node ../scripts/prepare-codegraph.mjs && node scripts/package-win-portable.ts",
     "prepack": "yarn run check",
     "verify:aa": "DSH_VERIFY_AA=1 node scripts/verify-profile-boot.mjs"
   },
@@ -277,8 +277,15 @@
     "@deepseek-ai/dsh-workflow": "0.1.5-rc.2",
     "@deepseek-ai/dsh-workspace": "0.1.5-rc.2",
     "@deepseek-ai/schemastery": "^3.18.2",
+    "@edan/edan-spec": "file:../vendor/edan-spec/edan-edan-spec-1.0.0.tgz",
+    "@huanlin/dsh-plugin-better-sidebar-plugin-office": "0.2.0",
+    "@hyzyn/dsh-codegraph": "0.2.2",
+    "@linxin666/dsh-client-ui-git-graph": "0.3.22",
     "adm-zip": "^0.6.0",
+    "dsh-better-sidebar": "0.19.1",
     "dsh-community-market": "0.1.0-dev.0",
+    "dsh-dream-skin": "file:../vendor/dream-skin/dsh-dream-skin-9.16.0-patched.tgz",
+    "dsh-session-manager": "0.4.11",
     "dshmarket": "1.38.1",
     "fs-ext": "2.1.1",
     "koffi": "3.1.5",
@@ -330,6 +337,16 @@
     "appId": "ai.deepseek.dsh.desktop.beta",
     "productName": "DSH Desktop Beta",
     "asar": false,
+    "extraResources": [
+      {
+        "from": "build/codegraph/host",
+        "to": "codegraph"
+      },
+      {
+        "from": "build/dream-skin-default.json",
+        "to": "dream-skin-default.json"
+      }
+    ],
     "npmRebuild": false,
     "afterPack": "./scripts/verify-packaged-runtime.ts",
     "afterAllArtifactBuild": "./scripts/verify-electron-fuses.ts",
@@ -378,7 +395,7 @@
       "signIgnore": [
         "\\.(?:pak|dat|wasm)$"
       ],
-      "x64ArchFiles": "**/node_modules/{@deepseek-ai/node-addon-system-darwin-*/**,node-pty/prebuilds/darwin-*/**,fs-ext/prebuilds/darwin-*/**,node-addon-require-builtin-darwin-*/**,@vscode/ripgrep-darwin-*/**,@img/sharp-darwin-*/**,@img/sharp-libvips-darwin-*/**,@koromix/koffi-darwin-*/**}",
+      "x64ArchFiles": "**/{node_modules/{@deepseek-ai/node-addon-system-darwin-*/**,node-pty/prebuilds/darwin-*/**,fs-ext/prebuilds/darwin-*/**,node-addon-require-builtin-darwin-*/**,@vscode/ripgrep-darwin-*/**,@img/sharp-darwin-*/**,@img/sharp-libvips-darwin-*/**,@koromix/koffi-darwin-*/**},Resources/codegraph/**}",
       "asar": false
     },
     "win": {

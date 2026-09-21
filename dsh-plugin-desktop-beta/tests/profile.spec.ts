@@ -21,6 +21,7 @@ import {
 import { retainAsarModuleResolver } from '../src/asar-module-resolver-state.ts'
 import {
   DESKTOP_PACKAGE_NAME,
+  DEFAULT_PROFILE_PLUGIN_BUNDLES,
   desktopShellModeFromSettings,
   desktopStartupSettingsFromSettings,
   desktopBundleList,
@@ -220,6 +221,69 @@ describe('desktop profile composition', {
       'third-party-one',
       'third-party-two',
     ])
+  })
+
+  it('preinstalls the shipped default plugins into a newly created profile', () => {
+    const home = temporaryHome()
+    const dir = ensureDesktopProfile(home)
+    const manifest = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8')) as {
+      dependencies: Record<string, string>
+      dsh: { profile: { bundles: string[] } }
+    }
+
+    expect(manifest.dsh.profile.bundles).toEqual([
+      '@deepseek-ai/dsh-base',
+      '@deepseek-ai/dsh-web-app',
+      ...DEFAULT_PROFILE_PLUGIN_BUNDLES,
+    ])
+    // The installation owns these packages, so the Profile declares no
+    // dependency for them and never runs a package manager to obtain them.
+    expect(manifest.dependencies).toEqual({})
+  })
+
+  it('declares every preinstalled default plugin as a direct installation dependency', () => {
+    const manifest = JSON.parse(readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), '..', 'package.json'),
+      'utf8',
+    )) as { dependencies: Record<string, string> }
+
+    for (const packageName of DEFAULT_PROFILE_PLUGIN_BUNDLES) {
+      expect(
+        manifest.dependencies[packageName],
+        `${packageName} must be a direct dependency so Electron Builder packs it`,
+      ).toBeDefined()
+    }
+  })
+
+  it('resolves every preinstalled default plugin from the installation, not the Profile', () => {
+    const home = temporaryHome()
+    const dir = ensureDesktopProfile(home)
+    const prepared = prepareDesktopProfile(undefined, home, 'darwin')
+
+    for (const packageName of DEFAULT_PROFILE_PLUGIN_BUNDLES) {
+      const layer = prepared.profile.layers.find(candidate => candidate.packageName === packageName)
+      expect(layer, `${packageName} did not resolve`).toBeDefined()
+      expect(layer!.packageDir).not.toContain(join(dir, 'node_modules'))
+      expect(existsSync(join(layer!.packageDir, 'package.json'))).toBe(true)
+    }
+  })
+
+  it('never re-adds a preinstalled default plugin to an existing profile', () => {
+    const home = temporaryHome()
+    const dir = ensureDesktopProfile(home)
+    const path = join(dir, 'package.json')
+    const manifest = JSON.parse(readFileSync(path, 'utf8')) as {
+      dsh: { profile: { bundles: string[] } }
+    }
+    manifest.dsh.profile.bundles = manifest.dsh.profile.bundles
+      .filter(name => name !== 'dsh-cost-meter')
+    writeFileSync(path, `${JSON.stringify(manifest, undefined, 2)}\n`)
+
+    ensureDesktopProfile(home)
+    const repaired = JSON.parse(readFileSync(path, 'utf8')) as {
+      dsh: { profile: { bundles: string[] } }
+    }
+    expect(repaired.dsh.profile.bundles).not.toContain('dsh-cost-meter')
   })
 
   it('repairs a base-only CLI profile without replacing dependencies', () => {

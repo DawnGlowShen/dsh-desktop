@@ -27,7 +27,11 @@ import {
   isDesktopInstallerQuitRequest,
 } from './desktop-installer-quit.ts'
 import { createDesktopBrowserAccess } from './desktop-browser-access.ts'
+import { installDesktopCodegraphShell } from './desktop-codegraph-shell.ts'
+import { seedDesktopDreamSkin } from './desktop-dream-skin-default.ts'
 import {
+  desktopCodegraphBundleSupportsHost,
+  installDesktopCodegraphRuntime,
   installDesktopDshRuntime,
   installDesktopPnpmRuntime,
 } from './desktop-runtime-environment.ts'
@@ -686,6 +690,22 @@ async function start(): Promise<void> {
     })
     const dshBootstrapPath = fileURLToPath(new URL('./desktop-cli.js', import.meta.url))
     const releasePnpmRuntime = generation.own(() => { pnpmRuntime.dispose() })
+    // Publish the packaged CodeGraph CLI so plugins resolve `codegraph` without
+    // touching any user configuration. An installer built for another
+    // architecture is skipped rather than published broken.
+    const codegraphBundleDir = join(process.resourcesPath, 'codegraph')
+    const codegraphRuntime = desktopCodegraphBundleSupportsHost(
+      codegraphBundleDir,
+      process.platform,
+      process.arch,
+    )
+      ? installDesktopCodegraphRuntime({
+          platform: process.platform,
+          bundleDir: codegraphBundleDir,
+          environment: process.env,
+        })
+      : undefined
+    const releaseCodegraphRuntime = generation.own(() => { codegraphRuntime?.dispose() })
     const fallbackHome = resolveDshHome()
     const defaultHome = resolve(defaultDshHome())
     const fallbackSource = process.env.DSH_HOME === undefined ? 'default' : 'environment'
@@ -702,6 +722,39 @@ async function start(): Promise<void> {
       homeDir = dataDirectoryLocation.homeDir
     }
     process.env.DSH_HOME = homeDir
+    // Expose the packaged CodeGraph CLI to the user's own terminal. A `.dmg` has
+    // no install hook, so a shim plus a PATH entry is the only way `codegraph`
+    // resolves in a shell the user starts. A failure here must never block
+    // startup: the CLI stays available to the Host through codegraphRuntime.
+    if (codegraphRuntime !== undefined && process.platform === 'darwin') {
+      try {
+        installDesktopCodegraphShell({
+          homeDir,
+          userHomeDir: app.getPath('home'),
+          launcherPath: join(codegraphRuntime.pathDir, 'codegraph'),
+          shell: process.env.SHELL,
+        })
+      } catch (cause) {
+        electronLogger.error(
+          `${BIN_NAME}: codegraph shell integration failed: `
+            + `${cause instanceof Error ? cause.message : String(cause)}`,
+        )
+      }
+    }
+    // Give a fresh installation the prepared dream-skin appearance. The plugin
+    // reads this file when it mounts, so seeding has to happen before the Host
+    // starts. An existing file belongs to the user and is left untouched.
+    try {
+      seedDesktopDreamSkin({
+        homeDir,
+        snapshotPath: join(process.resourcesPath, 'dream-skin-default.json'),
+      })
+    } catch (cause) {
+      electronLogger.error(
+        `${BIN_NAME}: dream-skin default seeding failed: `
+          + `${cause instanceof Error ? cause.message : String(cause)}`,
+      )
+    }
     const desktopLaunchEnvironment = withDesktopDshHome(environment, homeDir)
     const projectionCacheRecovery = recoverOversizedSessionProjectionCache(homeDir)
     if (projectionCacheRecovery.status === 'quarantined') {
@@ -1464,6 +1517,12 @@ async function start(): Promise<void> {
             () => releasePnpmRuntime,
             'dsh-plugin-desktop: packaged pnpm runtime PATH',
           )
+          if (codegraphRuntime !== undefined) {
+            hostCtx.effect(
+              () => releaseCodegraphRuntime,
+              'dsh-plugin-desktop: packaged codegraph runtime PATH',
+            )
+          }
           if (dshRuntime !== undefined) {
             hostCtx.effect(
               () => releaseDshRuntime,

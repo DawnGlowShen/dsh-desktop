@@ -8,9 +8,14 @@
 node_modules/
 *.tsbuildinfo
 .build/
+.build-cache/
 
 dsh-plugin-desktop/dist/
 dsh-plugin-desktop/lib/
 dsh-community-market/lib/
 
 .env.yarn
+
+# Vendored CodeGraph CLI materialized by scripts/prepare-codegraph.mjs
+dsh-plugin-desktop/build/codegraph/
+dsh-plugin-desktop-beta/build/codegraph/

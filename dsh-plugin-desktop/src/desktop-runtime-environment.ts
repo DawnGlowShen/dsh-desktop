@@ -3,6 +3,7 @@
 import { createHash, randomUUID } from 'node:crypto'
 import {
   chmodSync,
+  existsSync,
   lstatSync,
   mkdirSync,
   readFileSync,
@@ -11,7 +12,7 @@ import {
   rmSync,
   writeFileSync,
 } from 'node:fs'
-import { join, win32 as windowsPath } from 'node:path'
+import { isAbsolute, join, win32 as windowsPath } from 'node:path'
 import { PNPM_IGNORE_MINIMUM_RELEASE_AGE } from './pnpm-policy.ts'
 import { assertDesktopProfileName } from './profile-manager.ts'
 
@@ -74,6 +75,21 @@ export interface DesktopDshRuntimeOptions {
 export interface DesktopDshRuntimeInstallation {
   pathDir: string
   dshShimPath: string
+  dispose(): void
+}
+
+/** Inputs used to expose the packaged CodeGraph CLI to the Host process. */
+export interface DesktopCodegraphRuntimeOptions {
+  platform: NodeJS.Platform
+  /** Packaged platform bundle; its `bin` directory holds the `codegraph` launcher. */
+  bundleDir: string
+  environment?: NodeJS.ProcessEnv
+}
+
+/** Reversible Host PATH update publishing the packaged CodeGraph CLI. */
+export interface DesktopCodegraphRuntimeInstallation {
+  /** Directory prepended to the Host PATH; supplied by the installer, not generated. */
+  pathDir: string
   dispose(): void
 }
 
@@ -541,6 +557,73 @@ export function installDesktopDshRuntime(options: DesktopDshRuntimeOptions): Des
       options.platform,
       generation.obsoletePathDirectories,
     ),
+  }
+}
+
+/**
+ * Report whether the packaged CodeGraph bundle matches the running host.
+ *
+ * Upstream publishes the CLI as one self-contained bundle per platform and
+ * architecture. A macOS universal installer therefore carries a single slice in
+ * both architectures, so on the other one the bundled runtime cannot execute:
+ * publishing it would only replace a missing command with an obscure
+ * `bad CPU type in executable` failure. The caller skips it instead.
+ *
+ * @param bundleDir - packaged bundle root containing the upstream manifest.
+ * @param platform - host platform compared against the manifest `os` field.
+ * @param arch - host architecture compared against the manifest `cpu` field.
+ * @returns true when the bundle declares no restriction or matches the host.
+ */
+export function desktopCodegraphBundleSupportsHost(
+  bundleDir: string,
+  platform: NodeJS.Platform,
+  arch: NodeJS.Architecture,
+): boolean {
+  try {
+    const manifest: unknown = JSON.parse(readFileSync(join(bundleDir, 'package.json'), 'utf8'))
+    if (manifest === null || typeof manifest !== 'object') return false
+    const declared = manifest as { os?: unknown; cpu?: unknown }
+    const allows = (value: unknown, current: string): boolean => !Array.isArray(value)
+      || value.length === 0
+      || value.some(entry => entry === current)
+    return allows(declared.os, platform) && allows(declared.cpu, arch)
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Install the packaged CodeGraph CLI into this Electron process's PATH.
+ *
+ * The CLI ships as a self-contained per-platform bundle through
+ * `build.extraResources`, not as a Yarn dependency, so nothing has to be
+ * generated here: the installer's directory is prepended as-is. The Host
+ * process and every tool it spawns then resolve `codegraph` unchanged, which is
+ * what `@deepseek-ai/dsh-mcp-client` and `@hyzyn/dsh-codegraph` both expect.
+ *
+ * @param options - packaged bundle directory, platform, and parent environment.
+ * @returns the published directory and an idempotent PATH disposer.
+ */
+export function installDesktopCodegraphRuntime(
+  options: DesktopCodegraphRuntimeOptions,
+): DesktopCodegraphRuntimeInstallation {
+  if (options.platform !== 'darwin' && options.platform !== 'win32') {
+    throw new Error(`dsh-plugin-desktop: codegraph runtime is unsupported on ${options.platform}`)
+  }
+  assertScriptValue('codegraph bundle directory', options.bundleDir)
+  if (!isAbsolute(options.bundleDir)) {
+    throw new Error('dsh-plugin-desktop: codegraph bundle directory must be absolute')
+  }
+
+  const pathDir = join(options.bundleDir, 'bin')
+  const launcher = join(pathDir, options.platform === 'win32' ? 'codegraph.cmd' : 'codegraph')
+  if (!existsSync(launcher)) {
+    throw new Error(`dsh-plugin-desktop: packaged codegraph launcher is missing at ${launcher}`)
+  }
+
+  return {
+    pathDir,
+    dispose: installPathDirectory(options.environment ?? process.env, pathDir, options.platform),
   }
 }
 

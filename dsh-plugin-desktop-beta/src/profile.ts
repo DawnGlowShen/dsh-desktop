@@ -54,8 +54,10 @@ import {
 } from './desktop-network.ts'
 import type { DesktopShellMode } from './runtime.ts'
 import {
+  DEFAULT_PROFILE_PLUGIN_BUNDLES,
   DESKTOP_PACKAGE_NAME,
   DESKTOP_PACKAGE_NAMES,
+  DESKTOP_PROFILE_NAME,
 } from './product-identity.ts'
 import {
   DEFAULT_MACOS_WINDOW_MATERIAL,
@@ -78,7 +80,7 @@ import {
 } from './desktop-market.ts'
 
 /** Persistent profile managed by the desktop launcher and the ordinary dsh plugin command. */
-export const DESKTOP_PROFILE_NAME = 'desktop'
+export { DEFAULT_PROFILE_PLUGIN_BUNDLES, DESKTOP_PROFILE_NAME }
 
 /** Standalone package name inserted through the launcher-owned desktop layer. */
 export { DESKTOP_PACKAGE_NAME } from './product-identity.ts'
@@ -345,7 +347,7 @@ function sameList(left: readonly string[], right: readonly string[]): boolean {
 export function ensureDesktopProfile(home: string = resolveDshHome()): string {
   const dir = resolveProfileDir(DESKTOP_PROFILE_NAME, home)
   if (!existsSync(join(dir, 'package.json'))) {
-    initProfile(dir, REQUIRED_BUNDLES, requiredWebPatchReload())
+    initProfile(dir, [...REQUIRED_BUNDLES, ...DEFAULT_PROFILE_PLUGIN_BUNDLES], requiredWebPatchReload())
   }
   const manifest = readProfileManifest(BIN_NAME, dir)
   const rawBundles = (manifest.dsh?.profile as { bundles?: unknown } | undefined)?.bundles

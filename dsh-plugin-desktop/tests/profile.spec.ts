@@ -21,6 +21,8 @@ import {
 import { retainAsarModuleResolver } from '../src/asar-module-resolver-state.ts'
 import {
   DESKTOP_PACKAGE_NAME,
+  DESKTOP_PROFILE_NAME,
+  DEFAULT_PROFILE_PLUGIN_BUNDLES,
   desktopShellModeFromSettings,
   desktopStartupSettingsFromSettings,
   desktopBundleList,
@@ -64,7 +66,7 @@ function installWebClient(
 }
 
 function installBundle(home: string, packageName: string, patch: string, version = '1.0.0'): string {
-  const bundleDir = join(home, 'profiles', 'desktop', 'node_modules', packageName)
+  const bundleDir = join(home, 'profiles', DESKTOP_PROFILE_NAME, 'node_modules', packageName)
   mkdirSync(bundleDir, { recursive: true })
   writeFileSync(join(bundleDir, 'package.json'), JSON.stringify({
     name: packageName,
@@ -220,6 +222,69 @@ describe('desktop profile composition', {
       'third-party-one',
       'third-party-two',
     ])
+  })
+
+  it('preinstalls the shipped default plugins into a newly created profile', () => {
+    const home = temporaryHome()
+    const dir = ensureDesktopProfile(home)
+    const manifest = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8')) as {
+      dependencies: Record<string, string>
+      dsh: { profile: { bundles: string[] } }
+    }
+
+    expect(manifest.dsh.profile.bundles).toEqual([
+      '@deepseek-ai/dsh-base',
+      '@deepseek-ai/dsh-web-app',
+      ...DEFAULT_PROFILE_PLUGIN_BUNDLES,
+    ])
+    // The installation owns these packages, so the Profile declares no
+    // dependency for them and never runs a package manager to obtain them.
+    expect(manifest.dependencies).toEqual({})
+  })
+
+  it('declares every preinstalled default plugin as a direct installation dependency', () => {
+    const manifest = JSON.parse(readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), '..', 'package.json'),
+      'utf8',
+    )) as { dependencies: Record<string, string> }
+
+    for (const packageName of DEFAULT_PROFILE_PLUGIN_BUNDLES) {
+      expect(
+        manifest.dependencies[packageName],
+        `${packageName} must be a direct dependency so Electron Builder packs it`,
+      ).toBeDefined()
+    }
+  })
+
+  it('resolves every preinstalled default plugin from the installation, not the Profile', () => {
+    const home = temporaryHome()
+    const dir = ensureDesktopProfile(home)
+    const prepared = prepareDesktopProfile(undefined, home, 'darwin')
+
+    for (const packageName of DEFAULT_PROFILE_PLUGIN_BUNDLES) {
+      const layer = prepared.profile.layers.find(candidate => candidate.packageName === packageName)
+      expect(layer, `${packageName} did not resolve`).toBeDefined()
+      expect(layer!.packageDir).not.toContain(join(dir, 'node_modules'))
+      expect(existsSync(join(layer!.packageDir, 'package.json'))).toBe(true)
+    }
+  })
+
+  it('never re-adds a preinstalled default plugin to an existing profile', () => {
+    const home = temporaryHome()
+    const dir = ensureDesktopProfile(home)
+    const path = join(dir, 'package.json')
+    const manifest = JSON.parse(readFileSync(path, 'utf8')) as {
+      dsh: { profile: { bundles: string[] } }
+    }
+    manifest.dsh.profile.bundles = manifest.dsh.profile.bundles
+      .filter(name => name !== 'dsh-cost-meter')
+    writeFileSync(path, `${JSON.stringify(manifest, undefined, 2)}\n`)
+
+    ensureDesktopProfile(home)
+    const repaired = JSON.parse(readFileSync(path, 'utf8')) as {
+      dsh: { profile: { bundles: string[] } }
+    }
+    expect(repaired.dsh.profile.bundles).not.toContain('dsh-cost-meter')
   })
 
   it('repairs a base-only CLI profile without replacing dependencies', () => {
@@ -494,7 +559,7 @@ virtualStoreDirMaxLength: 60
       undefined,
       home,
       'darwin',
-      'desktop',
+      DESKTOP_PROFILE_NAME,
       undefined,
       undefined,
       { lanAddresses: ['192.168.1.5', '10.0.0.7', '10.0.0.7'] },
@@ -532,7 +597,7 @@ virtualStoreDirMaxLength: 60
       undefined,
       invalidAddressHome,
       'darwin',
-      'desktop',
+      DESKTOP_PROFILE_NAME,
       undefined,
       undefined,
       { lanAddresses: ['desktop.internal'] },
@@ -555,7 +620,7 @@ virtualStoreDirMaxLength: 60
 
   it('inserts the community Market as one canonical row only after explicit selection', () => {
     const home = temporaryHome()
-    const prepared = prepareDesktopProfile(undefined, home, 'darwin', 'desktop', undefined, {
+    const prepared = prepareDesktopProfile(undefined, home, 'darwin', DESKTOP_PROFILE_NAME, undefined, {
       requested: 'community-market',
       effective: 'community-market',
       legacyDefaulted: false,
@@ -584,7 +649,7 @@ virtualStoreDirMaxLength: 60
     }
     profileManifest.dsh.profile.bundles.push(DESKTOP_MARKET_IDENTITIES.dshMarket.packageName)
     writeFileSync(profileManifestPath, JSON.stringify(profileManifest) + '\n')
-    const prepared = prepareDesktopProfile(undefined, home, 'darwin', 'desktop', undefined, {
+    const prepared = prepareDesktopProfile(undefined, home, 'darwin', DESKTOP_PROFILE_NAME, undefined, {
       requested: 'dsh-market',
       effective: 'dsh-market',
       legacyDefaulted: false,
@@ -617,7 +682,7 @@ virtualStoreDirMaxLength: 60
     profileManifest.dsh.profile.bundles.push(DESKTOP_MARKET_IDENTITIES.dshMarket.packageName)
     writeFileSync(profileManifestPath, `${JSON.stringify(profileManifest)}\n`)
 
-    const prepared = prepareDesktopProfile(undefined, home, 'darwin', 'desktop', undefined, {
+    const prepared = prepareDesktopProfile(undefined, home, 'darwin', DESKTOP_PROFILE_NAME, undefined, {
       requested: 'dsh-market',
       effective: 'dsh-market',
       legacyDefaulted: false,
@@ -645,14 +710,14 @@ virtualStoreDirMaxLength: 60
     mkdirSync(dirname(managementStatePath), { recursive: true })
     writeFileSync(managementStatePath, JSON.stringify({
       version: 1,
-      profiles: [{ profileName: 'desktop', disabledBundles: [packageName] }],
+      profiles: [{ profileName: DESKTOP_PROFILE_NAME, disabledBundles: [packageName] }],
     }) + '\n')
 
     const external = prepareDesktopProfile(
       undefined,
       home,
       'darwin',
-      'desktop',
+      DESKTOP_PROFILE_NAME,
       managementStatePath,
       { requested: 'dsh-market', effective: 'dsh-market', legacyDefaulted: false },
     )
@@ -664,7 +729,7 @@ virtualStoreDirMaxLength: 60
       undefined,
       home,
       'darwin',
-      'desktop',
+      DESKTOP_PROFILE_NAME,
       managementStatePath,
       { requested: 'community-market', effective: 'community-market', legacyDefaulted: false },
     )
@@ -688,14 +753,14 @@ virtualStoreDirMaxLength: 60
     mkdirSync(dirname(recoveryStatePath), { recursive: true })
     writeFileSync(recoveryStatePath, JSON.stringify({
       version: 1,
-      profiles: [{ profileName: 'desktop', disabledBundles: [packageName] }],
+      profiles: [{ profileName: DESKTOP_PROFILE_NAME, disabledBundles: [packageName] }],
     }) + '\n')
 
     const prepared = prepareDesktopProfile(
       undefined,
       home,
       'darwin',
-      'desktop',
+      DESKTOP_PROFILE_NAME,
       managementStatePath,
       { requested: 'dsh-market', effective: 'dsh-market', legacyDefaulted: false },
     )
@@ -726,7 +791,7 @@ virtualStoreDirMaxLength: 60
     const home = temporaryHome()
     writeFileSync(join(home, 'cordis.patch.yml'), `- insert:\n    - id: community-market\n      name: dsh-community-market\n`)
 
-    const prepared = prepareDesktopProfile(undefined, home, 'darwin', 'desktop', undefined, {
+    const prepared = prepareDesktopProfile(undefined, home, 'darwin', DESKTOP_PROFILE_NAME, undefined, {
       requested: 'community-market',
       effective: 'community-market',
       legacyDefaulted: false,
@@ -1080,7 +1145,7 @@ virtualStoreDirMaxLength: 60
       '',
     ].join('\n')
     installBundle(home, packageName, bundlePatch)
-    const profileDir = join(home, 'profiles', 'desktop')
+    const profileDir = join(home, 'profiles', DESKTOP_PROFILE_NAME)
     writeFileSync(join(profileDir, 'package.json'), JSON.stringify({
       name: 'dsh-profile-desktop',
       private: true,

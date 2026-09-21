@@ -25,12 +25,14 @@ import {
   writeProfileManifest,
 } from '@deepseek-ai/dsh-app-boot'
 import {
+  DEFAULT_PROFILE_PLUGIN_BUNDLES,
   DESKTOP_PACKAGE_NAME,
   DESKTOP_PACKAGE_NAMES,
+  DESKTOP_PROFILE_NAME,
 } from './product-identity.ts'
 
 const BIN_NAME = DESKTOP_PACKAGE_NAME
-const DEFAULT_PROFILE_NAME = 'desktop'
+const DEFAULT_PROFILE_NAME = DESKTOP_PROFILE_NAME
 const BASE_BUNDLE_NAME = '@deepseek-ai/dsh-base'
 const WEB_BUNDLE_NAME = '@deepseek-ai/dsh-web-app'
 const PROFILE_MANIFEST_FILENAME = 'package.json'
@@ -181,7 +183,7 @@ export function createDesktopWebProfile(home: string, name: string): DesktopProf
 
   const staging = join(profilesDir, `.${basename(target)}.creating-${process.pid}-${randomUUID()}`)
   try {
-    initProfile(staging, template.bundles, template.patchReload)
+    initProfile(staging, [...template.bundles, ...DEFAULT_PROFILE_PLUGIN_BUNDLES], template.patchReload)
     const manifest = readProfileManifest(BIN_NAME, staging)
     writeProfileManifest(staging, { ...manifest, name: `dsh-profile-${name}` })
     // The target is checked again immediately before publication. `renameSync`

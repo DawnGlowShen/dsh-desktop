@@ -18,6 +18,8 @@ import { basename, delimiter as pathDelimiter, dirname, join, resolve } from 'no
 import { pathToFileURL } from 'node:url'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
+  desktopCodegraphBundleSupportsHost,
+  installDesktopCodegraphRuntime,
   installDesktopDshRuntime,
   installDesktopPnpmRuntime,
   type DesktopPnpmRuntimeOptions,
@@ -613,5 +615,108 @@ describe('desktop Host dsh runtime', () => {
     installation.dispose()
     installation.dispose()
     expect(environment).toEqual(original)
+  })
+})
+
+describe('desktop Host codegraph runtime', () => {
+  /** Build a stand-in bundle shaped like the vendored per-platform package. */
+  function bundledCodegraph(platform: NodeJS.Platform, manifest: Record<string, unknown> = {}): string {
+    const bundleDir = join(temporaryDirectory(), 'codegraph')
+    const binDir = join(bundleDir, 'bin')
+    mkdirSync(binDir, { recursive: true })
+    writeFileSync(
+      join(binDir, platform === 'win32' ? 'codegraph.cmd' : 'codegraph'),
+      '#!/bin/sh\n',
+      { mode: 0o755 },
+    )
+    writeFileSync(join(bundleDir, 'package.json'), JSON.stringify({ name: 'codegraph-fixture', ...manifest }))
+    return bundleDir
+  }
+
+  it('prepends the packaged bin directory and restores PATH on dispose', () => {
+    const bundleDir = bundledCodegraph('darwin')
+    const binDir = join(bundleDir, 'bin')
+    const environment: NodeJS.ProcessEnv = { PATH: '/usr/bin:/bin' }
+
+    const installation = installDesktopCodegraphRuntime({ platform: 'darwin', bundleDir, environment })
+
+    expect(installation.pathDir).toBe(binDir)
+    expect(environment.PATH).toBe(`${binDir}:/usr/bin:/bin`)
+
+    installation.dispose()
+    installation.dispose()
+    expect(environment.PATH).toBe('/usr/bin:/bin')
+  })
+
+  it('publishes the Windows launcher with the platform delimiter', () => {
+    const bundleDir = bundledCodegraph('win32')
+    const environment: NodeJS.ProcessEnv = { Path: 'C:\\Windows' }
+
+    const installation = installDesktopCodegraphRuntime({ platform: 'win32', bundleDir, environment })
+
+    expect(environment.Path).toBe(`${join(bundleDir, 'bin')};C:\\Windows`)
+    installation.dispose()
+    expect(environment.Path).toBe('C:\\Windows')
+  })
+
+  it('keeps an existing PATH entry for another owner beneath its own', () => {
+    const bundleDir = bundledCodegraph('darwin')
+    const environment: NodeJS.ProcessEnv = { PATH: '/opt/other/bin:/usr/bin' }
+
+    installDesktopCodegraphRuntime({ platform: 'darwin', bundleDir, environment })
+
+    expect(environment.PATH).toBe(`${join(bundleDir, 'bin')}:/opt/other/bin:/usr/bin`)
+  })
+
+  it('fails loud for an unsupported platform, a relative path, and a missing launcher', () => {
+    expect(() => installDesktopCodegraphRuntime({
+      platform: 'linux',
+      bundleDir: temporaryDirectory(),
+      environment: {},
+    })).toThrow(/unsupported on linux/u)
+
+    expect(() => installDesktopCodegraphRuntime({
+      platform: 'darwin',
+      bundleDir: 'relative/codegraph',
+      environment: {},
+    })).toThrow(/must be absolute/u)
+
+    // A bundle without its launcher must not silently reach the Host PATH.
+    expect(() => installDesktopCodegraphRuntime({
+      platform: 'darwin',
+      bundleDir: temporaryDirectory(),
+      environment: {},
+    })).toThrow(/launcher is missing/u)
+  })
+})
+
+describe('desktopCodegraphBundleSupportsHost', () => {
+  function bundleWith(manifest: Record<string, unknown>): string {
+    const bundleDir = join(temporaryDirectory(), 'codegraph')
+    mkdirSync(bundleDir, { recursive: true })
+    writeFileSync(join(bundleDir, 'package.json'), JSON.stringify({ name: 'codegraph-fixture', ...manifest }))
+    return bundleDir
+  }
+
+  it('matches the declared platform and architecture', () => {
+    const bundleDir = bundleWith({ os: ['darwin'], cpu: ['arm64'] })
+
+    expect(desktopCodegraphBundleSupportsHost(bundleDir, 'darwin', 'arm64')).toBe(true)
+    // A universal installer carries the arm64 bundle in the x64 slice too, where
+    // its bundled runtime cannot execute.
+    expect(desktopCodegraphBundleSupportsHost(bundleDir, 'darwin', 'x64')).toBe(false)
+    expect(desktopCodegraphBundleSupportsHost(bundleDir, 'win32', 'arm64')).toBe(false)
+  })
+
+  it('accepts a bundle that declares no restriction', () => {
+    expect(desktopCodegraphBundleSupportsHost(bundleWith({}), 'darwin', 'x64')).toBe(true)
+  })
+
+  it('rejects a missing or malformed manifest instead of publishing it', () => {
+    expect(desktopCodegraphBundleSupportsHost(join(temporaryDirectory(), 'absent'), 'darwin', 'arm64')).toBe(false)
+
+    const malformed = temporaryDirectory()
+    writeFileSync(join(malformed, 'package.json'), 'not json')
+    expect(desktopCodegraphBundleSupportsHost(malformed, 'darwin', 'arm64')).toBe(false)
   })
 })
