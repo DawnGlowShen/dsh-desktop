@@ -14,10 +14,16 @@ import {
 /** Desktop platforms with a fixed installer download endpoint. */
 export type DesktopDownloadPlatform = 'darwin' | 'win32'
 
-/** Fixed download endpoints that record one user-confirmed installer download. */
+/**
+ * Deliberately unroutable for the same reason as `DESKTOP_VERSION_ENDPOINT`:
+ * this custom edition must never fetch an upstream installer, so both entries
+ * use the reserved `.invalid` TLD (RFC 6761) and cannot resolve. A download can
+ * only start from a check that reported an available release, and that check is
+ * disabled as well.
+ */
 export const DESKTOP_DOWNLOAD_URLS: Readonly<Record<DesktopDownloadPlatform, string>> = {
-  darwin: 'https://www.dshdesktop.cn/api/downloads/mac',
-  win32: 'https://www.dshdesktop.cn/api/downloads/windows',
+  darwin: 'https://updates.invalid/dsh-desktop-evo/downloads/mac',
+  win32: 'https://updates.invalid/dsh-desktop-evo/downloads/windows',
 }
 
 /** Header pinning a download request and response to the checked release. */

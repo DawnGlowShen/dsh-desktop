@@ -18,6 +18,12 @@
       name: dsh-plugin-desktop-beta/profiles
     - id: desktop-updates
       name: dsh-plugin-desktop-beta/updates
+      # The custom Evo edition must never check the upstream release service, so
+      # the scheduled background check stays off. The tray command still exists,
+      # but the version endpoint and the installer download endpoints it would
+      # reach are deliberately unroutable.
+      config:
+        enabled: false
 
 # A desktop launch has no terminal operator waiting for the Web readiness line.
 - id: web-runtime
