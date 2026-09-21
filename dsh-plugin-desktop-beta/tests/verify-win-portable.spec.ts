@@ -4,6 +4,8 @@ import { join } from 'node:path'
 import AdmZip from 'adm-zip'
 import { afterEach, describe, expect, it } from 'vitest'
 import { verifyWindowsPortable } from '../scripts/verify-win-portable.ts'
+import { DESKTOP_PRODUCT_NAME } from '../src/product-identity.ts'
+import { DESKTOP_ARTIFACT_STEM } from '../src/product-identity.ts'
 
 const temporaryRoots: string[] = []
 
@@ -20,9 +22,9 @@ function fixture(version = '2.0.0'): { readonly root: string; readonly portable:
   temporaryRoots.push(root)
   const dist = join(root, 'dist')
   mkdirSync(dist, { recursive: true })
-  const portable = join(dist, `DSH-Desktop-Beta-${version}-x64-Portable.zip`)
+  const portable = join(dist, `${DESKTOP_ARTIFACT_STEM}-${version}-x64-Portable.zip`)
   const archive = new AdmZip()
-  archive.addFile('DSH Desktop Beta.exe', portableExecutable())
+  archive.addFile(`${DESKTOP_PRODUCT_NAME}.exe`, portableExecutable())
   archive.addFile('resources/app/package.json', Buffer.from('{}'))
   archive.writeZip(portable)
   return { root, portable }
@@ -43,7 +45,7 @@ describe('Windows portable artifact verification', () => {
     const value = fixture('1.9.0')
 
     expect(() => verifyWindowsPortable({ desktopRoot: value.root, version: '2.0.0' }))
-      .toThrow('DSH-Desktop-Beta-2.0.0-x64-Portable.zip')
+      .toThrow(`${DESKTOP_ARTIFACT_STEM}-2.0.0-x64-Portable.zip`)
   })
 
   it('rejects an application entry without a Windows PE header', () => {
@@ -51,7 +53,7 @@ describe('Windows portable artifact verification', () => {
     const invalid = portableExecutable()
     invalid.write('NO', 0, 'ascii')
     const archive = new AdmZip()
-    archive.addFile('DSH Desktop Beta.exe', invalid)
+    archive.addFile(`${DESKTOP_PRODUCT_NAME}.exe`, invalid)
     archive.addFile('resources/app/package.json', Buffer.from('{}'))
     archive.writeZip(value.portable)
 

@@ -17,6 +17,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 import { runInNewContext } from 'node:vm'
 import sharp from 'sharp'
 import { describe, expect, it } from 'vitest'
+import { DESKTOP_APP_ID, DESKTOP_PRODUCT_NAME } from '../src/product-identity.ts'
+import { DESKTOP_ARTIFACT_STEM } from '../src/product-identity.ts'
 
 const packageRoot = new URL('../', import.meta.url)
 const workspaceRoot = new URL('../', packageRoot)
@@ -33,6 +35,7 @@ const manifest = JSON.parse(readFileSync(new URL('package.json', packageRoot), '
     productName?: unknown
     appId?: unknown
     asar?: unknown
+    extraResources?: unknown
     afterPack?: unknown
     afterAllArtifactBuild?: unknown
     electronFuses?: unknown
@@ -40,6 +43,7 @@ const manifest = JSON.parse(readFileSync(new URL('package.json', packageRoot), '
     files?: unknown
     dmg?: { icon?: unknown }
     mac?: {
+      artifactName?: unknown
       extendInfo?: unknown
       hardenedRuntime?: unknown
       icon?: unknown
@@ -812,8 +816,8 @@ describe('published package surface', () => {
   it('fixes the installed application identity', () => {
     expect(workspaceManifest.version).toBeUndefined()
     expect(manifest.version).toBe('2.0.17')
-    expect(manifest.build?.productName).toBe('DSH Desktop')
-    expect(manifest.build?.appId).toBe('ai.deepseek.dsh.desktop')
+    expect(manifest.build?.productName).toBe(DESKTOP_PRODUCT_NAME)
+    expect(manifest.build?.appId).toBe(DESKTOP_APP_ID)
     expect(manifest.build?.asar).toBe(false)
     expect(manifest.build).not.toHaveProperty('asarUnpack')
     for (const platform of ['mac', 'win', 'linux'] as const) {
@@ -856,7 +860,10 @@ describe('published package surface', () => {
       target: 'nsis',
       arch: ['x64'],
     }])
-    expect(manifest.build?.win?.artifactName).toBe('DSH-Desktop-${version}-${arch}-Portable.${ext}')
+    expect(manifest.build?.mac?.artifactName)
+      .toBe(`${DESKTOP_ARTIFACT_STEM}-` + '${version}-${arch}.${ext}')
+    expect(manifest.build?.win?.artifactName)
+      .toBe(`${DESKTOP_ARTIFACT_STEM}-` + '${version}-${arch}-Portable.${ext}')
     expect(manifest.build?.nsis).toEqual({
       include: 'installer.nsh',
       installerIcon: 'build/app-icon.ico',
@@ -868,10 +875,10 @@ describe('published package surface', () => {
       createDesktopShortcut: true,
       createStartMenuShortcut: true,
       differentialPackage: false,
-      shortcutName: 'DSH Desktop',
+      shortcutName: DESKTOP_PRODUCT_NAME,
       uninstallerIcon: 'build/app-icon.ico',
       useZip: false,
-      artifactName: 'DSH-Desktop-${version}-${arch}-Setup.${ext}',
+      artifactName: `${DESKTOP_ARTIFACT_STEM}-` + '${version}-${arch}-Setup.${ext}',
     })
     expect(manifest.build?.linux?.icon).toBe('build/icons')
     expect(manifest.build?.linux?.synopsis).toBe('Agentic coding desktop for the DeepSeek Harness')
@@ -892,16 +899,18 @@ describe('published package surface', () => {
   it('separates unsigned smoke packaging from the signed macOS release', () => {
     const packageDir = readFileSync(new URL('scripts/package-dir.mjs', packageRoot), 'utf8')
 
-    expect(manifest.scripts?.['package:dir']).toBe('yarn run build && yarn run prepare:electron-native && node scripts/package-dir.mjs')
+    expect(manifest.scripts?.build).toContain('node scripts/generate-windows-app-icon.mjs')
+    expect(manifest.scripts?.build).toContain('node scripts/generate-mac-app-icon.mjs')
+    expect(manifest.scripts?.['package:dir']).toBe('node ../scripts/prepare-codegraph.mjs && yarn run build && yarn run prepare:electron-native && node scripts/package-dir.mjs')
     expect(packageDir).toContain("CSC_IDENTITY_AUTO_DISCOVERY: 'false'")
     expect(packageDir).toContain("'--config.forceCodeSigning=false'")
     expect(packageDir).toContain("'--config.mac.identity=null'")
     expect(packageDir).toContain("'--config.mac.notarize=false'")
     expect(packageDir).toContain("'--config.win.signExecutable=false'")
-    expect(manifest.scripts?.['dist:mac']).toBe('node scripts/release-mac.ts')
-    expect(manifest.scripts?.['dist:mac-smoke']).toBe('node scripts/package-mac.ts')
-    expect(manifest.scripts?.['dist:win']).toBe('node scripts/package-win.ts')
-    expect(manifest.scripts?.['dist:win-portable']).toBe('node scripts/package-win-portable.ts')
+    expect(manifest.scripts?.['dist:mac']).toBe('node ../scripts/prepare-codegraph.mjs && node scripts/release-mac.ts')
+    expect(manifest.scripts?.['dist:mac-smoke']).toBe('node ../scripts/prepare-codegraph.mjs && node scripts/package-mac.ts')
+    expect(manifest.scripts?.['dist:win']).toBe('node ../scripts/prepare-codegraph.mjs && node scripts/package-win.ts')
+    expect(manifest.scripts?.['dist:win-portable']).toBe('node ../scripts/prepare-codegraph.mjs && node scripts/package-win-portable.ts')
     expect(manifest.scripts?.['check:win-package:platform']).toContain('yarn workspace dsh-community-market build')
     expect(manifest.scripts?.['check:win-package:platform']).toContain('yarn run build')
     expect(manifest.scripts?.['check:win-package']).toBe('yarn run check:win-package:platform && yarn run typecheck')
@@ -935,6 +944,13 @@ describe('published package surface', () => {
       .toBe('yarn market:prepare && yarn aa:prepare-release && yarn aa:prepare-release --verify-release && yarn workspace dsh-community-market build && yarn workspace dsh-plugin-desktop dist:win')
     expect(workspaceManifest.scripts?.['dist:win-portable'])
       .toBe('yarn market:prepare && yarn aa:prepare-release && yarn aa:prepare-release --verify-release && yarn workspace dsh-community-market build && yarn workspace dsh-plugin-desktop dist:win-portable')
+    // The vendored CodeGraph CLI must reach the installer as extraResources, not as a
+    // Yarn dependency: a platform package carrying "cpu": ["arm64"] can be dropped from
+    // the x64 slice of the universal build and break @electron/universal.
+    expect(manifest.build?.extraResources).toEqual([
+      { from: 'build/codegraph/host', to: 'codegraph' },
+      { from: 'build/dream-skin-default.json', to: 'dream-skin-default.json' },
+    ])
     expect(manifest.build?.afterPack).toBe('./scripts/verify-packaged-runtime.ts')
     expect(manifest.build?.afterAllArtifactBuild).toBe('./scripts/verify-electron-fuses.ts')
     expect(manifest.build?.mac).toEqual(expect.objectContaining({
@@ -967,7 +983,7 @@ describe('published package surface', () => {
     )
 
     expect(windowsJob).not.toContain('- run: yarn check')
-    expect(windowsJob).toContain('workspace: [dsh-plugin-desktop, dsh-plugin-desktop-beta]')
+    expect(windowsJob).toContain('workspace: [dsh-plugin-desktop]')
     expect(windowsJob).toContain('- run: yarn workspace ${{ matrix.workspace }} check:win-package:platform')
     expect(windowsJob).toContain('run: yarn workspace ${{ matrix.workspace }} dist:win')
     expect(windowsJob).toContain('run: yarn workspace ${{ matrix.workspace }} dist:win-portable')
@@ -975,7 +991,7 @@ describe('published package surface', () => {
     // Smoke artifacts are never published, so CI skips their compression.
     expect(windowsJob.match(/DSH_WINDOWS_PACKAGE_COMPRESSION: store/g)).toHaveLength(2)
     expect(macosJob).not.toContain('- run: yarn check')
-    expect(macosJob).toContain('workspace: [dsh-plugin-desktop, dsh-plugin-desktop-beta]')
+    expect(macosJob).toContain('workspace: [dsh-plugin-desktop]')
     expect(macosJob).toContain('- run: yarn workspace ${{ matrix.workspace }} check:mac-package:platform')
     expect(macosJob).toContain('run: yarn workspace ${{ matrix.workspace }} dist:mac-smoke')
     expect(macosJob).toContain('DSH_PACKAGE_CHECK_ALREADY_RAN: \'1\'')

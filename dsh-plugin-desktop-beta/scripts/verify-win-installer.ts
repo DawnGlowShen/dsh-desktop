@@ -3,6 +3,8 @@
 import { closeSync, openSync, readFileSync, readSync, statSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { DESKTOP_PRODUCT_NAME } from '../src/product-identity.ts'
+import { DESKTOP_ARTIFACT_STEM } from '../src/product-identity.ts'
 
 /** Verify a complete in-memory Windows PE image. */
 export function assertPortableExecutableBuffer(data: Buffer, label: string, source: string): void {
@@ -90,9 +92,9 @@ export function verifyWindowsInstaller(
   const distDir = join(options.desktopRoot, 'dist')
   const installerPath = join(
     distDir,
-    `DSH-Desktop-Beta-${options.version}-x64-Setup.exe`,
+    `${DESKTOP_ARTIFACT_STEM}-${options.version}-x64-Setup.exe`,
   )
-  const applicationPath = join(distDir, 'win-unpacked', 'DSH Desktop Beta.exe')
+  const applicationPath = join(distDir, `win-unpacked`, `${DESKTOP_PRODUCT_NAME}.exe`)
 
   assertPortableExecutable(installerPath, 'Windows NSIS installer')
   assertPortableExecutable(applicationPath, 'unpacked Windows application')
