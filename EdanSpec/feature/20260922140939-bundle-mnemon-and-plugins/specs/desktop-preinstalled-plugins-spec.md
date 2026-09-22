@@ -26,7 +26,8 @@
 #### Scenario: 版本与上游一致
 
 - **WHEN** 读取任一变体 `package.json` 的 dependencies
-- **THEN** `billion-context` 为 `0.1.135`、`dsh-mnemon` 为 `0.5.12`、`dsh-rewind-plugin` 为 `0.12.2`
+- **THEN** `billion-context` 为 `0.1.131`、`dsh-mnemon` 为 `0.5.12`、`dsh-rewind-plugin` 为 `0.12.2`
+- **AND** `billion-context` 的版本已通过 Yarn 的 `npmMinimalAgeGate` 观察期，`corepack yarn install` 不报 `YN0016` 隔离错误
 
 #### Scenario: 许可证门禁通过
 

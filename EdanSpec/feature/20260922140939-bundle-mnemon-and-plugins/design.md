@@ -24,7 +24,8 @@
 
 - `billion-context` 自带的 `bili` / `bili-proxy`：本次只发布 mnemon CLI，`billion-context` 作为普通插件随包分发
 - Linux：与 CodeGraph 保持一致的覆盖范围（macOS + Windows）
-- 用户本机 profile 的 `billion-context@0.1.134 → 0.1.135` 升级：属本地状态，不在仓库变更内
+- 用户本机 profile 的 `billion-context` 版本：属本地状态，不在仓库变更内
+- 采用尚未通过 Yarn `npmMinimalAgeGate`（默认 24h）观察期的上游版本
 - 不修改 `dsh-mnemon` 的查找顺序、不写 `cliPath` 配置、不新增 `MNEMON_CLI_PATH`
 
 ## 技术决策
