@@ -1,0 +1,546 @@
+# 内置 mnemon 插件与 mnemon CLI 任务清单
+
+> 上游：`proposal.md`、`specs/mnemon-cli-bundling-spec.md`、`specs/desktop-preinstalled-plugins-spec.md`、`design.md`
+> 全局约定：**先改 `dsh-plugin-desktop-beta/`，再同步 `dsh-plugin-desktop/`**；两包 `src/` 必须逐字节一致（`src/product-identity.ts` 除外）。每个任务完成后跑其「完成判定」中的命令，通过后再进入下一任务。
+> 失败策略：连续 2 次失败 → `edanspec-debugging`；3 次 → `edanspec-explore`；4 次 → 停下来报告用户。
+
+## 阶段一：mnemon CLI 物化链路
+
+### Task-001：vendor 平台归档与物化脚本
+
+**描述**：把 mnemon 的两个平台 tgz 纳入 `vendor/mnemon/`，并新增 `scripts/prepare-mnemon.mjs`，使它能把归档解包校验到 `{desktop}/build/mnemon/host/`。镜像 `scripts/prepare-codegraph.mjs`，但断言规则不同：mnemon 平台包的 `package.json` 中 `name` 是主包名 `@mnemon-dev/mnemon`，`version` 才是带平台后缀的 `0.2.9-<targetKey>`。
+
+**关联需求**：`specs/mnemon-cli-bundling-spec.md` §平台二进制通过 vendor 归档物化、§平台归档可追溯。
+→ Agent：读取该 spec 确认 `--check` 行为、幂等复用条件、失败输出前缀。
+
+**前置依赖**：无。
+
+**工时估算**：0.5 人天
+- 基础：0.35 人天（S）
+- 缓冲：0.35 × 30% × 1.5 = 0.16 人天（依赖风险 - 中：归档布局与 codegraph 不同，需实测确认）
+- 总计：0.51 人天
+→ Agent：缓冲计算规则见 `references/risk-classification.md`。
+
+**涉及文件**：
+- `vendor/mnemon/mnemon-darwin-arm64-0.2.9.tgz` — 新增（已下载，6,298,831 字节，sha256 `004d6454625db1e880d83da057a801f9ec87fd08654af715d5d906ea1b2d464a`）
+- `vendor/mnemon/mnemon-win32-x64-0.2.9.tgz` — 新增（已下载，5,699,948 字节，sha256 `10e2d8d9e5f93d185018495b5c4822715bd0ad16873202f6d3b1a7696d6f69ef`）
+- `scripts/prepare-mnemon.mjs` — 新增
+- `.gitignore` — 新增 `dsh-plugin-desktop/build/mnemon/`、`dsh-plugin-desktop-beta/build/mnemon/`
+
+**验收标准**：
+- **物化成功**：`node scripts/prepare-mnemon.mjs --desktop dsh-plugin-desktop --target darwin-arm64` 退出码为 0，且 `dsh-plugin-desktop/build/mnemon/host/bin/mnemon` 存在、带可执行位、`host/package.json` 的 `license` 为 `Apache-2.0`。验证方式：执行该命令后 `test -x` 与 `node -e` 读 package.json。
+- **校验模式不写盘**：在未物化的目标上执行 `--check` 时退出码非 0 且 stderr 以 `prepare-mnemon: ` 开头，`build/mnemon/` 下无文件生成。验证方式：`rm -rf build/mnemon && node scripts/prepare-mnemon.mjs --check; echo $?`。
+- **幂等**：连续执行两次，第二次输出包含 `reusing`，`.prepared.json` 的归档 sha256 两次相同。验证方式：比对两次命令输出与标记文件。
+- **拒绝非桌面包目录**：`--desktop /tmp/not-a-desktop` 时退出码非 0 且不写文件。验证方式：在临时目录放一个 `name` 不匹配的 `package.json` 后执行。
+
+**增量计划**：
+- [x] **增量 1**：归档 git 登记与 `.gitignore`
+  - 做什么：确认 `vendor/mnemon/` 下两个 tgz 存在且 sha256 与上文一致，`.gitignore` 追加两条构建产物的忽略规则
+  - 交付：`vendor/mnemon/` 两个归档入库；`.gitignore` 更新
+  - 对应验收标准：物化成功（前置条件）
+  - 完成判定：`shasum -a 256 vendor/mnemon/*.tgz` 与上文一致 && `git check-ignore -v dsh-plugin-desktop/build/mnemon/` 有输出
+- [x] **增量 2**：`TARGETS` 与校验逻辑
+  - 做什么：定义 `darwin-arm64` / `win32-x64` 两个目标（各自归档文件名、期望 sha256、可执行文件名），断言 `name`/`version`/`license`
+  - 交付：`scripts/prepare-mnemon.mjs` 可完成一次完整物化
+  - 对应验收标准：物化成功
+  - 完成判定：`node scripts/prepare-mnemon.mjs --desktop dsh-plugin-desktop --target darwin-arm64 && node scripts/prepare-mnemon.mjs --desktop dsh-plugin-desktop --target win32-x64`
+- [x] **增量 3**：`--check` 与幂等复用分支
+  - 做什么：实现 `--check` 失败分支与基于 `.prepared.json` 的复用分支
+  - 交付：`--check` 与非 `--check` 两条路径行为符合 spec
+  - 对应验收标准：校验模式不写盘、幂等、拒绝非桌面包目录
+  - 完成判定：逐条执行三条验收命令
+
+**失败策略**：见全局约定。若归档内布局与预期不符，先打印实际 tar 列表再改断言，不得放宽断言。
+
+### 检查点 1
+
+```bash
+node scripts/prepare-mnemon.mjs --desktop dsh-plugin-desktop --target darwin-arm64
+node scripts/prepare-mnemon.mjs --desktop dsh-plugin-desktop --target win32-x64
+node scripts/prepare-mnemon.mjs --desktop dsh-plugin-desktop --target darwin-arm64 --check
+dsh-plugin-desktop/build/mnemon/host/bin/mnemon --version   # 期望：mnemon version 0.2.9
+```
+
+---
+
+## 阶段二：三个插件进入内置预装清单
+
+### Task-002：beta 变体接入三个插件
+
+**描述**：用仓库既有脚本把 `billion-context@0.1.135`、`dsh-rewind-plugin@0.12.2`、`dsh-mnemon@0.5.12` 加入 beta 变体的 `dependencies` 与 `DEFAULT_PROFILE_PLUGIN_BUNDLES`。**不使用** `--no-verify`，让脚本内置的四道门禁真实跑一遍。
+
+**关联需求**：`specs/desktop-preinstalled-plugins-spec.md` §默认预装插件清单。
+→ Agent：读取该 spec 确认清单内容、字母序位置、版本号。
+
+**前置依赖**：无（与 Task-001 无文件交集，可并行）。
+
+**工时估算**：0.25 人天
+- 基础：0.2 人天（XS）
+- 缓冲：0.2 × 30% × 1 = 0.06 人天（依赖风险 - 低：脚本已存在，只调它）
+- 总计：0.26 人天
+
+**涉及文件**：
+- `dsh-plugin-desktop-beta/package.json` — `dependencies` 增加三项
+- `dsh-plugin-desktop-beta/src/product-identity.ts` — `DEFAULT_PROFILE_PLUGIN_BUNDLES` 增加三项
+
+**验收标准**：
+- **依赖与清单同时到位**：`node scripts/preinstall-plugins.mjs list` 中三项在两个变体下均显示 `✓/✓`（stable 一侧此时可以是 `✗/✗`，Task-003 补上）。验证方式：执行该命令比对输出。
+- **清单按字典序**：`billion-context` 位于 `@linxin666/dsh-client-ui-git-graph` 之后、`dsh-better-sidebar` 之前。验证方式：`node -e` 读 beta 的 `product-identity.ts` 或 `grep -n` 数组。
+- **许可证与闭包门禁通过**：`yarn --cwd dsh-plugin-desktop-beta run verify:licenses` 与 `verify:closure` 均退出码 0。验证方式：直接执行两条命令。
+
+**增量计划**：
+- [ ] **增量 1**：`billion-context` 与 `dsh-rewind-plugin`
+  - 做什么：两次 `add` 调用，观察门禁输出
+  - 交付：两项进入 beta 的依赖与清单
+  - 对应验收标准：依赖与清单同时到位
+  - 完成判定：`node scripts/preinstall-plugins.mjs add billion-context@0.1.135 && node scripts/preinstall-plugins.mjs add dsh-rewind-plugin@0.12.2`
+- [ ] **增量 2**：`dsh-mnemon`
+  - 做什么：加入第三个插件，确认其 16 个子包不引入许可证问题
+  - 交付：三项齐备
+  - 对应验收标准：依赖与清单同时到位、清单按字典序
+  - 完成判定：`node scripts/preinstall-plugins.mjs add dsh-mnemon@0.5.12`
+- [ ] **增量 3**：门禁复跑
+  - 做什么：单独跑 `verify:licenses` 与 `verify:closure`，确认不是被 `add` 的临时环境掩盖
+  - 交付：门禁结论
+  - 对应验收标准：许可证与闭包门禁通过
+  - 完成判定：`yarn --cwd dsh-plugin-desktop-beta run verify:licenses && yarn --cwd dsh-plugin-desktop-beta run verify:closure`
+
+**失败策略**：见全局约定。若某个传递依赖 license 不在白名单，先记录包名与 license，停下来报告用户，不得放宽 `ALLOWED_LICENSES`。
+
+### Task-003：stable 变体同步
+
+**描述**：对 stable（`dsh-plugin-desktop`）执行同样的三项 `add`，使两个变体一致。
+
+**关联需求**：`specs/desktop-preinstalled-plugins-spec.md` §默认预装插件清单（既有清单项不回归）。
+
+**前置依赖**：Task-002。
+
+**工时估算**：0.15 人天
+- 基础：0.12 人天（XS）
+- 缓冲：0.12 × 30% × 1 = 0.04 人天（依赖风险 - 低）
+- 总计：0.16 人天
+
+**涉及文件**：
+- `dsh-plugin-desktop/package.json` — `dependencies` 增加三项
+- `dsh-plugin-desktop/src/product-identity.ts` — `DEFAULT_PROFILE_PLUGIN_BUNDLES` 增加三项
+
+**验收标准**：
+- **两变体一致**：`node scripts/preinstall-plugins.mjs list` 中三项两侧均为 `✓/✓`，且无「在清单里但不在 dependencies」告警。验证方式：执行该命令。
+- **既有 7 项未回归**：清单总数由 7 变 10，原有 7 项仍全部存在。验证方式：`node scripts/preinstall-plugins.mjs list` 计数。
+- **变体门禁通过**：`yarn check:desktop-variants` 退出码 0。验证方式：仓库根执行。
+
+**增量计划**：
+- [ ] **增量 1**：stable 三项 `add`
+  - 做什么：对 stable 变体执行三次 `add`
+  - 交付：stable 依赖与清单同步
+  - 对应验收标准：两变体一致
+  - 完成判定：`node scripts/preinstall-plugins.mjs list`
+- [ ] **增量 2**：变体一致性门禁
+  - 做什么：跑 `check:desktop-variants` 与根 `plugins:verify`
+  - 交付：一致性结论
+  - 对应验收标准：既有 7 项未回归、变体门禁通过
+  - 完成判定：`yarn check:desktop-variants && yarn plugins:verify`
+
+**失败策略**：见全局约定。
+
+### 检查点 2
+
+```bash
+node scripts/preinstall-plugins.mjs list
+yarn check:desktop-variants
+yarn plugins:verify
+```
+
+---
+
+## 阶段三：打包配置
+
+### Task-004：beta 变体打包配置与断言
+
+**描述**：beta 的 `package.json` 增加 `build.extraResources` 的 `build/mnemon/host → mnemon` 条目、`build.mac.x64ArchFiles` 追加 `Resources/mnemon/**`、五个打包脚本前缀 `node ../scripts/prepare-mnemon.mjs && `；同步更新 `tests/package.spec.ts` 中逐字符断言这些脚本字符串与 `extraResources` 深比较的用例。
+
+**关联需求**：`specs/mnemon-cli-bundling-spec.md` §mnemon 二进制随安装包分发。
+
+**前置依赖**：Task-001（脚本存在才能被脚本字符串引用）、Task-002（同文件 `package.json`，避免冲突；顺序执行）。
+
+**工时估算**：0.4 人天
+- 基础：0.3 人天（S）
+- 缓冲：0.3 × 20% × 1 = 0.06 人天（技术风险 - 低）
+- 总计：0.36 人天
+
+**涉及文件**：
+- `dsh-plugin-desktop-beta/package.json` — `build.extraResources`、`build.mac.x64ArchFiles`、五个打包脚本
+- `dsh-plugin-desktop-beta/tests/package.spec.ts` — 脚本字符串断言与 `extraResources` 深比较
+
+**验收标准**：
+- **五个脚本前缀齐备**：`package:dir`、`dist:mac`、`dist:mac-smoke`、`dist:win`、`dist:win-portable` 均以 `node ../scripts/prepare-mnemon.mjs && node ../scripts/prepare-codegraph.mjs && ` 开头。验证方式：`node -e` 读 `package.json` 打印五个脚本。
+- **extraResources 与 x64ArchFiles 正确**：`extraResources` 含 mnemon 条目且 codegraph 条目未动；`mac.x64ArchFiles` 同时含 `Resources/codegraph/**` 与 `Resources/mnemon/**`。验证方式：`node -e` 断言。
+- **打包用例通过**：`yarn --cwd dsh-plugin-desktop-beta test tests/package.spec.ts` 退出码 0。验证方式：直接执行。
+
+**增量计划**：
+- [ ] **增量 1**：`package.json` 的 `build` 三处改动
+  - 做什么：加 `extraResources` 条目、加 `x64ArchFiles` 片段、五个脚本加前缀
+  - 交付：打包配置就绪
+  - 对应验收标准：五个脚本前缀齐备、extraResources 与 x64ArchFiles 正确
+  - 完成判定：`node -e` 打印五个脚本与两个 build 字段
+- [ ] **增量 2**：`package.spec.ts` 断言同步
+  - 做什么：更新脚本字符串断言与 `extraResources` 深比较
+  - 交付：用例通过
+  - 对应验收标准：打包用例通过
+  - 完成判定：`yarn --cwd dsh-plugin-desktop-beta test tests/package.spec.ts`
+
+**失败策略**：见全局约定。
+
+### Task-005：stable 变体打包配置同步
+
+**描述**：把 Task-004 的 `package.json` 与 `tests/package.spec.ts` 改动同步到 stable 变体。
+
+**关联需求**：`specs/mnemon-cli-bundling-spec.md` §mnemon 二进制随安装包分发。
+
+**前置依赖**：Task-003、Task-004。
+
+**工时估算**：0.25 人天
+- 基础：0.2 人天（XS）
+- 缓冲：0.2 × 20% × 1 = 0.04 人天（技术风险 - 低）
+- 总计：0.24 人天
+
+**涉及文件**：
+- `dsh-plugin-desktop/package.json`
+- `dsh-plugin-desktop/tests/package.spec.ts`
+
+**验收标准**：
+- **两变体 build 字段一致**：除产品名相关字段外，两侧 `extraResources`、`mac.x64ArchFiles`、五个打包脚本内容相同。验证方式：`yarn check:desktop-variants` + `node -e` 逐字段比对。
+- **stable 打包用例通过**：`yarn --cwd dsh-plugin-desktop test tests/package.spec.ts` 退出码 0。验证方式：直接执行。
+
+**增量计划**：
+- [ ] **增量 1**：`package.json` 同步
+  - 做什么：按 beta 的实际值改 stable 的 build 字段
+  - 交付：配置一致
+  - 对应验收标准：两变体 build 字段一致
+  - 完成判定：`node -e` 逐字段比对
+- [ ] **增量 2**：`package.spec.ts` 同步
+  - 做什么：同步断言
+  - 交付：用例通过
+  - 对应验收标准：stable 打包用例通过
+  - 完成判定：`yarn --cwd dsh-plugin-desktop test tests/package.spec.ts`
+
+**失败策略**：见全局约定。
+
+### 检查点 3
+
+```bash
+node scripts/prepare-mnemon.mjs --desktop dsh-plugin-desktop-beta --target darwin-arm64
+yarn --cwd dsh-plugin-desktop-beta test tests/package.spec.ts
+yarn --cwd dsh-plugin-desktop test tests/package.spec.ts
+```
+
+---
+
+## 阶段四：运行时发布与终端集成
+
+### Task-006：shell 集成模块泛化
+
+**描述**：把 beta 的 `src/desktop-codegraph-shell.ts` 改名为 `src/desktop-cli-shell.ts`，导出面由单 launcher 改为 `launchers` 列表，`MARKER_BEGIN` / `MARKER_END` 文本**保持不变**（见 design.md 决策三）。同步改名并扩展 spec。
+
+**关联需求**：`specs/mnemon-cli-bundling-spec.md` §macOS 终端可直接使用 mnemon。
+
+**前置依赖**：无（与阶段三无文件交集，可并行）。
+
+**工时估算**：0.5 人天
+- 基础：0.35 人天（S）
+- 缓冲：0.35 × 20% × 1 = 0.07 人天（技术风险 - 低）
+- 总计：0.42 人天
+
+**涉及文件**：
+- `dsh-plugin-desktop-beta/src/desktop-cli-shell.ts` — 由 `desktop-codegraph-shell.ts` 改名并泛化
+- `dsh-plugin-desktop-beta/tests/desktop-cli-shell.spec.ts` — 由 `desktop-codegraph-shell.spec.ts` 改名并扩展多 launcher 用例
+- `dsh-plugin-desktop-beta/tests/package.spec.ts` — 若其中有源码文件清单或 `src/` 快照断言则同步（执行时确认）
+
+**验收标准**：
+- **多 launcher 一次登记**：一次调用传入 codegraph 与 mnemon 两个 launcher 后，`<homeDir>/bin` 下两个 shim 均存在且内容引用各自 launcher。验证方式：spec 用例。
+- **marker 块唯一**：`<userHomeDir>/.zshrc` 中 `# >>> dsh-desktop codegraph >>>` 恰好出现一次，块内 PATH 条目仍为 `<homeDir>/bin`。验证方式：spec 断言出现次数为 1。
+- **重复调用不写盘**：相同参数第二次调用 `changed === false`，且未生成额外 `.dsh-backup-*`。验证方式：spec 断言备份文件数量。
+- **卸载移除全部 shim**：卸载后两个 shim 均不存在、marker 块被移除、用户其余内容逐字节不变。验证方式：spec 用例。
+
+**增量计划**：
+- [ ] **增量 1**：改名 + 单 launcher 等价行为
+  - 做什么：文件与导出改名，签名改为 `launchers` 数组，行为与改动前对单个 launcher 完全等价
+  - 交付：改名后的模块与迁移后的 spec（原用例全绿即证明等价）
+  - 对应验收标准：多 launcher 一次登记（单 launcher 退化情形）
+  - 完成判定：`yarn --cwd dsh-plugin-desktop-beta test tests/desktop-cli-shell.spec.ts`
+- [ ] **增量 2**：多 launcher 与幂等
+  - 做什么：补多 launcher 用例、marker 唯一性用例、重复调用 `changed === false` 与备份数量用例
+  - 交付：spec 覆盖 spec.md 中 §macOS 终端可直接使用 mnemon 的全部场景
+  - 对应验收标准：marker 块唯一、重复调用不写盘
+  - 完成判定：`yarn --cwd dsh-plugin-desktop-beta test tests/desktop-cli-shell.spec.ts`
+- [ ] **增量 3**：卸载
+  - 做什么：`uninstallDesktopCliShell` 移除全部 launcher 的 shim
+  - 交付：卸载用例
+  - 对应验收标准：卸载移除全部 shim
+  - 完成判定：`yarn --cwd dsh-plugin-desktop-beta test tests/desktop-cli-shell.spec.ts`
+
+**失败策略**：见全局约定。注意：改名的同时必须同步 `main.ts` 的 import，否则 typecheck 失败——本任务的完成判定以 spec 通过为准，typecheck 在 Task-008 一并处理。
+
+### Task-007：mnemon runtime 发布
+
+**描述**：beta 的 `src/desktop-runtime-environment.ts` 新增 `DesktopMnemonRuntimeOptions`、`DesktopMnemonRuntimeInstallation`、`desktopMnemonBundleSupportsHost`、`installDesktopMnemonRuntime`，与 codegraph 版本同构；同步扩展 spec。
+
+**关联需求**：`specs/mnemon-cli-bundling-spec.md` §mnemon CLI 对 Host 进程可见。
+
+**前置依赖**：Task-001（需要知道 bundle 内的可执行文件名与清单形状）。
+
+**工时估算**：0.4 人天
+- 基础：0.3 人天（S）
+- 缓冲：0.3 × 20% × 1 = 0.06 人天（技术风险 - 低）
+- 总计：0.36 人天
+
+**涉及文件**：
+- `dsh-plugin-desktop-beta/src/desktop-runtime-environment.ts` — 新增 mnemon 相关导出
+- `dsh-plugin-desktop-beta/tests/desktop-runtime-environment.spec.ts` — 新增 mnemon 用例
+
+**验收标准**：
+- **架构匹配时发布并可还原**：darwin/win32 下 `installDesktopMnemonRuntime` 返回 `pathDir === <bundleDir>/bin`，调用后 PATH 首项为该目录，`dispose()` 后 PATH 与调用前逐字符相同。验证方式：spec 用例。
+- **架构不匹配返回 false**：清单声明 `cpu: ["arm64"]` 而主机为 `x64` 时 `desktopMnemonBundleSupportsHost` 返回 `false`。验证方式：spec 用例。
+- **清单不可读返回 false 且不抛错**：目录不存在或 `package.json` 非法 JSON 时返回 `false`。验证方式：spec 用例。
+- **可执行缺失即抛错**：`bin` 存在但 `mnemon`/`mnemon.exe` 缺失时抛错。验证方式：spec 用例。
+
+**增量计划**：
+- [ ] **增量 1**：`desktopMnemonBundleSupportsHost`
+  - 做什么：复制 codegraph 的清单判定逻辑并改用 mnemon 的字段语义
+  - 交付：判定函数 + 三条清单相关用例
+  - 对应验收标准：架构不匹配返回 false、清单不可读返回 false
+  - 完成判定：`yarn --cwd dsh-plugin-desktop-beta test tests/desktop-runtime-environment.spec.ts`
+- [ ] **增量 2**：`installDesktopMnemonRuntime`
+  - 做什么：darwin/win32 分支、可执行存在性校验、复用 `installPathDirectory`
+  - 交付：安装函数 + 发布/还原/抛错用例
+  - 对应验收标准：架构匹配时发布并可还原、可执行缺失即抛错
+  - 完成判定：`yarn --cwd dsh-plugin-desktop-beta test tests/desktop-runtime-environment.spec.ts`
+
+**失败策略**：见全局约定。
+
+### Task-008：beta 启动接线与 Windows 安装器
+
+**描述**：beta 的 `main.ts` 接入 mnemon runtime 与泛化后的 shell 集成（含 shutdown 释放），并把 `build/installer.nsh` 扩成 codegraph + mnemon 两组对称分支，同步更新 `tests/installer-nsh.spec.ts`。
+
+**关联需求**：`specs/mnemon-cli-bundling-spec.md` §mnemon CLI 对 Host 进程可见、§macOS 终端可直接使用 mnemon、§Windows 安装时写入用户 PATH。
+
+**前置依赖**：Task-004（打包配置）、Task-006（shell 模块）、Task-007（runtime 函数）。
+
+**工时估算**：0.5 人天
+- 基础：0.35 人天（S）
+- 缓冲：0.35 × 30% × 1.5 = 0.16 人天（依赖风险 - 中：NSIS 宏内多分支易出错，且需真机验证）
+- 总计：0.51 人天
+
+**涉及文件**：
+- `dsh-plugin-desktop-beta/src/main.ts` — import 改名、mnemon runtime 安装、shell launchers 传两项、shutdown 释放
+- `dsh-plugin-desktop-beta/build/installer.nsh` — mnemon 的 install/uninstall 分支
+- `dsh-plugin-desktop-beta/tests/installer-nsh.spec.ts` — `WriteRegExpandStr` 计数改为 4 并区分两个目录
+
+**验收标准**：
+- **启动不因 mnemon 失败而中断**：runtime 安装抛错时以错误日志记录且应用继续启动。验证方式：spec 或临时注入失败观察日志。
+- **shell 一次登记两个 CLI**：启动后 `~/.dsh/bin` 下有 codegraph 与 mnemon 两个 shim，`~/.zshrc` marker 块仍只有一段。验证方式：手动启动一次构建产物后检查。
+- **PATH 释放精确**：shutdown 后 `process.env.PATH` 不含 mnemon 的 `bin`，且与安装前逐字符相同。验证方式：spec 或 `main.ts` 的既有 `generation.own` 路径单测。
+- **NSIS 计数与分支**：`WriteRegExpandStr HKCU "Environment" "Path"` 恰好出现 4 次；mnemon 的 `FileExists` 与 `${StrContains}` 判断存在；卸载分支按末尾位置判断。验证方式：`yarn --cwd dsh-plugin-desktop-beta test tests/installer-nsh.spec.ts`。
+
+**增量计划**：
+- [ ] **增量 1**：`main.ts` 接入 runtime 与 shell
+  - 做什么：加 `mnemonRuntime` 安装块（与 codegraph 同构，含 `desktopMnemonBundleSupportsHost` 判定）、把 shell 调用改成 launchers 两项、加 `releaseMnemonRuntime`
+  - 交付：启动接线完成
+  - 对应验收标准：启动不因 mnemon 失败而中断、shell 一次登记两个 CLI、PATH 释放精确
+  - 完成判定：`yarn --cwd dsh-plugin-desktop-beta run build && yarn --cwd dsh-plugin-desktop-beta run typecheck`
+- [ ] **增量 2**：`installer.nsh` 两组分支
+  - 做什么：新增 mnemon define 与 install/uninstall 分支，保持 codegraph 分支不变
+  - 交付：安装器脚本
+  - 对应验收标准：NSIS 计数与分支
+  - 完成判定：`yarn --cwd dsh-plugin-desktop-beta test tests/installer-nsh.spec.ts`
+- [ ] **增量 3**：`installer-nsh.spec.ts` 断言更新
+  - 做什么：计数 2 → 4，新增两组分支各自的断言
+  - 交付：用例通过
+  - 对应验收标准：NSIS 计数与分支
+  - 完成判定：`yarn --cwd dsh-plugin-desktop-beta test tests/installer-nsh.spec.ts`
+
+**失败策略**：见全局约定。
+
+### 检查点 4
+
+```bash
+yarn --cwd dsh-plugin-desktop-beta run build
+yarn --cwd dsh-plugin-desktop-beta run typecheck
+yarn --cwd dsh-plugin-desktop-beta test
+```
+
+---
+
+## 阶段五：stable 同步与文档
+
+<!-- PARALLEL: Task-009, Task-012 -->
+
+### Task-009：stable 运行时与 shell 同步
+
+**描述**：把 beta 阶段四的 `src/` 改动同步到 stable（`desktop-cli-shell.ts` 改名、`desktop-runtime-environment.ts`、`main.ts`），并同步三个 spec 文件；`src/product-identity.ts` 保持两变体各自的既有差异。
+
+**关联需求**：全部 spec（既有能力不回归）。
+
+**前置依赖**：Task-008。
+
+**工时估算**：0.4 人天
+- 基础：0.3 人天（S）
+- 缓冲：0.3 × 20% × 1 = 0.06 人天（技术风险 - 低）
+- 总计：0.36 人天
+
+**涉及文件**：
+- `dsh-plugin-desktop/src/desktop-cli-shell.ts` — 新增（由 beta 同步，并删除旧 `desktop-codegraph-shell.ts`）
+- `dsh-plugin-desktop/src/desktop-runtime-environment.ts` — 同步
+- `dsh-plugin-desktop/src/main.ts` — 同步
+- `dsh-plugin-desktop/tests/desktop-cli-shell.spec.ts`、`tests/desktop-runtime-environment.spec.ts` — 同步
+
+**验收标准**：
+- **src 逐字节一致**：`yarn check:desktop-variants` 退出码 0。验证方式：仓库根执行。
+- **stable 全量测试通过**：`yarn --cwd dsh-plugin-desktop test` 退出码 0。验证方式：直接执行。
+
+**增量计划**：
+- [ ] **增量 1**：`src/` 三个文件同步
+  - 做什么：按 beta 逐字节复制，删除 stable 的旧文件名，同步 `main.ts` 的 import
+  - 交付：stable 源码一致
+  - 对应验收标准：src 逐字节一致
+  - 完成判定：`yarn check:desktop-variants`
+- [ ] **增量 2**：spec 文件同步
+  - 做什么：同步三个测试文件
+  - 交付：测试齐备
+  - 对应验收标准：stable 全量测试通过
+  - 完成判定：`yarn --cwd dsh-plugin-desktop test`
+
+**失败策略**：见全局约定。
+
+### Task-010：stable Windows 安装器同步
+
+**描述**：把 beta 的 `build/installer.nsh` 与 `tests/installer-nsh.spec.ts` 同步到 stable。`installer.nsh` 两变体在归一化产品名后本就逐字节一致，同步时保持这一性质。
+
+**关联需求**：`specs/mnemon-cli-bundling-spec.md` §Windows 安装时写入用户 PATH。
+
+**前置依赖**：Task-008。
+
+**工时估算**：0.25 人天
+- 基础：0.2 人天（XS）
+- 缓冲：0.2 × 20% × 1 = 0.04 人天（技术风险 - 低）
+- 总计：0.24 人天
+
+**涉及文件**：
+- `dsh-plugin-desktop/build/installer.nsh`
+- `dsh-plugin-desktop/tests/installer-nsh.spec.ts`
+
+**验收标准**：
+- **归一化后逐字节一致**：把两侧的 `dsh-plugin-desktop-beta` → `dsh-plugin-desktop`、`DSH Desktop Beta` → `DSH Desktop` 归一化后 `diff` 为空。验证方式：`sed` 归一化后 `diff`。
+- **stable 安装器用例通过**：`yarn --cwd dsh-plugin-desktop test tests/installer-nsh.spec.ts` 退出码 0。验证方式：直接执行。
+
+**增量计划**：
+- [ ] **增量 1**：`installer.nsh` 同步
+  - 做什么：同步 mnemon 分支
+  - 交付：脚本一致
+  - 对应验收标准：归一化后逐字节一致
+  - 完成判定：归一化 `diff`
+- [ ] **增量 2**：spec 同步
+  - 做什么：同步断言
+  - 交付：用例通过
+  - 对应验收标准：stable 安装器用例通过
+  - 完成判定：`yarn --cwd dsh-plugin-desktop test tests/installer-nsh.spec.ts`
+
+**失败策略**：见全局约定。
+
+### Task-011：Profile 预装清单相关用例同步
+
+**描述**：确认并同步 `profile.spec.ts`、`profile-manager.spec.ts` 中与 `DEFAULT_PROFILE_PLUGIN_BUNDLES` 相关的断言（这三项已由 `preinstall-plugins.mjs add` 跑过一轮，本任务负责 stable 一侧与显式清单计数断言）。
+
+**关联需求**：`specs/desktop-preinstalled-plugins-spec.md` §默认预装插件清单。
+
+**前置依赖**：Task-003。
+
+**工时估算**：0.25 人天
+- 基础：0.2 人天（XS）
+- 缓冲：0.2 × 20% × 1 = 0.04 人天（技术风险 - 低）
+- 总计：0.24 人天
+
+**涉及文件**：
+- `dsh-plugin-desktop/tests/profile.spec.ts`
+- `dsh-plugin-desktop/tests/profile-manager.spec.ts`
+
+**验收标准**：
+- **新 Profile 含三项**：新数据目录首次启动创建的默认 Profile 的 `bundles` 含 `billion-context`、`dsh-mnemon`、`dsh-rewind-plugin`。验证方式：`yarn --cwd dsh-plugin-desktop test tests/profile.spec.ts`。
+- **两变体清单内容一致**：`node scripts/preinstall-plugins.mjs list` 输出两侧清单项完全相同。验证方式：执行该命令。
+
+**增量计划**：
+- [ ] **增量 1**：跑现有用例确认是否需要改动
+  - 做什么：先执行 `yarn --cwd dsh-plugin-desktop test tests/profile.spec.ts tests/profile-manager.spec.ts`，仅在失败时按实际清单更新断言
+  - 交付：结论与必要的改动
+  - 对应验收标准：新 Profile 含三项
+  - 完成判定：`yarn --cwd dsh-plugin-desktop test tests/profile.spec.ts tests/profile-manager.spec.ts`
+- [ ] **增量 2**：两变体清单一致性
+  - 做什么：确认 stable 清单与 beta 相同
+  - 交付：一致性结论
+  - 对应验收标准：两变体清单内容一致
+  - 完成判定：`node scripts/preinstall-plugins.mjs list`
+
+**失败策略**：见全局约定。若用例通过则本任务只留下结论，不产生代码改动。
+
+### Task-012：中文说明文档
+
+**描述**：新增 `docs/bundle-mnemon-cli.zh.md`，说明内置 mnemon CLI 的方案、与 CodeGraph 的差异、体积增量、验证命令、回滚方式。单语言中文文档不触发双语门禁（与既有 `docs/bundle-codegraph-cli.zh.md` 一致，无 `.i18n.yaml` 配对）。
+
+**关联需求**：`specs/mnemon-cli-bundling-spec.md` §平台归档可追溯（文档说明场景）。
+
+**前置依赖**：Task-001（需实测数据）。
+
+**工时估算**：0.4 人天
+- 基础：0.3 人天（S）
+- 缓冲：0.3 × 20% × 1 = 0.06 人天（技术风险 - 低）
+- 总计：0.36 人天
+
+**涉及文件**：
+- `docs/bundle-mnemon-cli.zh.md` — 新增
+
+**验收标准**：
+- **文档覆盖六个要点**：归档来源与版本、两个平台的 PATH 机制差异、安装体积增量、验证命令、回滚方式、与 CodeGraph 方案的差异（单文件 Go 二进制 vs 内嵌 Node）。验证方式：人工核对章节标题。
+- **命令可复制执行**：文档中出现的每条命令都能在仓库根直接运行并得到所述结果。验证方式：逐条执行。
+- **不触发双语门禁**：`yarn check:docs`（若存在）退出码 0。验证方式：仓库根执行对应 gate。
+
+**增量计划**：
+- [ ] **增量 1**：结构与事实章节
+  - 做什么：按 `docs/bundle-codegraph-cli.zh.md` 的章节组织方式写「结论速览 / 需求 / 查证到的事实 / 方案」四段
+  - 交付：文档前半
+  - 对应验收标准：文档覆盖六个要点
+  - 完成判定：人工核对标题
+- [ ] **增量 2**：验证与回滚章节
+  - 做什么：写验证命令与回滚步骤，逐条实跑
+  - 交付：完整文档
+  - 对应验收标准：命令可复制执行、不触发双语门禁
+  - 完成判定：逐条执行文档命令 + 文档门禁
+
+**失败策略**：见全局约定。
+
+### 检查点 5
+
+```bash
+yarn check:desktop-variants
+yarn check:layout
+yarn --cwd dsh-plugin-desktop run check
+yarn --cwd dsh-plugin-desktop-beta run check
+```
+
+---
+
+## 阶段汇总
+
+| 阶段 | 任务 | 基础工时 | 缓冲 | 合计 |
+|---|---|---|---|---|
+| 一 | Task-001 | 0.35 | 0.16 | 0.51 |
+| 二 | Task-002、Task-003 | 0.32 | 0.10 | 0.42 |
+| 三 | Task-004、Task-005 | 0.50 | 0.10 | 0.60 |
+| 四 | Task-006、Task-007、Task-008 | 1.00 | 0.29 | 1.29 |
+| 五 | Task-009、Task-010、Task-011、Task-012 | 1.00 | 0.20 | 1.20 |
+| **总计** | **12 个任务** | **3.17** | **0.85** | **4.02 人天** |
+
+**关键路径**：Task-001 → Task-004 → Task-008 → Task-009 → 检查点 5（约 2.6 人天）。
+
+**可并行的任务**：
+- `Task-001` 与 `Task-002`：无文件交集（根 `scripts/` + `vendor/` + `.gitignore` vs beta 的 `package.json` + `product-identity.ts`），依据：修改的文件集合不相交，且 Task-002 调用的 `preinstall-plugins.mjs` 不读取 `scripts/prepare-mnemon.mjs`。
+- `Task-006` 与 `Task-007`：同在 beta `src/` 但不同文件，且 Task-006 只改 shell 模块与其 spec、Task-007 只改 runtime 模块与其 spec，依据：两文件之间无 import 关系（`main.ts` 是二者唯一的汇合点，在 Task-008 统一接线）。
