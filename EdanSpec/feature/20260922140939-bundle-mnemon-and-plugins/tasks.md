@@ -223,16 +223,18 @@ yarn plugins:verify
 - **stable 打包用例通过**：`yarn --cwd dsh-plugin-desktop test tests/package.spec.ts` 退出码 0。验证方式：直接执行。
 
 **增量计划**：
-- [ ] **增量 1**：`package.json` 同步
+- [x] **增量 1**：`package.json` 同步
   - 做什么：按 beta 的实际值改 stable 的 build 字段
   - 交付：配置一致
   - 对应验收标准：两变体 build 字段一致
   - 完成判定：`node -e` 逐字段比对
-- [ ] **增量 2**：`package.spec.ts` 同步
+- [x] **增量 2**：`package.spec.ts` 同步
   - 做什么：同步断言
   - 交付：用例通过
   - 对应验收标准：stable 打包用例通过
   - 完成判定：`yarn --cwd dsh-plugin-desktop test tests/package.spec.ts`
+
+> **执行记录**：实测五个脚本、`extraResources`、`mac.x64ArchFiles` 三个字段在两侧 JSON 序列化后完全相同；`yarn --cwd dsh-plugin-desktop test tests/package.spec.ts` 输出 42 passed | 1 skipped，退出码 0；`node scripts/verify-desktop-variants.mjs` 输出 184 个共享源文件对齐，退出码 0。注意 stable 的 `package.spec.ts` 与 beta 结构略有差异（stable 无 `fs-ext` 断言、`x64ArchFiles` 断言插在 `files` 断言之前），同步时按各自锚点分别落位。
 
 **失败策略**：见全局约定。
 
