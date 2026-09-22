@@ -58,7 +58,10 @@ export const DEFAULT_PROFILE_PLUGIN_BUNDLES: readonly string[] = Object.freeze([
   '@huanlin/dsh-plugin-better-sidebar-plugin-office',
   '@hyzyn/dsh-codegraph',
   '@linxin666/dsh-client-ui-git-graph',
+  'billion-context',
   'dsh-better-sidebar',
   'dsh-dream-skin',
+  'dsh-mnemon',
+  'dsh-rewind-plugin',
   'dsh-session-manager',
 ])

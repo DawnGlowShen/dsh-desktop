@@ -20,7 +20,7 @@
 - `main.ts` 在 Host 启动期发布 mnemon runtime（失败仅记日志、不阻塞启动），并在 macOS 一并写入 mnemon shim
 - `build/installer.nsh`（Windows）增加 mnemon 的 HKCU PATH 分支，与 codegraph 分支并存
 - 两个变体的 `src/product-identity.ts`：`DEFAULT_PROFILE_PLUGIN_BUNDLES` 增加 `billion-context`、`dsh-mnemon`、`dsh-rewind-plugin`（按字母序插入）
-- 两个变体的 `package.json` dependencies 增加 `billion-context@0.1.135`、`dsh-mnemon@0.5.12`、`dsh-rewind-plugin@0.12.2`
+- 两个变体的 `package.json` dependencies 增加 `billion-context@0.1.131`、`dsh-mnemon@0.5.12`、`dsh-rewind-plugin@0.12.2`
 - 相应更新测试（打包脚本字符串、`extraResources` 深比较、NSIS 断言、Profile 预装清单断言）
 - 新增中文说明文档，记录 mnemon CLI 的内置方案与实测数据
 
@@ -50,4 +50,5 @@
 
 - `billion-context` 自带的 `bili` / `bili-proxy` 可执行文件：本次只内置 mnemon CLI，`billion-context` 作为普通插件随安装包分发，其 bin 不做 PATH 发布
 - Linux 平台：与 CodeGraph 保持一致，仅覆盖 macOS 与 Windows
-- 用户自己 profile 里 `billion-context` 的 `0.1.134` → `0.1.135` 升级：那是用户本地 profile 的状态，不属于仓库变更；内置清单只声明依赖版本
+- 用户自己 profile 里 `billion-context` 的版本：那是用户本地 profile 的状态，不属于仓库变更；内置清单只声明依赖版本
+- 跨越 Yarn `npmMinimalAgeGate` 观察期的版本：内置清单只采用已通过 24h 供应链观察期的版本（`billion-context` 因此取 `0.1.131` 而非最新的 `0.1.135`）

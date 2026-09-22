@@ -11076,6 +11076,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"billion-context@npm:0.1.131":
+  version: 0.1.131
+  resolution: "billion-context@npm:0.1.131"
+  dependencies:
+    zod: "npm:4.1.8"
+  bin:
+    bili: dist/index.js
+    bili-proxy: dist/index.js
+  checksum: 10c0/7fdd1f6bbe59fcb5b4a3a183dd18f0aa364c9bd3b0187a69789fba8f97f997d12530577f4a6b900c8119370b763caea41d44b380b223786945f5a563480cae32
+  languageName: node
+  linkType: hard
+
 "birpc@npm:^4.0.0":
   version: 4.1.0
   resolution: "birpc@npm:4.1.0"
@@ -12815,6 +12827,223 @@ __metadata:
   languageName: node
   linkType: hard
 
+"dsh-mnemon-provider-byterover@npm:0.5.4":
+  version: 0.5.4
+  resolution: "dsh-mnemon-provider-byterover@npm:0.5.4"
+  peerDependencies:
+    "@deepseek-ai/cordis": ^4.0.1
+    dsh-mnemon-source-memory-spaces: ^0.5.1
+  checksum: 10c0/dac315e07260d6ecf0eaf42f77df0356626f81a450eafef589ca5fbb9ce4156eafca894e1f681d9f416af79c60209189ac267f6c340dc312162626a37bc81fa5
+  languageName: node
+  linkType: hard
+
+"dsh-mnemon-provider-hindsight@npm:0.5.4":
+  version: 0.5.4
+  resolution: "dsh-mnemon-provider-hindsight@npm:0.5.4"
+  peerDependencies:
+    "@deepseek-ai/cordis": ^4.0.1
+    dsh-mnemon-source-memory-spaces: ^0.5.1
+  checksum: 10c0/20f97f98f6866ca52f4b16e9af3bbe9afb4aceda6f1952fd62bb17179a7f18f7ecb3050bf6bca749cef36f11e84095ddd5003e4c03e4b49ff1a5f7865d2027d9
+  languageName: node
+  linkType: hard
+
+"dsh-mnemon-provider-holographic@npm:0.5.4":
+  version: 0.5.4
+  resolution: "dsh-mnemon-provider-holographic@npm:0.5.4"
+  peerDependencies:
+    "@deepseek-ai/cordis": ^4.0.1
+    dsh-mnemon-source-memory-spaces: ^0.5.1
+  checksum: 10c0/9bd5faad4d749e1d91d448c48d0c0a3b6bf60a0f98d52026876e9cc6b5c78122411f470413bd1190398ac338b8c8a66b69c4b272ab961cd87d4059a19f5ee67f
+  languageName: node
+  linkType: hard
+
+"dsh-mnemon-provider-honcho@npm:0.5.4":
+  version: 0.5.4
+  resolution: "dsh-mnemon-provider-honcho@npm:0.5.4"
+  peerDependencies:
+    "@deepseek-ai/cordis": ^4.0.1
+    dsh-mnemon-source-memory-spaces: ^0.5.1
+  checksum: 10c0/cbfa0376781d5767405999a008ce998d5468a950ecb8427fc24abde20a8c606994311fecda07af7a0d67e4cb9b05406e520792193e80ce841a24740707b05af9
+  languageName: node
+  linkType: hard
+
+"dsh-mnemon-provider-mem0@npm:0.5.4":
+  version: 0.5.4
+  resolution: "dsh-mnemon-provider-mem0@npm:0.5.4"
+  peerDependencies:
+    "@deepseek-ai/cordis": ^4.0.1
+    dsh-mnemon-source-memory-spaces: ^0.5.1
+  checksum: 10c0/ed8a086da6b6557ec209faba8f08ff6a481c11f897f22fc73a394ac2bbf5f2936caae7454120b06ee2a2926767a67e86348ebdb5c75c5b5e0dfbfcebdd6ca624
+  languageName: node
+  linkType: hard
+
+"dsh-mnemon-provider-mnemon-native@npm:0.5.5":
+  version: 0.5.5
+  resolution: "dsh-mnemon-provider-mnemon-native@npm:0.5.5"
+  peerDependencies:
+    "@deepseek-ai/cordis": ^4.0.1
+    dsh-mnemon-source-memory-spaces: ^0.5.1
+  checksum: 10c0/702d3401fd36dac8e7ee2754a8680ac85fe2f393f6b30ef58f92c27556855083f9a75dd1677d1113d9d7a6b58b6bc8b07bf1a0887473d1aaa520a67ab734984d
+  languageName: node
+  linkType: hard
+
+"dsh-mnemon-provider-openviking@npm:0.5.5":
+  version: 0.5.5
+  resolution: "dsh-mnemon-provider-openviking@npm:0.5.5"
+  peerDependencies:
+    "@deepseek-ai/cordis": ^4.0.1
+    dsh-mnemon-source-memory-spaces: ^0.5.1
+  checksum: 10c0/b0040b5be8f10c4dc9455be18c8e32a0504a46484163cd5c33d474a202a3bb65b7081323bed3484feca27c7069d1fa7bdff76dff6ff8f80f50728a015fbad048
+  languageName: node
+  linkType: hard
+
+"dsh-mnemon-provider-retaindb@npm:0.5.4":
+  version: 0.5.4
+  resolution: "dsh-mnemon-provider-retaindb@npm:0.5.4"
+  peerDependencies:
+    "@deepseek-ai/cordis": ^4.0.1
+    dsh-mnemon-source-memory-spaces: ^0.5.1
+  checksum: 10c0/e69248786af4191aaded2e49606f359e65e707e055b2548ecf48422a49123952df928f0df06f670e7b776d623dccaa34ad5c1491b93cc04c2cf041af5870b0e8
+  languageName: node
+  linkType: hard
+
+"dsh-mnemon-provider-supermemory@npm:0.5.4":
+  version: 0.5.4
+  resolution: "dsh-mnemon-provider-supermemory@npm:0.5.4"
+  peerDependencies:
+    "@deepseek-ai/cordis": ^4.0.1
+    dsh-mnemon-source-memory-spaces: ^0.5.1
+  checksum: 10c0/3515f0740bac29305e00402c1befbb1d5532f50cb56075d6b2c735438fc988f205bc07e23b84c54faf9ddb672364c5022bdc5b6c7a69d056d97fe3fd92fe0da8
+  languageName: node
+  linkType: hard
+
+"dsh-mnemon-source-documents@npm:0.5.6":
+  version: 0.5.6
+  resolution: "dsh-mnemon-source-documents@npm:0.5.6"
+  dependencies:
+    markdown-to-jsx: "npm:^7.7.0"
+    schemastery: "npm:^3.18.0"
+  peerDependencies:
+    "@deepseek-ai/cordis": ^4.0.1
+    dsh-mnemon: ^0.5.1
+    react: ^18.2.0
+  peerDependenciesMeta:
+    react:
+      optional: true
+  checksum: 10c0/d03bb6b658d0cf9ffa267a8dbfa2c86d5e49f3f31cfaa01d6cc28dbf3e56d647f363b0fcdb905598887236ffd3ef3d7c3cc40d7bdd3b2bf11f001527fec7f043
+  languageName: node
+  linkType: hard
+
+"dsh-mnemon-source-memory-spaces@npm:0.5.8":
+  version: 0.5.8
+  resolution: "dsh-mnemon-source-memory-spaces@npm:0.5.8"
+  dependencies:
+    schemastery: "npm:^3.18.0"
+  peerDependencies:
+    "@deepseek-ai/cordis": ^4.0.1
+    dsh-mnemon: ^0.5.1
+    react: ^18.2.0
+  peerDependenciesMeta:
+    react:
+      optional: true
+  checksum: 10c0/118b6298eba462c489fdcd75b29325374f5d77075faf3485fa98972e3673d7265c1f649ff577ee0f220035bac2c66bf253c138547ccead1572f5304da221b4d8
+  languageName: node
+  linkType: hard
+
+"dsh-mnemon-source-runtime@npm:0.5.8":
+  version: 0.5.8
+  resolution: "dsh-mnemon-source-runtime@npm:0.5.8"
+  dependencies:
+    schemastery: "npm:^3.18.0"
+  peerDependencies:
+    "@deepseek-ai/cordis": ^4.0.1
+    dsh-mnemon: ^0.5.1
+    react: ^18.2.0
+  peerDependenciesMeta:
+    react:
+      optional: true
+  checksum: 10c0/187e50f10e07d138c7432375f8db863e1ab89c6f6fee435415932eff03d1e15364d1987bf670cf6191c79c1e75e981446f288a794a283f2aae2c662657d199bb
+  languageName: node
+  linkType: hard
+
+"dsh-mnemon-strategy-auto-capture@npm:0.5.4":
+  version: 0.5.4
+  resolution: "dsh-mnemon-strategy-auto-capture@npm:0.5.4"
+  peerDependencies:
+    "@deepseek-ai/cordis": ^4.0.1
+    dsh-mnemon: ^0.5.1
+    dsh-mnemon-strategy-default-three-tier: ^0.5.1
+  checksum: 10c0/760cc0cebc9ed91e10d41c865678232e26569112c53ee401bacfa6231c3a394cd8c928a9e1ceaef127c91210e055ec51c8367d307dd573b19a0d1f0606f5fd13
+  languageName: node
+  linkType: hard
+
+"dsh-mnemon-strategy-default-three-tier@npm:0.5.5":
+  version: 0.5.5
+  resolution: "dsh-mnemon-strategy-default-three-tier@npm:0.5.5"
+  peerDependencies:
+    "@deepseek-ai/cordis": ^4.0.1
+    dsh-mnemon: ^0.5.1
+  checksum: 10c0/d1bef41b48bc0bc4e72463d31850c511fcc6f563bc016f00bfb388eb75536f0c3d99112c2694a4702fd12904f9564868ded0e167f0ad8a62364d778c15225af5
+  languageName: node
+  linkType: hard
+
+"dsh-mnemon-strategy-light-context@npm:0.5.4":
+  version: 0.5.4
+  resolution: "dsh-mnemon-strategy-light-context@npm:0.5.4"
+  peerDependencies:
+    "@deepseek-ai/cordis": ^4.0.1
+    dsh-mnemon: ^0.5.1
+    dsh-mnemon-strategy-default-three-tier: ^0.5.1
+  checksum: 10c0/06d8b6a50d729e48080db4180081c1b86a6bc5bc200eaebd57a6b518bcb35ebbe507c39e1474ada64c7a6742378378b5a002b0a5c3b3ea0f68520899530d62aa
+  languageName: node
+  linkType: hard
+
+"dsh-mnemon-strategy-scoped@npm:0.5.4":
+  version: 0.5.4
+  resolution: "dsh-mnemon-strategy-scoped@npm:0.5.4"
+  peerDependencies:
+    "@deepseek-ai/cordis": ^4.0.1
+    dsh-mnemon: ^0.5.1
+    dsh-mnemon-strategy-default-three-tier: ^0.5.1
+  checksum: 10c0/b1db1249e4137907cbcb329b966830d9763f4780c5e1b3d8af8145bd5eb76d5fd9118bc9e74f6897d875266f57d61da92fedc3b5af1285fd5e2c216e5519d4aa
+  languageName: node
+  linkType: hard
+
+"dsh-mnemon@npm:0.5.12":
+  version: 0.5.12
+  resolution: "dsh-mnemon@npm:0.5.12"
+  dependencies:
+    dsh-mnemon-provider-byterover: "npm:0.5.4"
+    dsh-mnemon-provider-hindsight: "npm:0.5.4"
+    dsh-mnemon-provider-holographic: "npm:0.5.4"
+    dsh-mnemon-provider-honcho: "npm:0.5.4"
+    dsh-mnemon-provider-mem0: "npm:0.5.4"
+    dsh-mnemon-provider-mnemon-native: "npm:0.5.5"
+    dsh-mnemon-provider-openviking: "npm:0.5.5"
+    dsh-mnemon-provider-retaindb: "npm:0.5.4"
+    dsh-mnemon-provider-supermemory: "npm:0.5.4"
+    dsh-mnemon-source-documents: "npm:0.5.6"
+    dsh-mnemon-source-memory-spaces: "npm:0.5.8"
+    dsh-mnemon-source-runtime: "npm:0.5.8"
+    dsh-mnemon-strategy-auto-capture: "npm:0.5.4"
+    dsh-mnemon-strategy-default-three-tier: "npm:0.5.5"
+    dsh-mnemon-strategy-light-context: "npm:0.5.4"
+    dsh-mnemon-strategy-scoped: "npm:0.5.4"
+    fflate: "npm:^0.8.3"
+    schemastery: "npm:^3.18.0"
+    zod: "npm:^4.4.3"
+  peerDependencies:
+    "@deepseek-ai/cordis": ^4.0.1
+    "@deepseek-ai/dsh-client-ui-primitives": ^0.1.5-rc.1 || ^0.1.6-alpha.2
+    "@deepseek-ai/dsh-typert-protocol": ^0.1.5-rc.1 || ^0.1.6-alpha.2
+    react: ^18.2.0
+    react-dom: ^18.2.0
+  bin:
+    dsh-mnemon-repair-session: bin/repair-legacy-session.mjs
+  checksum: 10c0/72fc134a8277c5b966acd9fbfa2bc33d8817fddd741e92cdc6b27aea6865020d457bfade0bfe1ea8ee29bfa119989e540603fd1a4ba2afb662e34b7045db6665
+  languageName: node
+  linkType: hard
+
 "dsh-plugin-desktop-beta@workspace:dsh-plugin-desktop-beta":
   version: 0.0.0-use.local
   resolution: "dsh-plugin-desktop-beta@workspace:dsh-plugin-desktop-beta"
@@ -12978,12 +13207,15 @@ __metadata:
     "@types/semver": "npm:^7.7.1"
     "@vitejs/plugin-react": "npm:^6"
     adm-zip: "npm:^0.6.0"
+    billion-context: "npm:0.1.131"
     builder-util: "npm:26.15.3"
     class-variance-authority: "npm:^0.7.1"
     clsx: "npm:^2.1.1"
     dsh-better-sidebar: "npm:0.19.1"
     dsh-community-market: "npm:0.1.0-dev.0"
     dsh-dream-skin: "file:../vendor/dream-skin/dsh-dream-skin-9.16.0-patched.tgz"
+    dsh-mnemon: "npm:0.5.12"
+    dsh-rewind-plugin: "npm:0.12.2"
     dsh-session-manager: "npm:0.4.11"
     dshmarket: "npm:1.38.1"
     electron: "npm:43.3.0"
@@ -13182,12 +13414,15 @@ __metadata:
     "@types/semver": "npm:^7.7.1"
     "@vitejs/plugin-react": "npm:^6"
     adm-zip: "npm:^0.6.0"
+    billion-context: "npm:0.1.131"
     builder-util: "npm:26.15.3"
     class-variance-authority: "npm:^0.7.1"
     clsx: "npm:^2.1.1"
     dsh-better-sidebar: "npm:0.19.1"
     dsh-community-market: "npm:0.1.0-dev.0"
     dsh-dream-skin: "file:../vendor/dream-skin/dsh-dream-skin-9.16.0-patched.tgz"
+    dsh-mnemon: "npm:0.5.12"
+    dsh-rewind-plugin: "npm:0.12.2"
     dsh-session-manager: "npm:0.4.11"
     dshmarket: "npm:1.38.1"
     electron: "npm:43.3.0"
@@ -13222,6 +13457,57 @@ __metadata:
     dsh-plugin-desktop: lib/bin.js
   languageName: unknown
   linkType: soft
+
+"dsh-rewind-plugin@npm:0.12.2":
+  version: 0.12.2
+  resolution: "dsh-rewind-plugin@npm:0.12.2"
+  peerDependencies:
+    "@deepseek-ai/cordis": ^4.0.1
+    "@deepseek-ai/dsh-client-locale": ^0.1.5-rc.1
+    "@deepseek-ai/dsh-client-ui-commands": ^0.1.5-rc.1
+    "@deepseek-ai/dsh-client-ui-settings": ^0.1.5-rc.1
+    "@deepseek-ai/dsh-client-ui-slots": ^0.1.5-rc.1
+    "@deepseek-ai/dsh-commands": ^0.1.5-rc.1
+    "@deepseek-ai/dsh-fs": ^0.1.5-rc.1
+    "@deepseek-ai/dsh-home-paths": ^0.1.5-rc.1
+    "@deepseek-ai/dsh-llm": ^0.1.5-rc.1
+    "@deepseek-ai/dsh-sandbox": ^0.1.5-rc.1
+    "@deepseek-ai/dsh-session": ^0.1.5-rc.1
+    "@deepseek-ai/dsh-settings": ^0.1.5-rc.1
+    "@deepseek-ai/dsh-tools": ^0.1.5-rc.1
+    "@deepseek-ai/schemastery": ^3.18.1
+  peerDependenciesMeta:
+    "@deepseek-ai/cordis":
+      optional: true
+    "@deepseek-ai/dsh-client-locale":
+      optional: true
+    "@deepseek-ai/dsh-client-ui-commands":
+      optional: true
+    "@deepseek-ai/dsh-client-ui-settings":
+      optional: true
+    "@deepseek-ai/dsh-client-ui-slots":
+      optional: true
+    "@deepseek-ai/dsh-commands":
+      optional: true
+    "@deepseek-ai/dsh-fs":
+      optional: true
+    "@deepseek-ai/dsh-home-paths":
+      optional: true
+    "@deepseek-ai/dsh-llm":
+      optional: true
+    "@deepseek-ai/dsh-sandbox":
+      optional: true
+    "@deepseek-ai/dsh-session":
+      optional: true
+    "@deepseek-ai/dsh-settings":
+      optional: true
+    "@deepseek-ai/dsh-tools":
+      optional: true
+    "@deepseek-ai/schemastery":
+      optional: true
+  checksum: 10c0/ea5eed6c301dbaa10be32bda2439425a10bd415d82711402d32fb09807cee5887ceabb9e71ec89e6d48265f48494dd74a7e83ebdf273fdd3afec46db8ff0cc37
+  languageName: node
+  linkType: hard
 
 "dsh-session-manager@npm:0.4.11":
   version: 0.4.11
@@ -13812,7 +14098,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"fflate@npm:^0.8.2":
+"fflate@npm:^0.8.2, fflate@npm:^0.8.3":
   version: 0.8.3
   resolution: "fflate@npm:0.8.3"
   checksum: 10c0/eab181ca37f5348ae76d4b6f840e0026e30220e33153289ac942222d8b9638237d486507dbcc09878d724095bd354993a2ee48bbee99c8f2c6440d4448719aa7
@@ -15528,6 +15814,18 @@ __metadata:
   dependencies:
     "@jridgewell/sourcemap-codec": "npm:^1.5.5"
   checksum: 10c0/299378e38f9a270069fc62358522ddfb44e94244baa0d6a8980ab2a9b2490a1d03b236b447eee309e17eb3bddfa482c61259d47960eb018a904f0ded52780c4a
+  languageName: node
+  linkType: hard
+
+"markdown-to-jsx@npm:^7.7.0":
+  version: 7.7.17
+  resolution: "markdown-to-jsx@npm:7.7.17"
+  peerDependencies:
+    react: ">= 0.14.0"
+  peerDependenciesMeta:
+    react:
+      optional: true
+  checksum: 10c0/581c5ee1b3c79445f9f8369dc2882d0289507e702b2fcf2bc276b163a984cdcca2d8463a609c9bf310a31dcbf10c3210721c42c9173d4f12da675d3b56243736
   languageName: node
   linkType: hard
 
@@ -19141,6 +19439,13 @@ __metadata:
   peerDependencies:
     zod: ^3.25.28 || ^4
   checksum: 10c0/dd300554393903022487688af14fbda5c719ba8179702bb55b3aa86318830467f0f7beb7d654036975ac963dc4843b72e59636448bfff9a0608f277bb6a14939
+  languageName: node
+  linkType: hard
+
+"zod@npm:4.1.8":
+  version: 4.1.8
+  resolution: "zod@npm:4.1.8"
+  checksum: 10c0/5eae39da09d7bd0564a30dfd2348811e4e2e7dd15955d8f3444f8e196f35e5422b1482eda234b722fafb0738f4a8b718adb042b860936bfdd2cc19cdbdac8a9a
   languageName: node
   linkType: hard
 

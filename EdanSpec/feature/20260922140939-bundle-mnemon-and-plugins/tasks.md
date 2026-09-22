@@ -67,7 +67,11 @@ dsh-plugin-desktop/build/mnemon/host/bin/mnemon --version   # 期望：mnemon ve
 
 ### Task-002：beta 变体接入三个插件
 
-**描述**：用仓库既有脚本把 `billion-context@0.1.135`、`dsh-rewind-plugin@0.12.2`、`dsh-mnemon@0.5.12` 加入 beta 变体的 `dependencies` 与 `DEFAULT_PROFILE_PLUGIN_BUNDLES`。**不使用** `--no-verify`，让脚本内置的四道门禁真实跑一遍。
+> **执行记录（偏离）**：`scripts/preinstall-plugins.mjs` 的 `applyEdits()` 内部对 `VARIANTS` 循环，**一次 `add` 调用同时写两个变体的 4 个文件**，没有 `--variant` 参数。因此 Task-002 与 Task-003 无法分开执行，已**合并为一次操作**，两个变体同时到位。
+>
+> **执行记录（版本偏离）**：`billion-context` 实际落地版本为 **0.1.131**，不是本任务书原定的 0.1.135。原因：`corepack yarn install` 报 `YN0016: billion-context@npm:0.1.135: All versions satisfying "0.1.135" are quarantined` —— 仓库 Yarn 4.18 的 `npmMinimalAgeGate` 默认 1440 分钟（24h）供应链观察期，而 0.1.135 发布仅 4.2 小时。0.1.131 发布于 39.9 小时前，是能通过该门禁的最新版本（0.1.132/133/134/135 均被隔离）。已经用户决策确认改用 0.1.131，未放宽门禁、未改动 `npmPreapprovedPackages`。
+
+**描述**：用仓库既有脚本把 `billion-context@0.1.131`、`dsh-rewind-plugin@0.12.2`、`dsh-mnemon@0.5.12` 加入 beta 变体的 `dependencies` 与 `DEFAULT_PROFILE_PLUGIN_BUNDLES`。**不使用** `--no-verify`，让脚本内置的四道门禁真实跑一遍。
 
 **关联需求**：`specs/desktop-preinstalled-plugins-spec.md` §默认预装插件清单。
 → Agent：读取该 spec 确认清单内容、字母序位置、版本号。
@@ -89,17 +93,17 @@ dsh-plugin-desktop/build/mnemon/host/bin/mnemon --version   # 期望：mnemon ve
 - **许可证与闭包门禁通过**：`yarn --cwd dsh-plugin-desktop-beta run verify:licenses` 与 `verify:closure` 均退出码 0。验证方式：直接执行两条命令。
 
 **增量计划**：
-- [ ] **增量 1**：`billion-context` 与 `dsh-rewind-plugin`
+- [x] **增量 1**：`billion-context` 与 `dsh-rewind-plugin`
   - 做什么：两次 `add` 调用，观察门禁输出
   - 交付：两项进入 beta 的依赖与清单
   - 对应验收标准：依赖与清单同时到位
-  - 完成判定：`node scripts/preinstall-plugins.mjs add billion-context@0.1.135 && node scripts/preinstall-plugins.mjs add dsh-rewind-plugin@0.12.2`
-- [ ] **增量 2**：`dsh-mnemon`
+  - 完成判定：`node scripts/preinstall-plugins.mjs add billion-context@0.1.131 && node scripts/preinstall-plugins.mjs add dsh-rewind-plugin@0.12.2`
+- [x] **增量 2**：`dsh-mnemon`
   - 做什么：加入第三个插件，确认其 16 个子包不引入许可证问题
   - 交付：三项齐备
   - 对应验收标准：依赖与清单同时到位、清单按字典序
   - 完成判定：`node scripts/preinstall-plugins.mjs add dsh-mnemon@0.5.12`
-- [ ] **增量 3**：门禁复跑
+- [x] **增量 3**：门禁复跑
   - 做什么：单独跑 `verify:licenses` 与 `verify:closure`，确认不是被 `add` 的临时环境掩盖
   - 交付：门禁结论
   - 对应验收标准：许可证与闭包门禁通过
@@ -130,16 +134,18 @@ dsh-plugin-desktop/build/mnemon/host/bin/mnemon --version   # 期望：mnemon ve
 - **变体门禁通过**：`yarn check:desktop-variants` 退出码 0。验证方式：仓库根执行。
 
 **增量计划**：
-- [ ] **增量 1**：stable 三项 `add`
+- [x] **增量 1**：stable 三项 `add`
   - 做什么：对 stable 变体执行三次 `add`
   - 交付：stable 依赖与清单同步
   - 对应验收标准：两变体一致
   - 完成判定：`node scripts/preinstall-plugins.mjs list`
-- [ ] **增量 2**：变体一致性门禁
+- [x] **增量 2**：变体一致性门禁
   - 做什么：跑 `check:desktop-variants` 与根 `plugins:verify`
   - 交付：一致性结论
   - 对应验收标准：既有 7 项未回归、变体门禁通过
   - 完成判定：`yarn check:desktop-variants && yarn plugins:verify`
+
+> **执行记录**：增量 1 由 Task-002 的同一批 `add` 调用完成（见 Task-002 执行记录）。实测 `node scripts/preinstall-plugins.mjs list` 输出 10 个插件，三项在两个变体下均 `✓/✓`，无漂移告警；`node scripts/verify-desktop-variants.mjs` 输出 `184 shared source files are aligned`，退出码 0；两个变体的 `verify:licenses`（941 个生产包）与 `verify:closure`（247 个 first-party 节点）退出码均为 0。
 
 **失败策略**：见全局约定。
 
