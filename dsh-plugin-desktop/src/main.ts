@@ -27,12 +27,14 @@ import {
   isDesktopInstallerQuitRequest,
 } from './desktop-installer-quit.ts'
 import { createDesktopBrowserAccess } from './desktop-browser-access.ts'
-import { installDesktopCodegraphShell } from './desktop-codegraph-shell.ts'
+import { installDesktopCliShell } from './desktop-cli-shell.ts'
 import { seedDesktopDreamSkin } from './desktop-dream-skin-default.ts'
 import {
   desktopCodegraphBundleSupportsHost,
+  desktopMnemonBundleSupportsHost,
   installDesktopCodegraphRuntime,
   installDesktopDshRuntime,
+  installDesktopMnemonRuntime,
   installDesktopPnpmRuntime,
 } from './desktop-runtime-environment.ts'
 import { desktopProductVersion, ElectronDesktopRuntime } from './electron-runtime.ts'
@@ -706,6 +708,22 @@ async function start(): Promise<void> {
         })
       : undefined
     const releaseCodegraphRuntime = generation.own(() => { codegraphRuntime?.dispose() })
+    // Publish the packaged Mnemon CLI the same way, so `dsh-mnemon` resolves
+    // `mnemon` from PATH with no plugin configuration. An installer built for
+    // another architecture is skipped rather than published broken.
+    const mnemonBundleDir = join(process.resourcesPath, 'mnemon')
+    const mnemonRuntime = desktopMnemonBundleSupportsHost(
+      mnemonBundleDir,
+      process.platform,
+      process.arch,
+    )
+      ? installDesktopMnemonRuntime({
+          platform: process.platform,
+          bundleDir: mnemonBundleDir,
+          environment: process.env,
+        })
+      : undefined
+    const releaseMnemonRuntime = generation.own(() => { mnemonRuntime?.dispose() })
     const fallbackHome = resolveDshHome()
     const defaultHome = resolve(defaultDshHome())
     const fallbackSource = process.env.DSH_HOME === undefined ? 'default' : 'environment'
@@ -722,23 +740,34 @@ async function start(): Promise<void> {
       homeDir = dataDirectoryLocation.homeDir
     }
     process.env.DSH_HOME = homeDir
-    // Expose the packaged CodeGraph CLI to the user's own terminal. A `.dmg` has
-    // no install hook, so a shim plus a PATH entry is the only way `codegraph`
-    // resolves in a shell the user starts. A failure here must never block
-    // startup: the CLI stays available to the Host through codegraphRuntime.
-    if (codegraphRuntime !== undefined && process.platform === 'darwin') {
-      try {
-        installDesktopCodegraphShell({
-          homeDir,
-          userHomeDir: app.getPath('home'),
-          launcherPath: join(codegraphRuntime.pathDir, 'codegraph'),
-          shell: process.env.SHELL,
-        })
-      } catch (cause) {
-        electronLogger.error(
-          `${BIN_NAME}: codegraph shell integration failed: `
-            + `${cause instanceof Error ? cause.message : String(cause)}`,
-        )
+    // Expose the packaged CLIs to the user's own terminal. A `.dmg` has no
+    // install hook, so a shim plus a PATH entry is the only way these commands
+    // resolve in a shell the user starts. Both CLIs share one shim directory and
+    // therefore one marked PATH block. A failure here must never block startup:
+    // the CLIs stay available to the Host through their runtime installers.
+    if (process.platform === 'darwin') {
+      const launchers = [
+        codegraphRuntime === undefined
+          ? undefined
+          : { name: 'codegraph', launcherPath: join(codegraphRuntime.pathDir, 'codegraph') },
+        mnemonRuntime === undefined
+          ? undefined
+          : { name: 'mnemon', launcherPath: join(mnemonRuntime.pathDir, 'mnemon') },
+      ].filter((launcher): launcher is { name: string; launcherPath: string } => launcher !== undefined)
+      if (launchers.length > 0) {
+        try {
+          installDesktopCliShell({
+            homeDir,
+            userHomeDir: app.getPath('home'),
+            launchers,
+            shell: process.env.SHELL,
+          })
+        } catch (cause) {
+          electronLogger.error(
+            `${BIN_NAME}: CLI shell integration failed: `
+              + `${cause instanceof Error ? cause.message : String(cause)}`,
+          )
+        }
       }
     }
     // Give a fresh installation the prepared dream-skin appearance. The plugin
@@ -1521,6 +1550,12 @@ async function start(): Promise<void> {
             hostCtx.effect(
               () => releaseCodegraphRuntime,
               'dsh-plugin-desktop: packaged codegraph runtime PATH',
+            )
+          }
+          if (mnemonRuntime !== undefined) {
+            hostCtx.effect(
+              () => releaseMnemonRuntime,
+              'dsh-plugin-desktop: packaged mnemon runtime PATH',
             )
           }
           if (dshRuntime !== undefined) {

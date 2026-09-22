@@ -93,6 +93,21 @@ export interface DesktopCodegraphRuntimeInstallation {
   dispose(): void
 }
 
+/** Inputs used to expose the packaged Mnemon CLI to the Host process. */
+export interface DesktopMnemonRuntimeOptions {
+  platform: NodeJS.Platform
+  /** Packaged platform bundle; its `bin` directory holds the `mnemon` launcher. */
+  bundleDir: string
+  environment?: NodeJS.ProcessEnv
+}
+
+/** Reversible Host PATH update publishing the packaged Mnemon CLI. */
+export interface DesktopMnemonRuntimeInstallation {
+  /** Directory prepended to the Host PATH; supplied by the installer, not generated. */
+  pathDir: string
+  dispose(): void
+}
+
 /** Reject a value that cannot be represented in a generated command file. */
 function assertScriptValue(label: string, value: string): void {
   if (value.length === 0) {
@@ -563,7 +578,34 @@ export function installDesktopDshRuntime(options: DesktopDshRuntimeOptions): Des
 /**
  * Report whether the packaged CodeGraph bundle matches the running host.
  *
- * Upstream publishes the CLI as one self-contained bundle per platform and
+ * @see {@link bundleSupportsHost} for why a mismatch is skipped rather than published.
+ */
+export function desktopCodegraphBundleSupportsHost(
+  bundleDir: string,
+  platform: NodeJS.Platform,
+  arch: NodeJS.Architecture,
+): boolean {
+  return bundleSupportsHost(bundleDir, platform, arch)
+}
+
+/**
+ * Report whether the packaged Mnemon bundle matches the running host.
+ *
+ * @see {@link bundleSupportsHost} for why a mismatch is skipped rather than published.
+ */
+export function desktopMnemonBundleSupportsHost(
+  bundleDir: string,
+  platform: NodeJS.Platform,
+  arch: NodeJS.Architecture,
+): boolean {
+  return bundleSupportsHost(bundleDir, platform, arch)
+}
+
+/**
+ * Report whether a packaged bundle's manifest declares this host's platform and
+ * architecture.
+ *
+ * Upstream publishes each CLI as one self-contained bundle per platform and
  * architecture. A macOS universal installer therefore carries a single slice in
  * both architectures, so on the other one the bundled runtime cannot execute:
  * publishing it would only replace a missing command with an obscure
@@ -574,7 +616,7 @@ export function installDesktopDshRuntime(options: DesktopDshRuntimeOptions): Des
  * @param arch - host architecture compared against the manifest `cpu` field.
  * @returns true when the bundle declares no restriction or matches the host.
  */
-export function desktopCodegraphBundleSupportsHost(
+function bundleSupportsHost(
   bundleDir: string,
   platform: NodeJS.Platform,
   arch: NodeJS.Architecture,
@@ -593,13 +635,50 @@ export function desktopCodegraphBundleSupportsHost(
 }
 
 /**
- * Install the packaged CodeGraph CLI into this Electron process's PATH.
+ * Install one packaged CLI into this Electron process's PATH.
  *
  * The CLI ships as a self-contained per-platform bundle through
  * `build.extraResources`, not as a Yarn dependency, so nothing has to be
  * generated here: the installer's directory is prepended as-is. The Host
- * process and every tool it spawns then resolve `codegraph` unchanged, which is
- * what `@deepseek-ai/dsh-mcp-client` and `@hyzyn/dsh-codegraph` both expect.
+ * process and every tool it spawns then resolve the command unchanged.
+ *
+ * @param label - CLI name used in error messages and the POSIX launcher name.
+ * @param windowsLauncher - Windows launcher file name; not always `<label>.cmd`,
+ *   because a CLI may ship a real executable (Mnemon ships `mnemon.exe`) while
+ *   another ships a batch shim (CodeGraph ships `codegraph.cmd`).
+ * @param options - packaged bundle directory, platform, and parent environment.
+ * @returns the published directory and an idempotent PATH disposer.
+ */
+function installBundledCliRuntime(
+  label: string,
+  windowsLauncher: string,
+  options: DesktopCodegraphRuntimeOptions,
+): DesktopCodegraphRuntimeInstallation {
+  if (options.platform !== 'darwin' && options.platform !== 'win32') {
+    throw new Error(`dsh-plugin-desktop: ${label} runtime is unsupported on ${options.platform}`)
+  }
+  assertScriptValue(`${label} bundle directory`, options.bundleDir)
+  if (!isAbsolute(options.bundleDir)) {
+    throw new Error(`dsh-plugin-desktop: ${label} bundle directory must be absolute`)
+  }
+
+  const pathDir = join(options.bundleDir, 'bin')
+  const launcher = join(pathDir, options.platform === 'win32' ? windowsLauncher : label)
+  if (!existsSync(launcher)) {
+    throw new Error(`dsh-plugin-desktop: packaged ${label} launcher is missing at ${launcher}`)
+  }
+
+  return {
+    pathDir,
+    dispose: installPathDirectory(options.environment ?? process.env, pathDir, options.platform),
+  }
+}
+
+/**
+ * Install the packaged CodeGraph CLI into this Electron process's PATH.
+ *
+ * The Host process and every tool it spawns then resolve `codegraph` unchanged,
+ * which `@deepseek-ai/dsh-mcp-client` and `@hyzyn/dsh-codegraph` both expect.
  *
  * @param options - packaged bundle directory, platform, and parent environment.
  * @returns the published directory and an idempotent PATH disposer.
@@ -607,24 +686,25 @@ export function desktopCodegraphBundleSupportsHost(
 export function installDesktopCodegraphRuntime(
   options: DesktopCodegraphRuntimeOptions,
 ): DesktopCodegraphRuntimeInstallation {
-  if (options.platform !== 'darwin' && options.platform !== 'win32') {
-    throw new Error(`dsh-plugin-desktop: codegraph runtime is unsupported on ${options.platform}`)
-  }
-  assertScriptValue('codegraph bundle directory', options.bundleDir)
-  if (!isAbsolute(options.bundleDir)) {
-    throw new Error('dsh-plugin-desktop: codegraph bundle directory must be absolute')
-  }
+  return installBundledCliRuntime('codegraph', 'codegraph.cmd', options)
+}
 
-  const pathDir = join(options.bundleDir, 'bin')
-  const launcher = join(pathDir, options.platform === 'win32' ? 'codegraph.cmd' : 'codegraph')
-  if (!existsSync(launcher)) {
-    throw new Error(`dsh-plugin-desktop: packaged codegraph launcher is missing at ${launcher}`)
-  }
-
-  return {
-    pathDir,
-    dispose: installPathDirectory(options.environment ?? process.env, pathDir, options.platform),
-  }
+/**
+ * Install the packaged Mnemon CLI into this Electron process's PATH.
+ *
+ * Prepending the bundle's `bin` directory is sufficient on its own:
+ * `dsh-mnemon` resolves the CLI by looking up `mnemon` on PATH (after its
+ * `cliPath` config and `MNEMON_CLI_PATH`), so no plugin configuration is
+ * involved.
+ *
+ * @param options - packaged bundle directory, platform, and parent environment.
+ * @returns the published directory and an idempotent PATH disposer.
+ */
+export function installDesktopMnemonRuntime(
+  options: DesktopMnemonRuntimeOptions,
+): DesktopMnemonRuntimeInstallation {
+  // The vendored Windows archive carries a real `bin/mnemon.exe`, not a `.cmd` shim.
+  return installBundledCliRuntime('mnemon', 'mnemon.exe', options)
 }
 
 /**

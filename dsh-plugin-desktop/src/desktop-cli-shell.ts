@@ -1,37 +1,56 @@
 /**
- * Publish the packaged CodeGraph CLI to the user's own terminal.
+ * Publish the packaged CLIs to the user's own terminal.
  *
  * A `.dmg` has no install hook: dragging the application into `/Applications`
- * is the whole installation. The Host process can publish the CLI on its own
- * PATH at runtime, but a shell started by the user is outside that process, so
- * the only way to make `codegraph` resolve there is a shim plus a PATH entry in
- * the user's shell profile.
+ * is the whole installation. The Host process can publish a CLI on its own PATH
+ * at runtime, but a shell started by the user is outside that process, so the
+ * only way to make a command resolve there is a shim plus a PATH entry in the
+ * user's shell profile.
+ *
+ * Every bundled CLI shares one shim directory and therefore one marked PATH
+ * block: adding a second CLI must not append a second block, or the profile
+ * would accumulate one `export PATH=...` line per CLI. Only the shim files
+ * differ per CLI.
  *
  * Both artifacts are generated idempotently and removed by
- * {@link uninstallDesktopCodegraphShell}. They are deliberately persistent
- * rather than released on shutdown: the point is that the command keeps working
- * after the application quits.
+ * {@link uninstallDesktopCliShell}. They are deliberately persistent rather
+ * than released on shutdown: the point is that the commands keep working after
+ * the application quits.
  */
 
 import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join, relative, resolve, sep } from 'node:path'
 
+/**
+ * Marker text is historical: it already contains the word `codegraph` because
+ * CodeGraph was the first bundled CLI. It is deliberately NOT renamed to a
+ * neutral string. An installed user profile holds a block with exactly this
+ * text, so renaming would make the old block unrecognisable, append a second
+ * one, and leave a stray `.dsh-backup-*` file behind.
+ */
 const MARKER_BEGIN = '# >>> dsh-desktop codegraph >>>'
 const MARKER_END = '# <<< dsh-desktop codegraph <<<'
-const SHIM_NAME = 'codegraph'
 const SHIM_DIRECTORY = 'bin'
 const PRIVATE_DIRECTORY_MODE = 0o700
 const EXECUTABLE_FILE_MODE = 0o755
 const PROFILE_FILE_MODE = 0o644
 
-/** Inputs required to publish the packaged CodeGraph CLI to a user's shell. */
-export interface DesktopCodegraphShellOptions {
-  /** Harness home directory; receives the generated shim under `bin/`. */
+/** One bundled CLI to publish under the shared shim directory. */
+export interface DesktopCliLauncher {
+  /** Command name, and therefore the shim's file name. Must be a bare name. */
+  name: string
+  /** Absolute path of the packaged launcher the shim delegates to. */
+  launcherPath: string
+}
+
+/** Inputs required to publish the packaged CLIs to a user's shell. */
+export interface DesktopCliShellOptions {
+  /** Harness home directory; receives the generated shims under `bin/`. */
   homeDir: string
   /** User's home directory; holds the shell profile that gains the PATH entry. */
   userHomeDir: string
-  /** Absolute path of the packaged `codegraph` launcher. */
-  launcherPath: string
+  /** Bundled CLIs to publish; all share one shim directory and one PATH block. */
+  launchers: readonly DesktopCliLauncher[]
   /** Login shell from `$SHELL`; selects which profile file is updated. */
   shell?: string | undefined
   /** Timestamp source for backup names; defaults to the wall clock. */
@@ -39,9 +58,9 @@ export interface DesktopCodegraphShellOptions {
 }
 
 /** Paths touched by one shell-integration run. */
-export interface DesktopCodegraphShellInstallation {
-  /** Generated launcher shim added to PATH. */
-  shimPath: string
+export interface DesktopCliShellInstallation {
+  /** Generated launcher shims added to PATH, in launcher order. */
+  shimPaths: string[]
   /** Shell profile that received the marked PATH block. */
   profilePath: string
   /** Directory prepended to PATH by the profile block. */
@@ -59,6 +78,17 @@ function assertValue(label: string, value: string): void {
   if (/[\0\r\n]/u.test(value)) fail(`${label} must not contain NUL or newlines`)
 }
 
+/**
+ * Reject a command name that would escape the shim directory or produce an
+ * unusable file name.
+ */
+function assertLauncherName(name: string): void {
+  assertValue('launcher name', name)
+  if (!/^[A-Za-z0-9._-]+$/u.test(name)) {
+    fail(`launcher name ${JSON.stringify(name)} must be a bare command name`)
+  }
+}
+
 /** Quote one arbitrary value as a POSIX shell word. */
 function quoteSh(value: string): string {
   return `'${value.replaceAll("'", `'"'"'`)}'`
@@ -71,7 +101,7 @@ function quoteSh(value: string): string {
  * default since Catalina. Bash login shells read `.bash_profile` instead. An
  * unknown or unset shell falls back to zsh rather than guessing further.
  */
-export function desktopCodegraphProfileName(shell?: string): string {
+export function desktopCliProfileName(shell?: string): string {
   return (shell ?? '').endsWith('bash') ? '.bash_profile' : '.zshrc'
 }
 
@@ -141,35 +171,49 @@ function applyProfileBlock(existing: string, pathDir: string, userHomeDir: strin
   return `${prefix}${separator}${block.join('\n')}\n`
 }
 
-/**
- * Write the launcher shim and add its directory to the user's shell profile.
- *
- * Safe to run on every launch: unchanged artifacts are left untouched, and the
- * profile is only rewritten when its marked block actually differs.
- */
-export function installDesktopCodegraphShell(
-  options: DesktopCodegraphShellOptions,
-): DesktopCodegraphShellInstallation {
-  assertValue('harness home directory', options.homeDir)
-  assertValue('user home directory', options.userHomeDir)
-  assertValue('codegraph launcher path', options.launcherPath)
-
-  const pathDir = join(options.homeDir, SHIM_DIRECTORY)
-  const shimPath = join(pathDir, SHIM_NAME)
-  const profilePath = join(options.userHomeDir, desktopCodegraphProfileName(options.shell))
-
-  const shim = [
+/** Render one shim that delegates to a packaged launcher. */
+function renderShim(launcherPath: string): string {
+  return [
     '#!/bin/sh',
     '# Generated by the DSH Desktop client. Do not edit: it is rewritten on launch.',
-    `exec ${quoteSh(options.launcherPath)} "$@"`,
+    `exec ${quoteSh(launcherPath)} "$@"`,
     '',
   ].join('\n')
+}
+
+/**
+ * Write the launcher shims and add their shared directory to the user's shell
+ * profile.
+ *
+ * Safe to run on every launch: unchanged artifacts are left untouched, and the
+ * profile is only rewritten when its marked block actually differs. One shim
+ * directory means one PATH block regardless of how many launchers are passed.
+ */
+export function installDesktopCliShell(options: DesktopCliShellOptions): DesktopCliShellInstallation {
+  assertValue('harness home directory', options.homeDir)
+  assertValue('user home directory', options.userHomeDir)
+  if (options.launchers.length === 0) fail('at least one launcher is required')
+
+  const pathDir = join(options.homeDir, SHIM_DIRECTORY)
+  const profilePath = join(options.userHomeDir, desktopCliProfileName(options.shell))
 
   let changed = false
-  if (readTextIfPresent(shimPath) !== shim) {
-    mkdirSync(pathDir, { recursive: true, mode: PRIVATE_DIRECTORY_MODE })
-    writeFileAtomic(shimPath, shim, EXECUTABLE_FILE_MODE)
-    changed = true
+  const shimPaths: string[] = []
+  let directoryCreated = false
+  for (const launcher of options.launchers) {
+    assertLauncherName(launcher.name)
+    assertValue(`${launcher.name} launcher path`, launcher.launcherPath)
+    const shimPath = join(pathDir, launcher.name)
+    shimPaths.push(shimPath)
+    const shim = renderShim(launcher.launcherPath)
+    if (readTextIfPresent(shimPath) !== shim) {
+      if (!directoryCreated) {
+        mkdirSync(pathDir, { recursive: true, mode: PRIVATE_DIRECTORY_MODE })
+        directoryCreated = true
+      }
+      writeFileAtomic(shimPath, shim, EXECUTABLE_FILE_MODE)
+      changed = true
+    }
   }
 
   const existing = readTextIfPresent(profilePath)
@@ -184,24 +228,31 @@ export function installDesktopCodegraphShell(
     changed = true
   }
 
-  return { shimPath, profilePath, pathDir, changed }
+  return { shimPaths, profilePath, pathDir, changed }
 }
 
 /**
- * Remove the shim and the marked PATH block, leaving the rest of the profile
+ * Remove the shims and the marked PATH block, leaving the rest of the profile
  * byte-identical. Absent artifacts are not an error.
+ *
+ * The marked block is only removed when no CLI is being published, so the
+ * block's fate is decided by the caller passing the full desired launcher set,
+ * not by which shims happen to exist.
  */
-export function uninstallDesktopCodegraphShell(
-  options: DesktopCodegraphShellOptions,
-): DesktopCodegraphShellInstallation {
+export function uninstallDesktopCliShell(options: DesktopCliShellOptions): DesktopCliShellInstallation {
   const pathDir = join(options.homeDir, SHIM_DIRECTORY)
-  const shimPath = join(pathDir, SHIM_NAME)
-  const profilePath = join(options.userHomeDir, desktopCodegraphProfileName(options.shell))
+  const profilePath = join(options.userHomeDir, desktopCliProfileName(options.shell))
 
   let changed = false
-  if (existsSync(shimPath)) {
-    rmSync(shimPath, { force: true })
-    changed = true
+  const shimPaths: string[] = []
+  for (const launcher of options.launchers) {
+    assertLauncherName(launcher.name)
+    const shimPath = join(pathDir, launcher.name)
+    shimPaths.push(shimPath)
+    if (existsSync(shimPath)) {
+      rmSync(shimPath, { force: true })
+      changed = true
+    }
   }
 
   const existing = readTextIfPresent(profilePath)
@@ -218,5 +269,5 @@ export function uninstallDesktopCodegraphShell(
     }
   }
 
-  return { shimPath, profilePath, pathDir, changed }
+  return { shimPaths, profilePath, pathDir, changed }
 }

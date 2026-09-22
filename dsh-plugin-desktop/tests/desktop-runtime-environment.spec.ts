@@ -19,8 +19,10 @@ import { pathToFileURL } from 'node:url'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   desktopCodegraphBundleSupportsHost,
+  desktopMnemonBundleSupportsHost,
   installDesktopCodegraphRuntime,
   installDesktopDshRuntime,
+  installDesktopMnemonRuntime,
   installDesktopPnpmRuntime,
   type DesktopPnpmRuntimeOptions,
 } from '../src/desktop-runtime-environment.ts'
@@ -718,5 +720,124 @@ describe('desktopCodegraphBundleSupportsHost', () => {
     const malformed = temporaryDirectory()
     writeFileSync(join(malformed, 'package.json'), 'not json')
     expect(desktopCodegraphBundleSupportsHost(malformed, 'darwin', 'arm64')).toBe(false)
+  })
+})
+
+describe('desktop Host mnemon runtime', () => {
+  /** Build a stand-in bundle shaped like the vendored per-platform package. */
+  function bundledMnemon(platform: NodeJS.Platform, manifest: Record<string, unknown> = {}): string {
+    const bundleDir = join(temporaryDirectory(), 'mnemon')
+    const binDir = join(bundleDir, 'bin')
+    mkdirSync(binDir, { recursive: true })
+    writeFileSync(
+      join(binDir, platform === 'win32' ? 'mnemon.exe' : 'mnemon'),
+      '#!/bin/sh\n',
+      { mode: 0o755 },
+    )
+    // The vendored archive reuses the main package name and puts the platform in
+    // the version, unlike CodeGraph whose platform packages are suffixed.
+    writeFileSync(
+      join(bundleDir, 'package.json'),
+      JSON.stringify({ name: '@mnemon-dev/mnemon', version: '0.2.9-darwin-arm64', ...manifest }),
+    )
+    return bundleDir
+  }
+
+  it('prepends the packaged bin directory and restores PATH on dispose', () => {
+    const bundleDir = bundledMnemon('darwin')
+    const binDir = join(bundleDir, 'bin')
+    const environment: NodeJS.ProcessEnv = { PATH: '/usr/bin:/bin' }
+
+    const installation = installDesktopMnemonRuntime({ platform: 'darwin', bundleDir, environment })
+
+    expect(installation.pathDir).toBe(binDir)
+    expect(environment.PATH).toBe(`${binDir}:/usr/bin:/bin`)
+
+    installation.dispose()
+    installation.dispose()
+    expect(environment.PATH).toBe('/usr/bin:/bin')
+  })
+
+  it('publishes the Windows launcher with the platform delimiter', () => {
+    const bundleDir = bundledMnemon('win32')
+    const environment: NodeJS.ProcessEnv = { Path: 'C:\\Windows' }
+
+    const installation = installDesktopMnemonRuntime({ platform: 'win32', bundleDir, environment })
+
+    expect(environment.Path).toBe(`${join(bundleDir, 'bin')};C:\\Windows`)
+    installation.dispose()
+    expect(environment.Path).toBe('C:\\Windows')
+  })
+
+  it('fails loud for an unsupported platform, a relative path, and a missing launcher', () => {
+    expect(() => installDesktopMnemonRuntime({
+      platform: 'linux',
+      bundleDir: temporaryDirectory(),
+      environment: {},
+    })).toThrow(/mnemon runtime is unsupported on linux/u)
+
+    expect(() => installDesktopMnemonRuntime({
+      platform: 'darwin',
+      bundleDir: 'relative/mnemon',
+      environment: {},
+    })).toThrow(/mnemon bundle directory must be absolute/u)
+
+    // A bundle without its launcher must not silently reach the Host PATH.
+    expect(() => installDesktopMnemonRuntime({
+      platform: 'darwin',
+      bundleDir: temporaryDirectory(),
+      environment: {},
+    })).toThrow(/packaged mnemon launcher is missing/u)
+  })
+
+  it('resolves the packaged CLI through PATH for a spawned process', () => {
+    const bundleDir = bundledMnemon('darwin')
+    const binDir = join(bundleDir, 'bin')
+    // A real launcher proves the published directory actually makes the command
+    // resolvable, which is the whole point of prepending it to PATH.
+    writeFileSync(join(binDir, 'mnemon'), '#!/bin/sh\nprintf "mnemon version 0.2.9\\n"\n', { mode: 0o755 })
+    const environment: NodeJS.ProcessEnv = { PATH: process.env.PATH, DSH_HOME: temporaryDirectory() }
+
+    const installation = installDesktopMnemonRuntime({ platform: 'darwin', bundleDir, environment })
+    try {
+      const result = spawnSync('mnemon', ['--version'], { env: environment, encoding: 'utf8' })
+      expect(result.stdout.trim()).toBe('mnemon version 0.2.9')
+    } finally {
+      installation.dispose()
+    }
+  })
+})
+
+describe('desktopMnemonBundleSupportsHost', () => {
+  function bundleWith(manifest: Record<string, unknown>): string {
+    const bundleDir = join(temporaryDirectory(), 'mnemon')
+    mkdirSync(bundleDir, { recursive: true })
+    writeFileSync(
+      join(bundleDir, 'package.json'),
+      JSON.stringify({ name: '@mnemon-dev/mnemon', ...manifest }),
+    )
+    return bundleDir
+  }
+
+  it('matches the declared platform and architecture', () => {
+    const bundleDir = bundleWith({ os: ['darwin'], cpu: ['arm64'] })
+
+    expect(desktopMnemonBundleSupportsHost(bundleDir, 'darwin', 'arm64')).toBe(true)
+    // A universal installer carries the arm64 bundle in the x64 slice too, where
+    // its bundled runtime cannot execute.
+    expect(desktopMnemonBundleSupportsHost(bundleDir, 'darwin', 'x64')).toBe(false)
+    expect(desktopMnemonBundleSupportsHost(bundleDir, 'win32', 'x64')).toBe(false)
+  })
+
+  it('accepts a bundle that declares no restriction', () => {
+    expect(desktopMnemonBundleSupportsHost(bundleWith({}), 'darwin', 'x64')).toBe(true)
+  })
+
+  it('rejects a missing or malformed manifest instead of publishing it', () => {
+    expect(desktopMnemonBundleSupportsHost(join(temporaryDirectory(), 'absent'), 'darwin', 'arm64')).toBe(false)
+
+    const malformed = temporaryDirectory()
+    writeFileSync(join(malformed, 'package.json'), 'not json')
+    expect(desktopMnemonBundleSupportsHost(malformed, 'darwin', 'arm64')).toBe(false)
   })
 })

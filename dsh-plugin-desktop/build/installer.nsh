@@ -99,6 +99,7 @@ Var pid
 !define DSH_WM_WININICHANGE 0x001A
 
 !define DSH_CODEGRAPH_BIN "resources\codegraph\bin"
+!define DSH_MNEMON_BIN "resources\mnemon\bin"
 
 !macro customInstall
   ; customInstall runs after installApplicationFiles, so the CLI can be checked
@@ -131,9 +132,53 @@ Var pid
       SendMessage ${DSH_HWND_BROADCAST} ${DSH_WM_WININICHANGE} 0 "STR:Environment" /TIMEOUT=5000
     ${endIf}
   ${endIf}
+
+  ; The packaged Mnemon CLI ships the same way and is published the same way.
+  ; This branch is deliberately a mirror of the one above rather than a
+  ; parameterized loop: NSIS macros are textual, so a shared body would need
+  ; every define and register name passed in, which reads worse than the
+  ; duplication it removes.
+  ;
+  ; It runs second so the uninstall below can peel the entries off in reverse
+  ; order, each one still last when its turn comes.
+  ${if} ${FileExists} "$INSTDIR\${DSH_MNEMON_BIN}\mnemon.exe"
+    ReadRegStr $0 HKCU "Environment" "Path"
+    ${StrContains} $1 "${DSH_MNEMON_BIN}" "$0"
+    ${if} $1 == ""
+      ; The CodeGraph branch above may already have replaced the backup with an
+      ; already-modified PATH. Only the first writer keeps the pristine value.
+      ReadRegStr $6 HKCU "Software\${PRODUCT_NAME}" "PathBackup"
+      ${if} $6 == ""
+        WriteRegExpandStr HKCU "Software\${PRODUCT_NAME}" "PathBackup" "$0"
+      ${endIf}
+      ${if} $0 == ""
+        StrCpy $0 "$INSTDIR\${DSH_MNEMON_BIN}"
+      ${else}
+        StrCpy $0 "$0;$INSTDIR\${DSH_MNEMON_BIN}"
+      ${endIf}
+      WriteRegExpandStr HKCU "Environment" "Path" "$0"
+      SendMessage ${DSH_HWND_BROADCAST} ${DSH_WM_WININICHANGE} 0 "STR:Environment" /TIMEOUT=5000
+    ${endIf}
+  ${endIf}
 !macroend
 
 !macro customUnInstall
+  ; Mnemon was appended last, so it is peeled off first; the CodeGraph branch
+  ; below then finds its own entry last and can remove it in turn. The mirror of
+  ; the install order is what makes both checks succeed.
+  ReadRegStr $0 HKCU "Environment" "Path"
+  StrLen $2 "$0"
+  StrLen $3 ";$INSTDIR\${DSH_MNEMON_BIN}"
+  ${if} $2 > $3
+    StrCpy $4 "$0" $3 -$3
+    ${if} $4 == ";$INSTDIR\${DSH_MNEMON_BIN}"
+      IntOp $5 $2 - $3
+      StrCpy $0 "$0" $5
+      WriteRegExpandStr HKCU "Environment" "Path" "$0"
+      SendMessage ${DSH_HWND_BROADCAST} ${DSH_WM_WININICHANGE} 0 "STR:Environment" /TIMEOUT=5000
+    ${endIf}
+  ${endIf}
+
   ; The installer appends to the end, so the entry is only removed when it is
   ; still last. A user who reordered PATH keeps their arrangement, and the cost
   ; of leaving a stale directory behind is that Windows skips a name that no
