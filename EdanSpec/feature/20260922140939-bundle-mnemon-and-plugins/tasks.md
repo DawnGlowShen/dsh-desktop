@@ -275,23 +275,26 @@ yarn --cwd dsh-plugin-desktop test tests/package.spec.ts
 - **卸载移除全部 shim**：卸载后两个 shim 均不存在、marker 块被移除、用户其余内容逐字节不变。验证方式：spec 用例。
 
 **增量计划**：
-- [ ] **增量 1**：改名 + 单 launcher 等价行为
+- [x] **增量 1**：改名 + 单 launcher 等价行为
   - 做什么：文件与导出改名，签名改为 `launchers` 数组，行为与改动前对单个 launcher 完全等价
   - 交付：改名后的模块与迁移后的 spec（原用例全绿即证明等价）
   - 对应验收标准：多 launcher 一次登记（单 launcher 退化情形）
   - 完成判定：`yarn --cwd dsh-plugin-desktop-beta test tests/desktop-cli-shell.spec.ts`
-- [ ] **增量 2**：多 launcher 与幂等
+- [x] **增量 2**：多 launcher 与幂等
   - 做什么：补多 launcher 用例、marker 唯一性用例、重复调用 `changed === false` 与备份数量用例
   - 交付：spec 覆盖 spec.md 中 §macOS 终端可直接使用 mnemon 的全部场景
   - 对应验收标准：marker 块唯一、重复调用不写盘
   - 完成判定：`yarn --cwd dsh-plugin-desktop-beta test tests/desktop-cli-shell.spec.ts`
-- [ ] **增量 3**：卸载
+- [x] **增量 3**：卸载
   - 做什么：`uninstallDesktopCliShell` 移除全部 launcher 的 shim
   - 交付：卸载用例
   - 对应验收标准：卸载移除全部 shim
   - 完成判定：`yarn --cwd dsh-plugin-desktop-beta test tests/desktop-cli-shell.spec.ts`
 
 **失败策略**：见全局约定。注意：改名的同时必须同步 `main.ts` 的 import，否则 typecheck 失败——本任务的完成判定以 spec 通过为准，typecheck 在 Task-008 一并处理。
+
+> **执行记录（重构与偏离）**：`dsh-plugin-desktop-beta/src/desktop-codegraph-shell.ts` 改名为 `src/desktop-cli-shell.ts`，spec 同步改名。导出面改为 `desktopCliProfileName(shell?)` / `installDesktopCliShell(options)` / `uninstallDesktopCliShell(options)`，**不保留旧名兼容别名**（包内唯一调用方 `main.ts` 在 Task-008 一并更新）。`MARKER_BEGIN`（`# >>> dsh-desktop codegraph >>>`）与 `MARKER_END` 文本及 `SHIM_DIRECTORY = 'bin'` 保持原值不变（design.md 决策三）；`SHIM_NAME` 常量移除。新增 `DesktopCliLauncher { name; launcherPath }`、`DesktopCliShellOptions.launchers`、`DesktopCliShellInstallation.shimPaths`；新增 `assertLauncherName()`（正则 `^[A-Za-z0-9._-]+$`）拒绝 `../escape`、空名与含空格名；空 `launchers` 抛 `at least one launcher is required`；空 `launcherPath` 抛 `${name} launcher path must not be empty`。多个 launcher 共享同一 `pathDir`，故 marker 块仍只出现一次，且目录创建改为幂等（`directoryCreated`）。
+> **执行记录**：实测 `yarn workspace dsh-plugin-desktop-beta test tests/desktop-cli-shell.spec.ts` → **15 passed**，退出码 0。关键回归用例：先只登记 codegraph、再调用一次追加 mnemon，断言 (a) `~/.zshrc` 的 marker 块**逐字节不变**、(b) 不产生第二个 `.dsh-backup-*`、(c) `<homeDir>/bin/mnemon` 出现。这条用例直接对应 design.md 决策三「已安装用户 profile 不变」。其余覆盖：shim 可执行位与 `exec '<abs>' "$@"` 转发、无尾换行 profile、shim 目录移动后原地改写块、目录在 `$HOME` 外时保留绝对路径、bash 走 `.bash_profile`、含空格与单引号的参数转发、单次备份文件名（`now: () => new Date('2026-01-02T03:04:05.678Z')` → `.dsh-backup-2026-01-02T03-04-05-678Z`）。
 
 ### Task-007：mnemon runtime 发布
 
@@ -317,18 +320,21 @@ yarn --cwd dsh-plugin-desktop test tests/package.spec.ts
 - **可执行缺失即抛错**：`bin` 存在但 `mnemon`/`mnemon.exe` 缺失时抛错。验证方式：spec 用例。
 
 **增量计划**：
-- [ ] **增量 1**：`desktopMnemonBundleSupportsHost`
+- [x] **增量 1**：`desktopMnemonBundleSupportsHost`
   - 做什么：复制 codegraph 的清单判定逻辑并改用 mnemon 的字段语义
   - 交付：判定函数 + 三条清单相关用例
   - 对应验收标准：架构不匹配返回 false、清单不可读返回 false
   - 完成判定：`yarn --cwd dsh-plugin-desktop-beta test tests/desktop-runtime-environment.spec.ts`
-- [ ] **增量 2**：`installDesktopMnemonRuntime`
+- [x] **增量 2**：`installDesktopMnemonRuntime`
   - 做什么：darwin/win32 分支、可执行存在性校验、复用 `installPathDirectory`
   - 交付：安装函数 + 发布/还原/抛错用例
   - 对应验收标准：架构匹配时发布并可还原、可执行缺失即抛错
   - 完成判定：`yarn --cwd dsh-plugin-desktop-beta test tests/desktop-runtime-environment.spec.ts`
 
 **失败策略**：见全局约定。
+
+> **执行记录（重构偏离）**：实现时把与 codegraph 重复的部分抽为内部共用函数 `bundleSupportsHost()` 与 `installBundledCliRuntime()`，两个导出 `desktopMnemonBundleSupportsHost` / `installDesktopMnemonRuntime` 只是薄包装。理由是原任务书的「与 codegraph 同构」若逐行复制会产生两份近乎相同的 PATH 前置与 manifest 校验逻辑，后续任一侧修 bug 都要改两处。**Windows 启动器名不从包名推导**：`installBundledCliRuntime()` 的第二个参数由调用方传入，codegraph 传 `codegraph.cmd`（批处理 shim）、mnemon 传 `mnemon.exe`（真实可执行文件）——这个坑详见 `docs/bundle-mnemon-cli.zh.md` §2.3。
+> **执行记录**：实测 `yarn workspace dsh-plugin-desktop-beta test tests/desktop-runtime-environment.spec.ts` → **27 passed**（20 → 27，新增 7 条），退出码 0。覆盖 `desktopMnemonBundleSupportsHost` 的 os/cpu 不匹配返回 false、manifest 缺失或 JSON 非法返回 false（异常一律吞掉返回 false）、以及 `installDesktopMnemonRuntime` 前置 PATH 后 `mnemon` 可解析、`dispose()` 逐条目还原原 PATH 且不改变其余顺序。
 
 ### Task-008：beta 启动接线与 Windows 安装器
 
@@ -355,23 +361,27 @@ yarn --cwd dsh-plugin-desktop test tests/package.spec.ts
 - **NSIS 计数与分支**：`WriteRegExpandStr HKCU "Environment" "Path"` 恰好出现 4 次；mnemon 的 `FileExists` 与 `${StrContains}` 判断存在；卸载分支按末尾位置判断。验证方式：`yarn --cwd dsh-plugin-desktop-beta test tests/installer-nsh.spec.ts`。
 
 **增量计划**：
-- [ ] **增量 1**：`main.ts` 接入 runtime 与 shell
+- [x] **增量 1**：`main.ts` 接入 runtime 与 shell
   - 做什么：加 `mnemonRuntime` 安装块（与 codegraph 同构，含 `desktopMnemonBundleSupportsHost` 判定）、把 shell 调用改成 launchers 两项、加 `releaseMnemonRuntime`
   - 交付：启动接线完成
   - 对应验收标准：启动不因 mnemon 失败而中断、shell 一次登记两个 CLI、PATH 释放精确
   - 完成判定：`yarn --cwd dsh-plugin-desktop-beta run build && yarn --cwd dsh-plugin-desktop-beta run typecheck`
-- [ ] **增量 2**：`installer.nsh` 两组分支
+- [x] **增量 2**：`installer.nsh` 两组分支
   - 做什么：新增 mnemon define 与 install/uninstall 分支，保持 codegraph 分支不变
   - 交付：安装器脚本
   - 对应验收标准：NSIS 计数与分支
   - 完成判定：`yarn --cwd dsh-plugin-desktop-beta test tests/installer-nsh.spec.ts`
-- [ ] **增量 3**：`installer-nsh.spec.ts` 断言更新
+- [x] **增量 3**：`installer-nsh.spec.ts` 断言更新
   - 做什么：计数 2 → 4，新增两组分支各自的断言
   - 交付：用例通过
   - 对应验收标准：NSIS 计数与分支
   - 完成判定：`yarn --cwd dsh-plugin-desktop-beta test tests/installer-nsh.spec.ts`
 
 **失败策略**：见全局约定。
+
+> **执行记录**：`main.ts` 的 `desktop-codegraph-shell.ts` import 改为 `./desktop-cli-shell.ts` / `installDesktopCliShell`，一次调用传入两个 launcher（codegraph 走 `codegraphRuntime.pathDir`，mnemon 走 `mnemonRuntime.pathDir`）。mnemon 接线与 codegraph 并列：`mnemonBundleDir = join(process.resourcesPath, 'mnemon')` → `desktopMnemonBundleSupportsHost()` 做主机架构校验 → 通过才 `installDesktopMnemonRuntime()` → `generation.own(() => { mnemonRuntime?.dispose() })` 注册可逆释放。**失败只 `electronLogger.error()`，不抛异常、不阻断启动**（darwin-only 的 try/catch 与 codegraph 同构）。
+> **执行记录（NSIS 偏离）**：任务书写「镜像两组分支」，实际**未做成参数化循环**——NSIS 宏是文本展开的，共用宏体需把每个 `!define` 与寄存器名一并传参，比省下的重复更难读（design.md 决策四已记录该取舍）。另有两处必须成立的不变量：(a) 卸载顺序**与安装严格相反**（安装 codegraph→mnemon，卸载先剥 mnemon 再剥 codegraph），因为每个条目只在自己仍是 PATH 最后一项时才移除；(b) `PathBackup` **只由第一个真正改动 PATH 的分支写**——mnemon 分支先 `ReadRegStr $6 HKCU "Software\${PRODUCT_NAME}" "PathBackup"`，为空才写，否则备份里存的会是「已含 codegraph 的 PATH」而非用户最初的 PATH。`WriteRegExpandStr HKCU "Environment" "Path"` 仍**恰好出现两次**（每分支一次），未用 `setx`、未用 `WriteRegStr`。
+> **执行记录**：实测 `yarn workspace dsh-plugin-desktop-beta test tests/installer-nsh.spec.ts` → **7 passed**（5 → 7），退出码 0。既有 codegraph 断言（`DSH_CODEGRAPH_BIN`、`StrCpy $4 "$0" $3 -$3`、`${if} $4 == ";$INSTDIR\${DSH_CODEGRAPH_BIN}"`、`${DSH_WM_WININICHANGE}`、恰好两次 `WriteRegExpandStr`）全部保留未改。新增两条：mnemon 分支存在，且卸载段中 mnemon 出现在 codegraph **之前**。**注意：注册表 PATH 的实际写入效果未在 native Windows 上验证**（本机 macOS，`scripts/package-win.ts:115-116` 硬断言必须在 native Windows 构建），需人工装一次并开新终端确认，见 `docs/bundle-mnemon-cli.zh.md` §8.3。
 
 ### 检查点 4
 
@@ -411,18 +421,21 @@ yarn --cwd dsh-plugin-desktop-beta test
 - **stable 全量测试通过**：`yarn --cwd dsh-plugin-desktop test` 退出码 0。验证方式：直接执行。
 
 **增量计划**：
-- [ ] **增量 1**：`src/` 三个文件同步
+- [x] **增量 1**：`src/` 三个文件同步
   - 做什么：按 beta 逐字节复制，删除 stable 的旧文件名，同步 `main.ts` 的 import
   - 交付：stable 源码一致
   - 对应验收标准：src 逐字节一致
   - 完成判定：`yarn check:desktop-variants`
-- [ ] **增量 2**：spec 文件同步
+- [x] **增量 2**：spec 文件同步
   - 做什么：同步三个测试文件
   - 交付：测试齐备
   - 对应验收标准：stable 全量测试通过
   - 完成判定：`yarn --cwd dsh-plugin-desktop test`
 
 **失败策略**：见全局约定。
+
+> **执行记录（提交合并偏离）**：stable 同步了 `src/desktop-cli-shell.ts`（由 `desktop-codegraph-shell.ts` 改名）、`src/desktop-runtime-environment.ts`、`src/main.ts` 与两个 spec 文件。Task-006/007/008 与 Task-009/010 实际在**同一次提交** `edf76cf308 feat(desktop): 内置 mnemon CLI 的宿主 PATH、shell 集成与 Windows 安装器` 中落地——因为两变体的 `src/` 必须逐字节一致，分开提交会留下无法通过 `check:desktop-variants` 的中间态。
+> **执行记录**：实测 `node scripts/verify-desktop-variants.mjs` → `184 shared source files are aligned`，退出码 0；两变体 `typecheck` 退出码均为 0；stable 全量 137 个测试文件 **1399 passed | 8 skipped**、beta 135 个文件 **1385 passed | 7 skipped**，均退出码 0。另：`yarn check:layout` → `verify-layout: dual Desktop workspaces and upstream fb2c4b9e69 are consistent`；两变体 `verify:licenses` → `941 production packages checked`；两变体 `verify:closure` → `247 first-party nodes form a closed reachable runtime graph`。
 
 ### Task-010：stable Windows 安装器同步
 
@@ -446,18 +459,20 @@ yarn --cwd dsh-plugin-desktop-beta test
 - **stable 安装器用例通过**：`yarn --cwd dsh-plugin-desktop test tests/installer-nsh.spec.ts` 退出码 0。验证方式：直接执行。
 
 **增量计划**：
-- [ ] **增量 1**：`installer.nsh` 同步
+- [x] **增量 1**：`installer.nsh` 同步
   - 做什么：同步 mnemon 分支
   - 交付：脚本一致
   - 对应验收标准：归一化后逐字节一致
   - 完成判定：归一化 `diff`
-- [ ] **增量 2**：spec 同步
+- [x] **增量 2**：spec 同步
   - 做什么：同步断言
   - 交付：用例通过
   - 对应验收标准：stable 安装器用例通过
   - 完成判定：`yarn --cwd dsh-plugin-desktop test tests/installer-nsh.spec.ts`
 
 **失败策略**：见全局约定。
+
+> **执行记录**：`dsh-plugin-desktop/build/installer.nsh` 与 beta 版本同步为镜像分支结构（新增 `!define DSH_MNEMON_BIN "resources\mnemon\bin"`），归一化产品字符串后两侧逐字节一致。stable 的 `tests/installer-nsh.spec.ts` 同步补齐为 7 条断言，与 beta 同集。
 
 ### Task-011：Profile 预装清单相关用例同步
 
@@ -481,18 +496,21 @@ yarn --cwd dsh-plugin-desktop-beta test
 - **两变体清单内容一致**：`node scripts/preinstall-plugins.mjs list` 输出两侧清单项完全相同。验证方式：执行该命令。
 
 **增量计划**：
-- [ ] **增量 1**：跑现有用例确认是否需要改动
+- [x] **增量 1**：跑现有用例确认是否需要改动
   - 做什么：先执行 `yarn --cwd dsh-plugin-desktop test tests/profile.spec.ts tests/profile-manager.spec.ts`，仅在失败时按实际清单更新断言
   - 交付：结论与必要的改动
   - 对应验收标准：新 Profile 含三项
   - 完成判定：`yarn --cwd dsh-plugin-desktop test tests/profile.spec.ts tests/profile-manager.spec.ts`
-- [ ] **增量 2**：两变体清单一致性
+- [x] **增量 2**：两变体清单一致性
   - 做什么：确认 stable 清单与 beta 相同
   - 交付：一致性结论
   - 对应验收标准：两变体清单内容一致
   - 完成判定：`node scripts/preinstall-plugins.mjs list`
 
 **失败策略**：见全局约定。若用例通过则本任务只留下结论，不产生代码改动。
+
+> **执行记录（本任务不产生代码改动，只留下结论）**：两个变体的 `tests/profile.spec.ts`（54 用例）与 `tests/profile-manager.spec.ts`（20 用例）都以 `...DEFAULT_PROFILE_PLUGIN_BUNDLES` 展开断言，**没有硬编码的清单长度或元素列表**，故三个新插件自动被覆盖。实测 `yarn workspace dsh-plugin-desktop-beta test tests/profile.spec.ts tests/profile-manager.spec.ts` 与 stable 同一命令，**两侧均 74 passed**，退出码 0——先跑后判，确认无需改动。
+> **执行记录**：`node scripts/preinstall-plugins.mjs list` 输出**默认预装清单 10 个插件**，`billion-context` / `dsh-mnemon` / `dsh-rewind-plugin` 三项在两个变体下均 `✓/✓`，无漂移告警。
 
 ### Task-012：中文说明文档
 
@@ -516,18 +534,23 @@ yarn --cwd dsh-plugin-desktop-beta test
 - **不触发双语门禁**：`yarn check:docs`（若存在）退出码 0。验证方式：仓库根执行对应 gate。
 
 **增量计划**：
-- [ ] **增量 1**：结构与事实章节
+- [x] **增量 1**：结构与事实章节
   - 做什么：按 `docs/bundle-codegraph-cli.zh.md` 的章节组织方式写「结论速览 / 需求 / 查证到的事实 / 方案」四段
   - 交付：文档前半
   - 对应验收标准：文档覆盖六个要点
   - 完成判定：人工核对标题
-- [ ] **增量 2**：验证与回滚章节
+- [x] **增量 2**：验证与回滚章节
   - 做什么：写验证命令与回滚步骤，逐条实跑
   - 交付：完整文档
   - 对应验收标准：命令可复制执行、不触发双语门禁
   - 完成判定：逐条执行文档命令 + 文档门禁
 
 **失败策略**：见全局约定。
+
+> **执行记录**：`docs/bundle-mnemon-cli.zh.md` 已写出（新建，纯中文单语言）。结构与 `docs/bundle-codegraph-cli.zh.md` 对齐，但在差异处独立成节：结论速览表、需求、**查证到的事实**（2.1 单个自包含 Go 二进制 vs codegraph 内嵌 Node 的对比表、2.2 adhoc 签名、**2.3 Windows 是 `.exe` 不是 `.cmd` 的踩坑记录**、2.4 `findMnemonCommand()` 的 PATH 发现优先级、2.5 `name`/`version` 约定与 codegraph 相反）、两平台机制差异（3.1 共用 marker 块、3.2 NSIS 镜像分支 + 反序卸载 + `PathBackup` 只写一次 + 便携版）、方案四层、改动清单 12 项、**体积实测**、风险与坑（codegraph 共有风险只给交叉引用，mnemon 特有 8 条）、验证方法（8.1 通用 / 8.2 macOS / 8.3 Windows / 8.4 应用内）、回滚（含「不要手删 `~/.zshrc` 标记块，它正被 codegraph 使用」的陷阱）、实施记录（含 5 条与计划的偏差）、附 A（为何不用 `npm i -g`）/ 附 B（为何 Windows 不照抄 macOS）。
+> **执行记录（事实取证）**：体积数据为实测——`gzip -9 -c build/mnemon/host/bin/mnemon | wc -c` → 6,153,199 字节，`6,153,199 / 15,519,186 = 0.396`，**高于** codegraph 的 0.322（Go 静态二进制的可压缩性不如 JS 文本），文档中明确写了「不可直接套用」。物化后 `build/mnemon/host/` 为 15 MB（codegraph 是 278 MB）；`otool -L` 只依赖 `libSystem.B.dylib` / `libresolv.9.dylib` / `CoreFoundation` / `Security`，无第三方动态库；`codesign -dv` 为 `flags=0x20002(adhoc,linker-signed)`、`Signature=adhoc`、`Identifier=a.out`。
+> **执行记录（文档门禁）**：`node scripts/verify-bilingual-docs.mjs` 只扫 `git ls-files '*.i18n.yaml'`，纯中文新文档无 `.i18n.yaml` 配对，**不触发双语门禁**（与既有 `docs/bundle-codegraph-cli.zh.md` 一致）。
+> **执行记录（范围偏离，已回滚）**：一度执行 `verify:notices` 重新生成 `THIRD_PARTY_NOTICES.md`，`git diff` 新增 393 行但**同时删除 8 行仅 Windows 的平台包**（`@img/sharp-win32-*`、`@koromix/koffi-win32-*`、`@vscode/ripgrep-win32-*`、`node-addon-require-builtin-win32-*-msvc`）——根因是本机 `supportedArchitectures.os=[current]` 只装了 darwin，属宿主相关噪声。核对 `git show HEAD` 版本后确认**已提交的 notices 本就不含任何内置预装插件**（`dsh-better-sidebar`、`@hyzyn/dsh-codegraph` 同样计数为 0），且 `verify:notices` 不在任何 `check` 门禁链内。**已 `git checkout --` 回滚，本次不改动、不提交。**
 
 ### 检查点 5
 
