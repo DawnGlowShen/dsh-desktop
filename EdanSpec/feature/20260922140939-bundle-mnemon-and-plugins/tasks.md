@@ -184,18 +184,22 @@ yarn plugins:verify
 - **打包用例通过**：`yarn --cwd dsh-plugin-desktop-beta test tests/package.spec.ts` 退出码 0。验证方式：直接执行。
 
 **增量计划**：
-- [ ] **增量 1**：`package.json` 的 `build` 三处改动
+- [x] **增量 1**：`package.json` 的 `build` 三处改动
   - 做什么：加 `extraResources` 条目、加 `x64ArchFiles` 片段、五个脚本加前缀
   - 交付：打包配置就绪
   - 对应验收标准：五个脚本前缀齐备、extraResources 与 x64ArchFiles 正确
   - 完成判定：`node -e` 打印五个脚本与两个 build 字段
-- [ ] **增量 2**：`package.spec.ts` 断言同步
+- [x] **增量 2**：`package.spec.ts` 断言同步
   - 做什么：更新脚本字符串断言与 `extraResources` 深比较
   - 交付：用例通过
   - 对应验收标准：打包用例通过
   - 完成判定：`yarn --cwd dsh-plugin-desktop-beta test tests/package.spec.ts`
 
 **失败策略**：见全局约定。
+
+> **执行记录（偏离）**：前缀顺序实际为 `node ../scripts/prepare-codegraph.mjs && node ../scripts/prepare-mnemon.mjs && `，**codegraph 在前、mnemon 在后**，与本节验收标准写反。理由：把新前缀追加在既有前缀之后，`git diff` 只显示新增片段，不重写 codegraph 的既有顺序，diff 更小也更易复核；两者无执行顺序依赖（各自独立物化到 `build/codegraph/host` 与 `build/mnemon/host`）。
+>
+> **执行记录**：实测 `node -e` 校验五个脚本前缀齐备、`extraResources` 为三项（codegraph / mnemon / dream-skin-default）、`mac.x64ArchFiles` 同时含 `Resources/codegraph/**` 与 `Resources/mnemon/**`；`yarn --cwd dsh-plugin-desktop-beta test tests/package.spec.ts` 输出 46 passed | 1 skipped，退出码 0。另在 `package.spec.ts` 补了两条 `x64ArchFiles` 断言，使两个内置 CLI 的资源路径都有用例覆盖（原先只有 `node-pty`/`fs-ext` 的断言）。
 
 ### Task-005：stable 变体打包配置同步
 

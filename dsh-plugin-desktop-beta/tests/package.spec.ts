@@ -916,7 +916,7 @@ describe('published package surface', () => {
     expect(manifest.scripts?.['prepare:electron-native']).toBe('node scripts/prepare-fs-ext.ts')
     expect(manifest.scripts?.dev).toContain('yarn run prepare:electron-native')
     expect(manifest.scripts?.['package:dir'])
-      .toBe('node ../scripts/prepare-codegraph.mjs && yarn run build && yarn run prepare:electron-native && node scripts/package-dir.mjs')
+      .toBe('node ../scripts/prepare-codegraph.mjs && node ../scripts/prepare-mnemon.mjs && yarn run build && yarn run prepare:electron-native && node scripts/package-dir.mjs')
     expect(packageDir).toContain("CSC_IDENTITY_AUTO_DISCOVERY: 'false'")
     expect(packageDir).toContain("'--config.forceCodeSigning=false'")
     expect(packageDir).toContain("'--config.mac.identity=null'")
@@ -925,10 +925,10 @@ describe('published package surface', () => {
     expect(packageDir).toContain("require.resolve('electron/package.json')")
     expect(packageDir).toContain('--config.electronDist=')
     expect(packageDir).toContain('electronBuilderEnvironment')
-    expect(manifest.scripts?.['dist:mac']).toBe('node ../scripts/prepare-codegraph.mjs && node scripts/release-mac.ts')
-    expect(manifest.scripts?.['dist:mac-smoke']).toBe('node ../scripts/prepare-codegraph.mjs && node scripts/package-mac.ts')
-    expect(manifest.scripts?.['dist:win']).toBe('node ../scripts/prepare-codegraph.mjs && node scripts/package-win.ts')
-    expect(manifest.scripts?.['dist:win-portable']).toBe('node ../scripts/prepare-codegraph.mjs && node scripts/package-win-portable.ts')
+    expect(manifest.scripts?.['dist:mac']).toBe('node ../scripts/prepare-codegraph.mjs && node ../scripts/prepare-mnemon.mjs && node scripts/release-mac.ts')
+    expect(manifest.scripts?.['dist:mac-smoke']).toBe('node ../scripts/prepare-codegraph.mjs && node ../scripts/prepare-mnemon.mjs && node scripts/package-mac.ts')
+    expect(manifest.scripts?.['dist:win']).toBe('node ../scripts/prepare-codegraph.mjs && node ../scripts/prepare-mnemon.mjs && node scripts/package-win.ts')
+    expect(manifest.scripts?.['dist:win-portable']).toBe('node ../scripts/prepare-codegraph.mjs && node ../scripts/prepare-mnemon.mjs && node scripts/package-win-portable.ts')
     expect(manifest.scripts?.['check:win-package']).toContain('yarn workspace dsh-community-market build')
     expect(manifest.scripts?.['check:win-package']).toContain('yarn run build')
     expect(manifest.scripts?.['check:win-package']).toContain('yarn run typecheck')
@@ -960,9 +960,11 @@ describe('published package surface', () => {
       .toBe('yarn aa:prepare-release && yarn workspace dsh-community-market build && yarn workspace dsh-plugin-desktop-beta dist:win-portable')
     // The vendored CodeGraph CLI must reach the installer as extraResources, not as a
     // Yarn dependency: a platform package carrying "cpu": ["arm64"] can be dropped from
-    // the x64 slice of the universal build and break @electron/universal.
+    // the x64 slice of the universal build and break @electron/universal. The vendored
+    // Mnemon CLI ships the same way and for the same reason.
     expect(manifest.build?.extraResources).toEqual([
       { from: 'build/codegraph/host', to: 'codegraph' },
+      { from: 'build/mnemon/host', to: 'mnemon' },
       { from: 'build/dream-skin-default.json', to: 'dream-skin-default.json' },
     ])
     expect(manifest.build?.afterPack).toBe('./scripts/verify-packaged-runtime.ts')
@@ -982,6 +984,10 @@ describe('published package surface', () => {
     }))
     expect(manifest.build?.npmRebuild).toBe(false)
     expect(manifest.build?.mac?.x64ArchFiles).toContain('fs-ext/prebuilds/darwin-*')
+    // Both bundled CLIs live outside node_modules, so @electron/universal has to be
+    // told explicitly that their resources are arch-independent.
+    expect(manifest.build?.mac?.x64ArchFiles).toContain('Resources/codegraph/**')
+    expect(manifest.build?.mac?.x64ArchFiles).toContain('Resources/mnemon/**')
     expect(manifest.build?.files).toContain('!node_modules/node-pty/build/**')
     expect(manifest.build?.files).toContain('!node_modules/fs-ext/build/**')
     expect(manifest.devDependencies?.['@electron/asar']).toBe('3.4.1')
