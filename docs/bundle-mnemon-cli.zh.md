@@ -123,11 +123,27 @@ installBundledCliRuntime('mnemon',    'mnemon.exe',    options)   // 真实可�
 
 1. `config.cliPath`（插件配置）
 2. 环境变量 `MNEMON_CLI_PATH`
-3. **在 `PATH` 里查 `mnemon`**（Windows 上补 `.exe` 与 `.cmd` 两个后缀）
+3. **在 `PATH` 里查 `mnemon`**（Windows 上按 `.exe`、`.cmd` 两个后缀探测）
 4. 若干常见路径兜底
 
 第 3 步就是我们的切入点。**把包内 `bin` 目录前置到 Host 进程的 `PATH` 即可**，
 不需要写任何插件配置、不需要改 `cliPath`、不需要设环境变量。
+
+> **`.cmd` 那个后缀其实是幌子。** `native-cli.js:94-100` 虽然列出 `.exe` 与 `.cmd`
+> 两个候选名，但对 `.cmd` 追加了一道守卫：
+> `if (/\.cmd$/i.test(name) && mnemonNpmLauncher(path) === void 0) continue;`
+> ——只有**被识别为 npm 安装的启动器**才接受 `.cmd`，自己手写的批处理 shim 会被跳过。
+> 已用一次进程内验证确认（`isExecutable` 桩函数只为对应后缀返回 true）：
+>
+> ```js
+> findMnemonCommand({}, { platform: 'win32', env: { Path: 'C:\\bundle\\bin' }, home: 'C:\\Users\\x',
+>   isExecutable: p => /mnemon\.exe$/i.test(p) })   // -> C:\bundle\bin\mnemon.exe
+> findMnemonCommand({}, { platform: 'win32', env: { Path: 'C:\\bundle\\bin' }, home: 'C:\\Users\\x',
+>   isExecutable: p => /mnemon\.cmd$/i.test(p) })   // -> undefined
+> ```
+>
+> 这从插件解析逻辑一侧**独立佐证了 §2.3 的结论**：Windows 上必须发布真实的
+> `mnemon.exe`，照抄 CodeGraph 的 `.cmd` shim 会永久失效。
 
 ### 2.5 归档的 `name` 与 `version` 约定与 CodeGraph 相反
 
