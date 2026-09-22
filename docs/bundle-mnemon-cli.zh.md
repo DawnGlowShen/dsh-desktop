@@ -418,8 +418,8 @@ console.log(b.mac.x64ArchFiles.includes('Resources/codegraph/**'),
 "
 
 # ⑤ 两个变体的打包配置与源文件一致
-yarn check:desktop-variants    # → 184 shared source files are aligned
-yarn check:layout
+corepack yarn check:desktop-variants    # → 184 shared source files are aligned
+corepack yarn check:layout
 ```
 
 ### 8.2 macOS
@@ -521,12 +521,12 @@ cmd /c "where mnemon"
 ### 门禁实测
 
 ```
-yarn check:layout              → verify-layout: dual Desktop workspaces ... consistent
-yarn check:desktop-variants    → 184 shared source files are aligned
-preinstall-plugins list        → 默认预装清单：10 个插件，三项两变体均 ✓/✓
-verify:licenses                → 941 production packages checked
-verify:closure                 → 247 first-party nodes form a closed reachable runtime graph
-typecheck（两变体）             → exit 0
+corepack yarn check:layout              → verify-layout: dual Desktop workspaces ... consistent
+corepack yarn check:desktop-variants    → 184 shared source files are aligned
+node scripts/preinstall-plugins.mjs list → 默认预装清单：10 个插件，三项两变体均 ✓/✓
+verify:licenses                          → 941 production packages checked
+verify:closure                           → 247 first-party nodes form a closed reachable runtime graph
+typecheck（两变体）                       → exit 0
 ```
 
 ### 与计划的偏差
@@ -534,7 +534,7 @@ typecheck（两变体）             → exit 0
 | 计划 | 实际 | 原因 |
 |------|------|------|
 | Task-002 与 Task-003 分开执行（beta 先、stable 后） | **合并为一次操作** | `preinstall-plugins.mjs` 的 `applyEdits()` 内部就循环 `VARIANTS`，一次 `add` 调用同时写两个变体的 4 个文件，没有 `--variant` 参数 |
-| `billion-context` 用 0.1.135 | **改用 0.1.131** | `yarn install` 报 `YN0016: ... All versions satisfying "0.1.135" are quarantined`——Yarn 4.18 的 `npmMinimalAgeGate` 默认 1440 分钟（24h）供应链观察期，0.1.135 只发布 4.2 小时。0.1.131（39.9 小时）是能通过门禁的最新版本。**已用户决策确认**，未放宽门禁 |
+| `billion-context` 用 0.1.135 | **改用 0.1.131** | `corepack yarn install` 报 `YN0016: ... All versions satisfying "0.1.135" are quarantined`——Yarn 4.18 的 `npmMinimalAgeGate` 默认 1440 分钟（24h）供应链观察期，0.1.135 只发布 4.2 小时。0.1.131（39.9 小时）是能通过门禁的最新版本。**已用户决策确认**，未放宽门禁 |
 | 打包脚本前缀 mnemon 在前、codegraph 在后 | **codegraph 在前** | 追加在既有前缀之后，`git diff` 只显示新增片段，不重写 CodeGraph 既有顺序，更易复核；两者无顺序依赖 |
 | 用 `${label}.cmd` 统一推导 Windows 启动器 | **改为调用方传入** | 见 2.3，mnemon 是 `.exe` 而非 `.cmd`；测试抓到了这个真实缺陷 |
 | 顺带重新生成 `THIRD_PARTY_NOTICES.md` | **未纳入本次改动** | 该文件是可选产物（`verify:notices` 不在 `check` 门禁里），且**当前已提交的版本本就不含任何内置插件**（`dsh-better-sidebar`、`@hyzyn/dsh-codegraph` 同样不在列表里）。本机 `supportedArchitectures.os=[current]` 会让重新生成**删掉 8 行仅 Windows 的平台包**，属宿主相关的噪声，与本次任务无关。已回滚 |

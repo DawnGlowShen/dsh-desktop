@@ -27,11 +27,11 @@
 
 - **WHEN** 读取任一变体 `package.json` 的 dependencies
 - **THEN** `billion-context` 为 `0.1.131`、`dsh-mnemon` 为 `0.5.12`、`dsh-rewind-plugin` 为 `0.12.2`
-- **AND** `billion-context` 的版本已通过 Yarn 的 `npmMinimalAgeGate` 观察期，`corepack yarn install` 不报 `YN0016` 隔离错误
+- **AND** `billion-context` 的版本已通过 Yarn 的 `npmMinimalAgeGate` 观察期，`corepack corepack yarn install` 不报 `YN0016` 隔离错误
 
 #### Scenario: 许可证门禁通过
 
-- **WHEN** 在任一变体执行 `yarn run verify:licenses`
+- **WHEN** 在任一变体执行 `corepack yarn run verify:licenses`
 - **THEN** 三个插件及其传递依赖均通过 `ALLOWED_LICENSES` 校验，不产生需要人工处理的失败项
 
 #### Scenario: 既有清单项不回归
