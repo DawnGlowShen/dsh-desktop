@@ -579,3 +579,56 @@ corepack yarn --cwd dsh-plugin-desktop-beta run check
 **可并行的任务**：
 - `Task-001` 与 `Task-002`：无文件交集（根 `scripts/` + `vendor/` + `.gitignore` vs beta 的 `package.json` + `product-identity.ts`），依据：修改的文件集合不相交，且 Task-002 调用的 `preinstall-plugins.mjs` 不读取 `scripts/prepare-mnemon.mjs`。
 - `Task-006` 与 `Task-007`：同在 beta `src/` 但不同文件，且 Task-006 只改 shell 模块与其 spec、Task-007 只改 runtime 模块与其 spec，依据：两文件之间无 import 关系（`main.ts` 是二者唯一的汇合点，在 Task-008 统一接线）。
+
+---
+
+## 审查后修复
+
+三重审查（code-review / security-review / verify）全部 APPROVE（CRITICAL = 0），但 verify 关卡指出 `specs/mnemon-cli-bundling-spec.md` §发布失败不阻断启动存在**真实违约**，经复核成立，已在审查后单独修复。
+
+### 缺陷
+
+原 `main.ts` 把 CLI 发布写成「先判定、再安装」的三元表达式，整段位于 `start()` 的**外层** `try`（原 `:639`）到 `catch`（原 `:1775`）之间、**没有任何局部 try/catch**：
+
+```ts
+const mnemonRuntime = desktopMnemonBundleSupportsHost(mnemonBundleDir, process.platform, process.arch)
+  ? installDesktopMnemonRuntime({ platform: process.platform, bundleDir: mnemonBundleDir, environment: process.env })
+  : undefined
+```
+
+因此 `installDesktopMnemonRuntime` 抛错（可执行文件缺失、`bundleDir` 非绝对路径、平台不支持）会冒泡到外层 catch → `failStartup` → 启动恢复窗口 + `exitCode 1`，与 spec「Host 启动流程继续执行，异常信息以错误日志形式记录；应用仍能进入主界面」直接冲突。同段紧随其后的 macOS shell 集成（原 `:758-770`）与 dream-skin 播种（原 `:776-786`）**都有局部 catch**，说明是遗漏而非设计意图。既有 codegraph（原 `:699-708`）与 mnemon **同形**，属同一处遗漏。
+
+### 修复
+
+在 `desktop-runtime-environment.ts` 新增不会抛出的发布入口，把「判定 + 安装」整体包进 `try`，用返回值代替异常：
+
+- 新接口 `DesktopBundledCliPublication<Installation> { installation?; failure? }` —— 恰好只有一个字段被设置；
+- 私有 `publishBundledCliRuntime<Installation>({ label, supportsHost, install })` —— `supportsHost()` 与 `install()` 都在同一个 `try` 内，`catch` 归一化为 `failure` 字符串；判定为不支持时返回空对象（**静默跳过**，因为「架构不匹配」是 universal 安装包的正常现象，不该每次启动都报错）；
+- 新导出 `publishDesktopCodegraphRuntime(bundleDir, platform, arch, environment)` 与 `publishDesktopMnemonRuntime(...)`，各自把 `bundleSupportsHost` 与既有的 `installDesktop*Runtime` 传进去。
+
+`main.ts` 改为消费返回值，失败只写错误日志：
+
+```ts
+const codegraphPublication = publishDesktopCodegraphRuntime(
+  join(process.resourcesPath, 'codegraph'), process.platform, process.arch, process.env,
+)
+if (codegraphPublication.failure !== undefined) {
+  electronLogger.error(`${BIN_NAME}: ${codegraphPublication.failure}`)
+}
+const codegraphRuntime = codegraphPublication.installation
+```
+
+mnemon 同构。`installDesktopCodegraphRuntime` / `installDesktopMnemonRuntime` / `desktop*BundleSupportsHost` **保留原样导出**（既有 32 个用例继续覆盖它们的抛错行为），只是 `main.ts` 不再直接调用。codegraph 的同形缺口一并修掉。
+
+**注意**：畸形清单（JSON 非法）**不产生** `failure`，因为 `bundleSupportsHost` 内部已按 spec §无法读取清单时视为不支持吞掉异常并返回 `false`，故走静默跳过分支——这一点由测试固化。
+
+### 验证
+
+- `dsh-plugin-desktop-beta/tests/desktop-runtime-environment.spec.ts` 新增 6 条用例（32 → **38 tests | 3 skipped**），分两个 `describe`：
+  - `publishDesktopMnemonRuntime`：正常发布并可通过 `dispose()` 还原 PATH、**launcher 缺失时返回 failure 而非抛错**（断言 `/mnemon CLI runtime unavailable/` + `/packaged mnemon launcher is missing/`，且 PATH 未被改动）、架构不匹配时静默跳过（`failure` 为 `undefined`）、畸形清单静默跳过；
+  - `publishDesktopCodegraphRuntime`：正常发布、launcher 缺失时返回 failure 而非抛错。
+- `dsh-plugin-desktop` 同步后受影响三文件 → **57 passed | 3 skipped (60)**。
+- `check:desktop-variants` → `184 shared source files are aligned`。
+- 两变体 `typecheck` 退出码均为 0。
+
+**涉及文件**：`dsh-plugin-desktop{,-beta}/src/desktop-runtime-environment.ts`、`src/main.ts`、`tests/desktop-runtime-environment.spec.ts`。
