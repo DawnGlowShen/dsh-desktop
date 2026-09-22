@@ -765,7 +765,7 @@ describe('published package surface', () => {
 
   it('fixes the installed application identity', () => {
     expect(workspaceManifest.version).toBeUndefined()
-    expect(manifest.version).toBe('2.0.10-evo.1')
+    expect(manifest.version).toBe('2.0.10-evo.2')
     expect(manifest.build?.productName).toBe(DESKTOP_PRODUCT_NAME)
     expect(manifest.build?.appId).toBe(DESKTOP_APP_ID)
     expect(manifest.build?.asar).toBe(false)
