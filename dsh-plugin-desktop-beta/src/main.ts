@@ -30,12 +30,10 @@ import { createDesktopBrowserAccess } from './desktop-browser-access.ts'
 import { installDesktopCliShell } from './desktop-cli-shell.ts'
 import { seedDesktopDreamSkin } from './desktop-dream-skin-default.ts'
 import {
-  desktopCodegraphBundleSupportsHost,
-  desktopMnemonBundleSupportsHost,
-  installDesktopCodegraphRuntime,
   installDesktopDshRuntime,
-  installDesktopMnemonRuntime,
   installDesktopPnpmRuntime,
+  publishDesktopCodegraphRuntime,
+  publishDesktopMnemonRuntime,
 } from './desktop-runtime-environment.ts'
 import { desktopProductVersion, ElectronDesktopRuntime } from './electron-runtime.ts'
 import { getOrCreateDesktopInstallationId } from './desktop-installation-id.ts'
@@ -693,36 +691,32 @@ async function start(): Promise<void> {
     const dshBootstrapPath = fileURLToPath(new URL('./desktop-cli.js', import.meta.url))
     const releasePnpmRuntime = generation.own(() => { pnpmRuntime.dispose() })
     // Publish the packaged CodeGraph CLI so plugins resolve `codegraph` without
-    // touching any user configuration. An installer built for another
-    // architecture is skipped rather than published broken.
-    const codegraphBundleDir = join(process.resourcesPath, 'codegraph')
-    const codegraphRuntime = desktopCodegraphBundleSupportsHost(
-      codegraphBundleDir,
+    // touching any user configuration, and the packaged Mnemon CLI the same way
+    // so `dsh-mnemon` resolves `mnemon` from PATH with no plugin configuration.
+    // An installer built for another architecture, or a bundle that cannot be
+    // published at all, is logged and skipped instead of blocking startup: the
+    // desktop must still reach its main window with the CLI merely unavailable.
+    const codegraphPublication = publishDesktopCodegraphRuntime(
+      join(process.resourcesPath, 'codegraph'),
       process.platform,
       process.arch,
+      process.env,
     )
-      ? installDesktopCodegraphRuntime({
-          platform: process.platform,
-          bundleDir: codegraphBundleDir,
-          environment: process.env,
-        })
-      : undefined
+    if (codegraphPublication.failure !== undefined) {
+      electronLogger.error(`${BIN_NAME}: ${codegraphPublication.failure}`)
+    }
+    const codegraphRuntime = codegraphPublication.installation
     const releaseCodegraphRuntime = generation.own(() => { codegraphRuntime?.dispose() })
-    // Publish the packaged Mnemon CLI the same way, so `dsh-mnemon` resolves
-    // `mnemon` from PATH with no plugin configuration. An installer built for
-    // another architecture is skipped rather than published broken.
-    const mnemonBundleDir = join(process.resourcesPath, 'mnemon')
-    const mnemonRuntime = desktopMnemonBundleSupportsHost(
-      mnemonBundleDir,
+    const mnemonPublication = publishDesktopMnemonRuntime(
+      join(process.resourcesPath, 'mnemon'),
       process.platform,
       process.arch,
+      process.env,
     )
-      ? installDesktopMnemonRuntime({
-          platform: process.platform,
-          bundleDir: mnemonBundleDir,
-          environment: process.env,
-        })
-      : undefined
+    if (mnemonPublication.failure !== undefined) {
+      electronLogger.error(`${BIN_NAME}: ${mnemonPublication.failure}`)
+    }
+    const mnemonRuntime = mnemonPublication.installation
     const releaseMnemonRuntime = generation.own(() => { mnemonRuntime?.dispose() })
     const fallbackHome = resolveDshHome()
     const defaultHome = resolve(defaultDshHome())

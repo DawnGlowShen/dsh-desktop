@@ -24,6 +24,8 @@ import {
   installDesktopDshRuntime,
   installDesktopMnemonRuntime,
   installDesktopPnpmRuntime,
+  publishDesktopCodegraphRuntime,
+  publishDesktopMnemonRuntime,
   type DesktopPnpmRuntimeOptions,
 } from '../src/desktop-runtime-environment.ts'
 
@@ -839,5 +841,107 @@ describe('desktopMnemonBundleSupportsHost', () => {
     const malformed = temporaryDirectory()
     writeFileSync(join(malformed, 'package.json'), 'not json')
     expect(desktopMnemonBundleSupportsHost(malformed, 'darwin', 'arm64')).toBe(false)
+  })
+})
+
+describe('publishDesktopMnemonRuntime', () => {
+  /** Build a bundle directory without creating any launcher. */
+  function manifestOnlyBundle(
+    cpu: readonly string[] | undefined,
+  ): string {
+    const bundleDir = join(temporaryDirectory(), 'mnemon')
+    mkdirSync(join(bundleDir, 'bin'), { recursive: true })
+    writeFileSync(
+      join(bundleDir, 'package.json'),
+      JSON.stringify({ name: '@mnemon-dev/mnemon', ...(cpu === undefined ? {} : { os: ['darwin'], cpu }) }),
+    )
+    return bundleDir
+  }
+
+  it('publishes the CLI and reports no failure when the bundle matches the host', () => {
+    const bundleDir = manifestOnlyBundle(undefined)
+    writeFileSync(join(bundleDir, 'bin', 'mnemon'), '#!/bin/sh\n', { mode: 0o755 })
+    const environment: NodeJS.ProcessEnv = { PATH: '/usr/bin:/bin' }
+
+    const publication = publishDesktopMnemonRuntime(bundleDir, 'darwin', 'arm64', environment)
+
+    expect(publication.failure).toBeUndefined()
+    expect(publication.installation?.pathDir).toBe(join(bundleDir, 'bin'))
+    expect(environment.PATH).toBe(`${join(bundleDir, 'bin')}:/usr/bin:/bin`)
+    publication.installation?.dispose()
+    expect(environment.PATH).toBe('/usr/bin:/bin')
+  })
+
+  it('reports a failure instead of throwing when the launcher is missing', () => {
+    // Startup ends in a failure screen if this escapes, so the publication helper
+    // has to absorb the installer's throw and hand back a loggable reason.
+    const bundleDir = manifestOnlyBundle(undefined)
+    const environment: NodeJS.ProcessEnv = { PATH: '/usr/bin:/bin' }
+
+    const publication = publishDesktopMnemonRuntime(bundleDir, 'darwin', 'arm64', environment)
+
+    expect(publication.installation).toBeUndefined()
+    expect(publication.failure).toMatch(/mnemon CLI runtime unavailable/u)
+    expect(publication.failure).toMatch(/packaged mnemon launcher is missing/u)
+    expect(environment.PATH).toBe('/usr/bin:/bin')
+  })
+
+  it('stays silent when the bundle cannot run on this host', () => {
+    // A universal installer carries one slice's bundle in the other slice, where
+    // the mismatch is expected rather than something worth logging every launch.
+    const bundleDir = manifestOnlyBundle(['arm64'])
+    writeFileSync(join(bundleDir, 'bin', 'mnemon'), '#!/bin/sh\n', { mode: 0o755 })
+    const environment: NodeJS.ProcessEnv = { PATH: '/usr/bin:/bin' }
+
+    const publication = publishDesktopMnemonRuntime(bundleDir, 'darwin', 'x64', environment)
+
+    expect(publication.installation).toBeUndefined()
+    expect(publication.failure).toBeUndefined()
+    expect(environment.PATH).toBe('/usr/bin:/bin')
+  })
+
+  it('stays silent for an unreadable manifest, which counts as unsupported', () => {
+    // `bundleSupportsHost` already turns a malformed manifest into "unsupported",
+    // so this path is a quiet skip rather than a failure worth logging.
+    const bundleDir = temporaryDirectory()
+    writeFileSync(join(bundleDir, 'package.json'), 'not json')
+    const environment: NodeJS.ProcessEnv = { PATH: '/usr/bin:/bin' }
+
+    const publication = publishDesktopMnemonRuntime(bundleDir, 'darwin', 'arm64', environment)
+
+    expect(publication.installation).toBeUndefined()
+    expect(publication.failure).toBeUndefined()
+    expect(environment.PATH).toBe('/usr/bin:/bin')
+  })
+})
+
+describe('publishDesktopCodegraphRuntime', () => {
+  it('publishes the CLI and reports no failure when the bundle matches the host', () => {
+    const bundleDir = join(temporaryDirectory(), 'codegraph')
+    mkdirSync(join(bundleDir, 'bin'), { recursive: true })
+    writeFileSync(join(bundleDir, 'package.json'), JSON.stringify({ name: '@hyzyn/dsh-codegraph' }))
+    writeFileSync(join(bundleDir, 'bin', 'codegraph'), '#!/bin/sh\n', { mode: 0o755 })
+    const environment: NodeJS.ProcessEnv = { PATH: '/usr/bin:/bin' }
+
+    const publication = publishDesktopCodegraphRuntime(bundleDir, 'darwin', 'arm64', environment)
+
+    expect(publication.failure).toBeUndefined()
+    expect(publication.installation?.pathDir).toBe(join(bundleDir, 'bin'))
+    publication.installation?.dispose()
+    expect(environment.PATH).toBe('/usr/bin:/bin')
+  })
+
+  it('reports a failure instead of throwing when the launcher is missing', () => {
+    const bundleDir = join(temporaryDirectory(), 'codegraph')
+    mkdirSync(join(bundleDir, 'bin'), { recursive: true })
+    writeFileSync(join(bundleDir, 'package.json'), JSON.stringify({ name: '@hyzyn/dsh-codegraph' }))
+    const environment: NodeJS.ProcessEnv = { PATH: '/usr/bin:/bin' }
+
+    const publication = publishDesktopCodegraphRuntime(bundleDir, 'darwin', 'arm64', environment)
+
+    expect(publication.installation).toBeUndefined()
+    expect(publication.failure).toMatch(/codegraph CLI runtime unavailable/u)
+    expect(publication.failure).toMatch(/packaged codegraph launcher is missing/u)
+    expect(environment.PATH).toBe('/usr/bin:/bin')
   })
 })

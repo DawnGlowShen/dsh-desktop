@@ -675,6 +675,88 @@ function installBundledCliRuntime(
 }
 
 /**
+ * Result of trying to publish one packaged CLI without risking startup.
+ *
+ * Exactly one field is ever set: `installation` on success, `failure` when the
+ * bundle could not be published. A skipped CLI is not an error the user has to
+ * act on, so the caller only records `failure` in the log.
+ */
+export interface DesktopBundledCliPublication<Installation> {
+  /** Published CLI and its PATH disposer; absent when publication did not happen. */
+  installation?: Installation
+  /** Operator-facing reason the CLI stayed unpublished; absent on success. */
+  failure?: string
+}
+
+/**
+ * Publish one packaged CLI into the Host PATH, substituting a log line for a throw.
+ *
+ * Startup must survive a broken or foreign bundle: the desktop still has to
+ * reach its main window, and the CLI simply stays unavailable to spawned tools.
+ * Every failure mode therefore has to be caught here rather than reach the
+ * launcher-wide startup failure path.
+ */
+function publishBundledCliRuntime<Installation>(options: {
+  label: string
+  supportsHost: () => boolean
+  install: () => Installation
+}): DesktopBundledCliPublication<Installation> {
+  try {
+    if (!options.supportsHost()) return {}
+    return { installation: options.install() }
+  } catch (cause) {
+    return {
+      failure: `${options.label} CLI runtime unavailable: `
+        + `${cause instanceof Error ? cause.message : String(cause)}`,
+    }
+  }
+}
+
+/**
+ * Publish the packaged CodeGraph CLI, or report why it stayed unavailable.
+ *
+ * @param bundleDir - packaged bundle; its `bin` directory holds the launcher.
+ * @param platform - Host platform; any other platform skips the bundle.
+ * @param arch - Host architecture; a mismatched bundle is skipped, not published broken.
+ * @param environment - parent environment receiving the PATH prepend.
+ * @returns the installation, or a `failure` reason ready to log.
+ */
+export function publishDesktopCodegraphRuntime(
+  bundleDir: string,
+  platform: NodeJS.Platform,
+  arch: NodeJS.Architecture,
+  environment: NodeJS.ProcessEnv,
+): DesktopBundledCliPublication<DesktopCodegraphRuntimeInstallation> {
+  return publishBundledCliRuntime({
+    label: 'codegraph',
+    supportsHost: () => bundleSupportsHost(bundleDir, platform, arch),
+    install: () => installDesktopCodegraphRuntime({ platform, bundleDir, environment }),
+  })
+}
+
+/**
+ * Publish the packaged Mnemon CLI, or report why it stayed unavailable.
+ *
+ * @param bundleDir - packaged bundle; its `bin` directory holds the launcher.
+ * @param platform - Host platform; any other platform skips the bundle.
+ * @param arch - Host architecture; a mismatched bundle is skipped, not published broken.
+ * @param environment - parent environment receiving the PATH prepend.
+ * @returns the installation, or a `failure` reason ready to log.
+ */
+export function publishDesktopMnemonRuntime(
+  bundleDir: string,
+  platform: NodeJS.Platform,
+  arch: NodeJS.Architecture,
+  environment: NodeJS.ProcessEnv,
+): DesktopBundledCliPublication<DesktopMnemonRuntimeInstallation> {
+  return publishBundledCliRuntime({
+    label: 'mnemon',
+    supportsHost: () => bundleSupportsHost(bundleDir, platform, arch),
+    install: () => installDesktopMnemonRuntime({ platform, bundleDir, environment }),
+  })
+}
+
+/**
  * Install the packaged CodeGraph CLI into this Electron process's PATH.
  *
  * The Host process and every tool it spawns then resolve `codegraph` unchanged,
