@@ -152,7 +152,8 @@ Windows 安装器必须在本用户 PATH 中登记安装目录下的 mnemon `bin
 #### Scenario: codegraph 分支保持不变
 
 - **WHEN** 读取 `build/installer.nsh`
-- **THEN** 原有 codegraph 的安装/卸载分支仍完整存在，且 `WriteRegExpandStr HKCU "Environment" "Path"` 在文件中恰好出现两次（安装一次、卸载一次）
+- **THEN** 原有 codegraph 的安装/卸载分支仍完整存在（`DSH_CODEGRAPH_BIN`、`FileExists`、`StrContains`、安装段末尾位置判断）
+- **AND** `WriteRegExpandStr HKCU "Environment" "Path"` 在文件中恰好出现四次——安装两次（codegraph、mnemon 各一次）、卸载两次（各一次）。新增分支必然改变原「恰好两次」的计数，故该断言按 design.md 决策同步为四，而非放宽为「至少两次」
 
 ### Requirement: 平台归档可追溯
 
