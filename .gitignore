@@ -19,3 +19,7 @@ dsh-community-market/lib/
 # Vendored CodeGraph CLI materialized by scripts/prepare-codegraph.mjs
 dsh-plugin-desktop/build/codegraph/
 dsh-plugin-desktop-beta/build/codegraph/
+
+# Vendored Mnemon CLI materialized by scripts/prepare-mnemon.mjs
+dsh-plugin-desktop/build/mnemon/
+dsh-plugin-desktop-beta/build/mnemon/
