@@ -6,7 +6,10 @@ import {
   verifyMacSmoke,
   type MacSmokeVerificationOptions,
 } from '../scripts/verify-mac-smoke.ts'
-import { MACOS_UNIVERSAL_NATIVE_ENTRIES } from '../scripts/mac-universal.ts'
+import {
+  MACOS_UNIVERSAL_BUNDLED_CLI_ENTRIES,
+  MACOS_UNIVERSAL_NATIVE_ENTRIES,
+} from '../scripts/mac-universal.ts'
 
 const temporaryRoots: string[] = []
 
@@ -15,6 +18,8 @@ interface AppFixture {
   readonly infoPlist: string
   readonly executable: string
   readonly appAsar: string
+  /** Absolute paths of the bundled CLIs copied in through `extraResources`. */
+  readonly bundledClis: Map<string, string>
   readonly modeOverrides: Map<string, number>
 }
 
@@ -46,7 +51,17 @@ function fixture(): AppFixture {
       modeOverrides.set(path, 0o755)
     }
   }
-  return { root, infoPlist, executable, appAsar, modeOverrides }
+  const bundledClis = new Map<string, string>()
+  for (const entry of MACOS_UNIVERSAL_BUNDLED_CLI_ENTRIES) {
+    const path = join(contents, entry.path)
+    mkdirSync(join(path, '..'), { recursive: true })
+    writeFileSync(path, 'binary')
+    const mode = entry.executable ? 0o755 : 0o644
+    chmodSync(path, mode)
+    modeOverrides.set(path, mode)
+    bundledClis.set(entry.path, path)
+  }
+  return { root, infoPlist, executable, appAsar, bundledClis, modeOverrides }
 }
 
 function options(
@@ -125,6 +140,11 @@ describe('macOS DMG smoke artifact verification', () => {
         command: 'lipo',
         args: [join(join(value.appAsar, '..'), entry.path), '-verify_arch', entry.arch],
       })),
+      // Each bundled CLI must be verified for both architectures.
+      ...MACOS_UNIVERSAL_BUNDLED_CLI_ENTRIES.flatMap(entry => [
+        { command: 'lipo', args: [value.bundledClis.get(entry.path)!, '-verify_arch', 'x86_64'] },
+        { command: 'lipo', args: [value.bundledClis.get(entry.path)!, '-verify_arch', 'arm64'] },
+      ]),
       { command: 'hdiutil', args: ['detach', value.root] },
     ])
     expect(harness.removeMountPoint).toHaveBeenCalledWith(value.root)
@@ -179,6 +199,27 @@ describe('macOS DMG smoke artifact verification', () => {
     const harness = options({ makeMountPoint: () => value.root }, value.modeOverrides)
 
     expectSmokeFailure(harness, 'package.json')
+    expect(harness.removeMountPoint).toHaveBeenCalledWith(value.root)
+  })
+
+  it('rejects an application whose bundled CodeGraph runtime is absent', () => {
+    const value = fixture()
+    const missing = value.bundledClis.get('Resources/codegraph/node')!
+    rmSync(missing)
+    const harness = options({ makeMountPoint: () => value.root }, value.modeOverrides)
+
+    expectSmokeFailure(harness, missing)
+    expect(harness.removeMountPoint).toHaveBeenCalledWith(value.root)
+  })
+
+  it('rejects a bundled CLI that lost its execute bit', () => {
+    const value = fixture()
+    const mnemon = value.bundledClis.get('Resources/mnemon/bin/mnemon')!
+    chmodSync(mnemon, 0o644)
+    value.modeOverrides.set(mnemon, 0o644)
+    const harness = options({ makeMountPoint: () => value.root }, value.modeOverrides)
+
+    expectSmokeFailure(harness, 'non-executable bundled CLI')
     expect(harness.removeMountPoint).toHaveBeenCalledWith(value.root)
   })
 })

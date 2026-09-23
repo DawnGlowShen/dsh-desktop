@@ -291,17 +291,17 @@
 - **既有主可执行文件校验不变**：当 smoke 校验运行时，`Contents/MacOS/<productName>` 仍执行既有的双架构 `lipo` 校验。验证方式：同一测试文件中原有断言仍通过
 
 **增量计划**：
-- [ ] **增量 1**：新增内置 CLI 校验清单常量
+- [x] **增量 1**：新增内置 CLI 校验清单常量
   - 做什么：在 `mac-universal.ts` 加 `MACOS_UNIVERSAL_BUNDLED_CLI_PATHS`（`Resources/codegraph/node`、`Resources/codegraph/lib/kernel/codegraph-kernel.node`、`Resources/mnemon/bin/mnemon`），沿用该文件作为 universal 产物清单的唯一归属；**不扩充** `MACOS_UNIVERSAL_NATIVE_ENTRIES`（其条目相对 `Resources/app`，语义不同）
   - 交付：新增常量
   - 对应验收标准：内置 CLI 被校验为双架构
   - 完成判定：`yarn workspace dsh-plugin-desktop-beta typecheck` 无错误
-- [ ] **增量 2**：在内置 CLI 路径上执行双架构校验
+- [x] **增量 2**：在内置 CLI 路径上执行双架构校验
   - 做什么：在 `verify-mac-smoke.ts` 已有 `Contents/MacOS/<productName>` 校验之后，按清单逐个做存在性、非空、可执行性与 `lipo -verify_arch` 双架构校验，复用既有 `options.run` / `options.exists` / `options.stat` 注入边界
   - 交付：脚本内新增校验段落
   - 对应验收标准：内置 CLI 被校验为双架构、缺失内置 CLI 时校验失败
   - 完成判定：`yarn workspace dsh-plugin-desktop-beta vitest run tests/verify-mac-smoke.spec.ts` 通过
-- [ ] **增量 3**：补测试：fixture 内置 CLI、调用列表与缺失路径负例
+- [x] **增量 3**：补测试：fixture 内置 CLI、调用列表与缺失路径负例
   - 做什么：在 spec 的 `fixture()` 中创建三个内置 CLI 文件；更新主用例的 `harness.calls` 期望，加入 6 次 `lipo` 调用；新增缺文件时 `expectSmokeFailure` 的负例
   - 交付：更新后的测试
   - 对应验收标准：内置 CLI 被校验为双架构、缺失内置 CLI 时校验失败、既有主可执行文件校验不变
