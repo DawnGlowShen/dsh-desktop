@@ -22,6 +22,12 @@ export const DESKTOP_MARKET_SELECT_PATH = '/api/desktop/market/select'
 /** Open the launcher-owned DSH terminal without accepting command text. */
 export const DESKTOP_TERMINAL_OPEN_PATH = '/api/desktop/terminal/open'
 
+/** Generate the CLI forwarders and register their directory on the user PATH. */
+export const DESKTOP_CLI_PUBLISH_PATH = '/api/desktop/cli/publish'
+
+/** Remove this installation's own entry from the user PATH, keeping the files. */
+export const DESKTOP_CLI_REVOKE_PATH = '/api/desktop/cli/revoke'
+
 /** Queue an orderly Desktop relaunch after acknowledging the renderer. */
 export const DESKTOP_RESTART_PATH = '/api/desktop/restart'
 
@@ -184,6 +190,34 @@ export type DesktopDiagnosticsExportRequest = Readonly<Record<string, never>>
 export interface DesktopDiagnosticsExportResponse {
   readonly accepted: true
 }
+
+/** Exact empty body accepted by the CLI publish endpoint. */
+export type DesktopCliPublishRequest = Readonly<Record<string, never>>
+
+/**
+ * Outcome of registering or revoking the CLI shim directory.
+ *
+ * `changed` separates "already in the wanted state" from "the registry value
+ * was rewritten", which is exactly the difference the settings panel has to
+ * report: repeating the action is not an error, but reporting it as a change
+ * would claim work that did not happen.
+ *
+ * The shim directory and the raw PATH value are deliberately absent, matching
+ * the rest of this contract: the renderer never receives native paths, and the
+ * PATH value can embed other applications' directories.
+ */
+export interface DesktopCliPublishResponse {
+  /** Whether the PATH value was actually modified by this request. */
+  readonly changed: boolean
+  /** Whether the shim directory is registered on the user PATH afterwards. */
+  readonly registered: boolean
+}
+
+/** Exact empty body accepted by the CLI revoke endpoint. */
+export type DesktopCliRevokeRequest = Readonly<Record<string, never>>
+
+/** Successful revoke; the shim files stay behind on purpose. */
+export type DesktopCliRevokeResponse = DesktopCliPublishResponse
 
 /** Stable API failure shape that never contains native paths or raw causes. */
 export interface DesktopSettingsErrorResponse {

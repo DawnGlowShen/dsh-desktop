@@ -289,25 +289,25 @@
 **涉及文件**：
 - `dsh-plugin-desktop-beta/src/desktop-settings-contract.ts` — 修改，新增两个路径常量与请求/响应类型
 - `dsh-plugin-desktop-beta/src/desktop-settings-route.ts` — 修改，新增两个 handler
-- `dsh-plugin-desktop-beta/tests/desktop-settings-route.spec.ts` — 修改，补路由校验用例
+- `dsh-plugin-desktop-beta/tests/desktop-settings-api.spec.ts` — 修改，补路由校验用例
 
 **验收标准**：
 - **契约完整**：当读取契约文件时，存在命令行工具登记与撤销两个路径常量及对应请求/响应类型。验证方式：`yarn workspace dsh-plugin-desktop-beta typecheck` 无错误
-- **仅接受合法请求**：当请求来自非 loopback 来源、或 origin 不匹配、或 body 超过上限时，路由返回既有约定的错误响应且不执行任何注册表操作。验证方式：`yarn workspace dsh-plugin-desktop-beta vitest run tests/desktop-settings-route.spec.ts` 通过
+- **仅接受合法请求**：当请求来自非 loopback 来源、或 origin 不匹配、或 body 超过上限时，路由返回既有约定的错误响应且不执行任何注册表操作。验证方式：`yarn workspace dsh-plugin-desktop-beta vitest run tests/desktop-settings-api.spec.ts` 通过
 - **响应区分是否发生变更**：当操作实际修改了 PATH 时响应 `changed: true`，未修改时 `changed: false`。验证方式：同一测试文件中的两条用例（注入假 PATH 读写）通过
 
 **增量计划**：
-- [ ] **增量 1**：契约常量与类型
+- [x] **增量 1**：契约常量与类型
   - 做什么：新增路径常量与请求/响应类型，命名沿用 `DESKTOP_TERMINAL_OPEN_PATH` 风格
   - 交付：可编译的契约
   - 对应验收标准：契约完整
   - 完成判定：`yarn workspace dsh-plugin-desktop-beta typecheck` 无错误
-- [ ] **增量 2**：两个 handler 与校验复用
+- [x] **增量 2**：两个 handler 与校验复用
   - 做什么：实现 handler，复用既有的 loopback/origin/body-size 校验与 `finishJson`
   - 交付：可调用的路由
   - 对应验收标准：仅接受合法请求
-  - 完成判定：`yarn workspace dsh-plugin-desktop-beta vitest run tests/desktop-settings-route.spec.ts` 通过
-- [ ] **增量 3**：变更状态反馈
+  - 完成判定：`yarn workspace dsh-plugin-desktop-beta vitest run tests/desktop-settings-api.spec.ts` 通过
+- [x] **增量 3**：变更状态反馈
   - 做什么：把底层操作的 `changed` 透出到响应
   - 交付：可供界面区分的响应
   - 对应验收标准：响应区分是否发生变更
@@ -336,8 +336,8 @@
 - `dsh-plugin-desktop-beta/src/index.ts` — 修改，在 `settingsRoutes` 注册表（`:304-317`）新增两项
 
 **验收标准**：
-- **操作可被路由触达**：当请求命中两个新路径时，控制器方法被调用且返回结构符合契约。验证方式：`yarn workspace dsh-plugin-desktop-beta vitest run tests/desktop-settings-route.spec.ts` 通过
-- **入口不限安装形态**：当宿主为安装版时，控制器照常执行登记与撤销，不因形态被拒绝。验证方式：`yarn workspace dsh-plugin-desktop-beta vitest run tests/desktop-windows-install-kind.spec.ts tests/desktop-settings-route.spec.ts` 通过
+- **操作可被路由触达**：当请求命中两个新路径时，控制器方法被调用且返回结构符合契约。验证方式：`yarn workspace dsh-plugin-desktop-beta vitest run tests/desktop-settings-api.spec.ts` 通过
+- **入口不限安装形态**：当宿主为安装版时，控制器照常执行登记与撤销，不因形态被拒绝。验证方式：`yarn workspace dsh-plugin-desktop-beta vitest run tests/desktop-windows-install-kind.spec.ts tests/desktop-settings-api.spec.ts` 通过
 - **失败有反馈**：当底层操作抛错时，路由返回错误响应而非静默成功。验证方式：路由测试中的失败分支用例通过
 
 **增量计划**：
@@ -350,7 +350,7 @@
   - 做什么：在 `settingsRoutes` 数组中新增两项
   - 交付：端到端可请求
   - 对应验收标准：入口不限安装形态
-  - 完成判定：`yarn workspace dsh-plugin-desktop-beta vitest run tests/desktop-settings-route.spec.ts` 通过
+  - 完成判定：`yarn workspace dsh-plugin-desktop-beta vitest run tests/desktop-settings-api.spec.ts` 通过
 - [ ] **增量 3**：错误封装
   - 做什么：把底层错误包装成既有的 settings 错误响应形态
   - 交付：失败反馈
@@ -396,7 +396,7 @@
   - 做什么：在设置面板新增区块，展示当前状态与执行结果
   - 交付：可见入口
   - 对应验收标准：结果可见
-  - 完成判定：`yarn workspace dsh-plugin-desktop-beta vitest run tests/desktop-settings-route.spec.ts` 通过 && `yarn workspace dsh-plugin-desktop-beta build` 无错误
+  - 完成判定：`yarn workspace dsh-plugin-desktop-beta vitest run tests/desktop-settings-api.spec.ts` 通过 && `yarn workspace dsh-plugin-desktop-beta build` 无错误
 - [ ] **增量 3**：文案与多语言
   - 做什么：补齐新键的文案，覆盖两种状态与两种结果
   - 交付：完整文案
@@ -452,7 +452,7 @@
 
 **验收标准**：
 - **变体一致性校验通过**：当执行一致性校验时无 drift 报告。验证方式：`corepack yarn check:desktop-variants` 退出码 0
-- **stable 侧测试通过**：当 stable 工作区运行相关测试时全部通过。验证方式：`yarn workspace dsh-plugin-desktop vitest run tests/desktop-cli-shell.spec.ts tests/desktop-windows-path.spec.ts tests/desktop-windows-install-kind.spec.ts tests/installer-nsh.spec.ts tests/desktop-settings-route.spec.ts` 退出码 0
+- **stable 侧测试通过**：当 stable 工作区运行相关测试时全部通过。验证方式：`yarn workspace dsh-plugin-desktop vitest run tests/desktop-cli-shell.spec.ts tests/desktop-windows-path.spec.ts tests/desktop-windows-install-kind.spec.ts tests/installer-nsh.spec.ts tests/desktop-settings-api.spec.ts` 退出码 0
 - **installer.nsh 逐字节相同**：当比较两个变体的该文件时内容一致。验证方式：`diff dsh-plugin-desktop/build/installer.nsh dsh-plugin-desktop-beta/build/installer.nsh` 无输出
 - **stable 侧类型检查通过**：验证方式：`yarn workspace dsh-plugin-desktop typecheck` 无错误
 
