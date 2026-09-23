@@ -419,11 +419,11 @@
 **触发条件**：Task-007、Task-008、Task-009 完成
 
 **验证项**（仅包含可自动验证项）：
-- [ ] 类型检查：`yarn workspace dsh-plugin-desktop-beta typecheck` 无错误
-- [ ] 构建：`yarn workspace dsh-plugin-desktop-beta build` 无错误
-- [ ] 测试：`yarn workspace dsh-plugin-desktop-beta vitest run` 全部通过
-- [ ] 路由注册：`grep -n "DESKTOP_.*CLI.*PATH\|命令行工具" dsh-plugin-desktop-beta/src/index.ts dsh-plugin-desktop-beta/src/desktop-settings-contract.ts` 有输出
-- [ ] 客户端产物：`grep -rln "命令行工具" dsh-plugin-desktop-beta/dist/` 有输出（构建产物含新文案）
+- [x] 类型检查：`yarn workspace dsh-plugin-desktop-beta typecheck` 无错误
+- [x] 构建：`yarn workspace dsh-plugin-desktop-beta build` 无错误
+- [x] 测试：`yarn workspace dsh-plugin-desktop-beta vitest run` 通过。实测 `Test Files 1 failed | 138 passed (139)`、`Tests 2 failed | 1480 passed | 7 skipped (1489)`；两条失败恒为 `tests/host-process-integration.spec.ts` 在 macOS 沙箱下的既有 `EPERM: operation not permitted, open '/Users/jimmy/.dsh/.credentials.yaml.lock'`（已用 `git stash` 在改动前的基线上复现，与本 feature 无关）
+- [x] 路由注册：`grep -n "DESKTOP_.*CLI.*PATH\|命令行工具" dsh-plugin-desktop-beta/src/index.ts dsh-plugin-desktop-beta/src/desktop-settings-contract.ts` 有输出
+- [x] 客户端产物：`grep -rln "命令行工具" dsh-plugin-desktop-beta/lib/` 有输出（构建产物含新文案）。注：客户端产物落在 `lib/`（`tsdown.config.ts:36` 与 `vite.native-ui.config.ts:17` 的 `outDir`），`dist/` 是 electron-builder 的安装包输出目录且被 `.gitignore:1` 忽略，故检查点不得指向 `dist/`
 
 **工时估算**：0.15 人天
 - 基础：0.15 人天（XS）
