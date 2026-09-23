@@ -317,13 +317,13 @@
 **触发条件**：Task-006、Task-007 完成后触发
 
 **验证项**（仅包含可自动验证项）：
-- [ ] 单测：`yarn workspace dsh-plugin-desktop-beta vitest run tests/desktop-runtime-environment.spec.ts tests/verify-mac-smoke.spec.ts tests/package.spec.ts tests/mac-universal.spec.ts` 全部通过
-- [ ] 类型检查：`yarn workspace dsh-plugin-desktop-beta typecheck` 无错误
-- [ ] 打包检查：`yarn workspace dsh-plugin-desktop-beta check:mac-package` 退出码 0
-- [ ] 端到端产物：`yarn workspace dsh-plugin-desktop-beta dist:mac-smoke` 退出码 0 并在 `dsh-plugin-desktop-beta/dist/mac-smoke/` 产出唯一 DMG
-- [ ] smoke 校验：`node dsh-plugin-desktop-beta/scripts/verify-mac-smoke.ts dsh-plugin-desktop-beta/dist/mac-smoke` 退出码 0
-- [ ] 任务完整性：Task-006、Task-007 的增量 checkbox 全勾
-- [ ] 依赖变更：无未声明的新增第三方依赖
+- [x] 单测：`yarn workspace dsh-plugin-desktop-beta vitest run tests/desktop-runtime-environment.spec.ts tests/verify-mac-smoke.spec.ts tests/package.spec.ts tests/mac-universal.spec.ts` 全部通过
+- [x] 类型检查：`yarn workspace dsh-plugin-desktop-beta typecheck` 无错误
+- [x] 打包检查：`yarn workspace dsh-plugin-desktop-beta check:mac-package` 退出码 0
+- [x] 端到端产物：`yarn workspace dsh-plugin-desktop-beta dist:mac-smoke` 退出码 0 并在 `dsh-plugin-desktop-beta/dist/mac-smoke/` 产出唯一 DMG
+- [x] smoke 校验：`node dsh-plugin-desktop-beta/scripts/verify-mac-smoke.ts dsh-plugin-desktop-beta/dist/mac-smoke` 退出码 0
+- [x] 任务完整性：Task-006、Task-007 的增量 checkbox 全勾
+- [x] 依赖变更：无未声明的新增第三方依赖
 
 ---
 
@@ -394,17 +394,17 @@
 - **架构门禁未因文档改动失效**：当归档时，仓库的布局与文档门禁通过。验证方式：`corepack yarn check:layout` 退出码 0
 
 **增量计划**：
-- [ ] **增量 1**：更新 CodeGraph 文档
+- [x] **增量 1**：更新 CodeGraph 文档
   - 做什么：更新 `docs/bundle-codegraph-cli.zh.md` 的 vendor 清单、`x64ArchFiles` 说明、体积表与构建命令
   - 交付：更新后的 CodeGraph 文档
   - 对应验收标准：vendor 清单含 darwin-x64、universal 合成机制被记录
   - 完成判定：`grep -c 'darwin-x64' docs/bundle-codegraph-cli.zh.md` ≥ 1 && 该文档含 `darwin-universal` 与 `lipo`
-- [ ] **增量 2**：更新 Mnemon 文档
+- [x] **增量 2**：更新 Mnemon 文档
   - 做什么：更新 `docs/bundle-mnemon-cli.zh.md` 的 vendor 清单、sha256 钉值表与构建命令
   - 交付：更新后的 Mnemon 文档
   - 对应验收标准：vendor 清单含 darwin-x64、universal 合成机制被记录
   - 完成判定：`grep -c 'darwin-x64' docs/bundle-mnemon-cli.zh.md` ≥ 1 && 该文档含 `darwin-universal` 与 `lipo`
-- [ ] **增量 3**：核对体积数字与布局门禁
+- [x] **增量 3**：核对体积数字与布局门禁
   - 做什么：以 Task-005 的实测体积复核文档数字，并确认两份 `docs/bundle-*.zh.md` 不在双语文档记录内（仓库通过 `git ls-files '*.i18n.yaml'` 登记双语对，这两份仅有 zh 版本、无 `.i18n.yaml`，故无 en 侧需同步）
   - 交付：体积数字更新 + 门禁通过
   - 对应验收标准：体积数字更新、架构门禁未因文档改动失效
