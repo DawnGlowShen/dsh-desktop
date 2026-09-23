@@ -1,6 +1,6 @@
 # 把 mnemon CLI 随 DSH Desktop 一起离线安装（方案 · macOS + Windows）
 
-> **状态：macOS 与 Windows 的代码路径均已实施（2026-09-22）；Windows 注册表 PATH 的实际效果待原生 Windows 主机验证。**
+> **状态：macOS 与 Windows 的代码路径均已实施（2026-09-22）；Windows 侧登记 `%USERPROFILE%\.dsh\bin` 并生成 `mnemon.cmd` 转发 shim，便携版首次启动另有一次提示，设置里也有可重复的登记/撤销入口，实际效果待原生 Windows 主机验证。**
 >
 > 目标读者：不熟悉构建流程的使用者。所有结论都标注了查证来源。
 >
@@ -20,7 +20,7 @@
 | Windows 安装包会大多少？ | **约 +5.5 MB** |
 | 离线机器要先装什么吗？ | **什么都不用**，见 2.1 |
 | macOS 的 PATH 怎么做？ | **首次启动写 `~/.zshrc`**（与 CodeGraph **共用同一个块**） |
-| Windows 的 PATH 怎么做？ | **NSIS 安装时写注册表**（与 CodeGraph 各写一条） |
+| Windows 的 PATH 怎么做？ | **NSIS 安装时写注册表**，登记共用的 `%USERPROFILE%\.dsh\bin`（与 CodeGraph 共用同一条）；便携版首次启动弹一次性提示 |
 | 两平台机制一样吗？ | **不一样**，与 CodeGraph 的结论相同 |
 | 和 CodeGraph 的最大差异？ | **单文件 Go 二进制 ↔ 内嵌 Node 的 JS 程序**，见第 2 节 |
 
@@ -179,8 +179,9 @@ Windows 走注册表）。这里只写 mnemon 特有的两点：
 | | **macOS（DMG）** | **Windows（NSIS）** |
 |---|---|---|
 | PATH 写在哪 | `~/.zshrc` 的标记块 | `HKCU\Environment` 的 `PATH` |
-| 与 CodeGraph 的关系 | **共用同一个块**（同一个 `~/.dsh/bin`） | **各写一条**（两个目录） |
-| shim 文件 | `~/.dsh/bin/mnemon` | **不需要**，`bin\mnemon.exe` 已在 PATH |
+| 登记哪个目录 | `~/.dsh/bin`（与 CodeGraph 同一个） | `%USERPROFILE%\.dsh\bin`（与 CodeGraph 同一个） |
+| 与 CodeGraph 的关系 | **共用同一个块** | **共用同一条 PATH 条目**（去重后只写一次） |
+| shim 文件 | `~/.dsh/bin/mnemon` | `%USERPROFILE%\.dsh\bin\mnemon.cmd`（转发到包内 `bin\mnemon.exe`） |
 
 ### 3.1 macOS：与 CodeGraph 共用同一个标记块
 
@@ -224,39 +225,36 @@ shim 内容与 CodeGraph 同构，只是指向不同目标：
 exec '/Applications/DSH Desktop Evo.app/Contents/Resources/mnemon/bin/mnemon' "$@"
 ```
 
-### 3.2 Windows：两个分支，镜像但独立
+### 3.2 Windows：两个 CLI 共用一条 PATH 条目
 
-CodeGraph 与 mnemon 落在**两个不同目录**（`resources\codegraph\bin` 与
-`resources\mnemon\bin`），所以 NSIS 里是**两个独立分支**，不是一个参数化循环。
+CodeGraph 与 mnemon 的**载荷**落在两个不同目录（`resources\codegraph\bin` 与
+`resources\mnemon\bin`），但**登记进 PATH 的只有一个目录**：`%USERPROFILE%\.dsh\bin`。
+因此 NSIS 里只有一条分支、一次 `WriteRegExpandStr`、一次广播——不存在「两个分支的
+顺序」问题，也不存在 `PathBackup` 被第二个分支覆盖的问题。
 
-**为什么不做成参数化的循环**：NSIS 宏是文本展开的，共用一段宏体就得把每个
-`!define` 与寄存器名都传进去，比它省下的重复更难读。设计文档里的决策记录保留了这个取舍。
+分工是：
 
-两个分支之间有两个必须成立的约束：
+| 谁 | 负责什么 |
+|----|---------|
+| NSIS `customInstall` | 确认 CLI 随包分发后，把 `$PROFILE\.dsh\bin` 追加到用户 PATH（去重） |
+| 应用（每次启动 / 设置里的登记动作） | 把 `mnemon.cmd` 与 `codegraph.cmd` 两个转发 shim 写进 `.dsh\bin`，内容指向当前包内二进制 |
+| 便携版提示（仅启动时） | 注册表里没有安装记录时弹一次，接受即登记；结果记在应用数据目录 `cli-prompt\state.json` |
 
-**① 安装顺序 = CodeGraph 先、Mnemon 后；卸载顺序必须严格相反。**
+**为什么是转发 shim 而不是直接登记包内目录**：安装目录会变（换盘、改名、便携版重新
+解压），直接登记的条目一旦失效就必须手工修 PATH；`.dsh\bin` 位置稳定，shim 每次启动
+重写，所以升级与搬目录都自动跟随。`mnemon.cmd` 的内容形如：
 
-卸载时每条目**只在自己仍是 PATH 最后一项时才移除**（避免用户重排过 PATH 时改坏它）。
-所以后追加的必须先剥离，前一个才可能轮到它成为最后一项：
-
+```bat
+@echo off
+"<当前安装目录>\resources\mnemon\bin\mnemon.exe" %*
 ```
-安装：  ...;resources\codegraph\bin;resources\mnemon\bin
-卸载：  先剥 mnemon → ...;resources\codegraph\bin
-        再剥 codegraph → ...
-```
 
-**② `PathBackup` 只能由第一个真正改动 PATH 的分支写。**
+**一个安装包检查覆盖两个 CLI**：两者来自同一个 `extraResources` 块，所以
+`customInstall` 只看 `resources\codegraph\bin\codegraph.cmd` 是否存在。
 
-CodeGraph 分支原本就会写备份（因为它去重在前、只在 PATH 真变时才写）。如果 mnemon
-分支无条件再写一次，**备份里存的将是「已含 codegraph 的 PATH」而不是用户最初的 PATH**，
-回滚就回不到原始状态。修正是第二个分支先读一次：
-
-```nsis
-ReadRegStr $6 HKCU "Software\${PRODUCT_NAME}" "PathBackup"
-${if} $6 == ""
-  WriteRegExpandStr HKCU "Software\${PRODUCT_NAME}" "PathBackup" "$0"
-${endIf}
-```
+**卸载只移除 PATH 条目，保留 shim 文件**：`.dsh\bin` 属于用户数据目录，另一个变体
+可能也在用同一个目录，运行时删掉它等于替用户丢数据。便携版没有卸载器，撤销走设置里的
+「撤销登记」。
 
 **必须遵守的 7 条与 CodeGraph 相同**（只动 HKCU、读改追加、写备份、不用 `setx`、
 `REG_EXPAND_SZ`、卸载精确移除、不与既有 `Var` 冲突），逐条对照见
@@ -265,8 +263,10 @@ ${endIf}
 
 ### 3.3 便携版
 
-与 CodeGraph 相同：`dist:win-portable` 没有安装器 → 不改 PATH，依赖第二层
-（应用内已可用）。详见姊妹篇 4.4.2。
+与 CodeGraph 相同：`dist:win-portable` 没有安装器，所以便携版**首次启动会弹一次提示**，
+点「登记」即完成；也可以随时走「设置 → 命令行工具 → 登记」。一次登记同时生成 `mnemon.cmd`
+与 `codegraph.cmd` 并写同一条 PATH 条目，因为它俩共用 `%USERPROFILE%\.dsh\bin`。
+换解压目录后重跑一次即可。详见姊妹篇 4.4.2。
 
 ---
 
@@ -535,19 +535,25 @@ zsh -i -c 'which mnemon && mnemon --version'
 & "$env:LOCALAPPDATA\Programs\DSH Desktop Beta\resources\mnemon\bin\mnemon.exe" --version
 #   → mnemon version 0.2.9
 
-# ② 安装后 PATH 已写入（新开窗口，让 WM_SETTINGCHANGE 生效）
-$env:Path -split ';' | Select-String mnemon
+# ② 安装后 .dsh\bin 已进 PATH（新开窗口，让 WM_SETTINGCHANGE 生效）
+$env:Path -split ';' | Select-String '\.dsh\\bin'
 
 # ③ cmd.exe 里也能用（证明写的是注册表而不是只写 PowerShell profile）
 cmd /c "where mnemon"
+cmd /c "where codegraph"
 
-# ④ 两条目都在，且顺序为 codegraph 在前、mnemon 在后
+# ④ PATH 里只有一条 DSH 条目（两个 CLI 共用），且没有指向安装目录的旧条目
 (Get-ItemProperty HKCU:\Environment).Path
 
-# ⑤ 备份里存的是**最初**的 PATH，不含我们追加的任何一条
+# ⑤ 两个转发 shim 都指向当前安装目录内的二进制
+Get-Content "$env:USERPROFILE\.dsh\bin\mnemon.cmd"
+Get-Content "$env:USERPROFILE\.dsh\bin\codegraph.cmd"
+
+# ⑥ 备份里存的是**最初**的 PATH，不含我们追加的那一条
 (Get-ItemProperty 'HKCU:\Software\DSH Desktop Beta').PathBackup
 
-# ⑥ 卸载后 PATH 恢复，两条都消失，其余条目与安装前逐条一致
+# ⑦ 卸载后 PATH 恢复，DSH 条目消失，其余条目与安装前逐条一致
+#    注意 .dsh\bin 里的 shim 文件仍在（卸载不动用户数据）
 ```
 
 > **注册表的实际效果待原生 Windows 主机验证。** 本机是 macOS，`package-win.ts` 又有
@@ -574,7 +580,8 @@ cmd /c "where mnemon"
 | prepare | 删 `scripts/prepare-mnemon.mjs`、删 `vendor/mnemon/`、`.gitignore` 去掉两行 |
 | 运行时 | `main.ts` 去掉 mnemon 的 install/release 接线 |
 | macOS shell | shim 文件由 `installDesktopCliShell()` 每次启动重写；卸载时不主动删（与 codegraph 同为持久产物）。**不要手工删 `~/.zshrc` 的块**——它正被 codegraph 使用 |
-| Windows PATH | **不要手改注册表**。正确做法：在干净的 Windows 机器上装一次带 mnemon 的版本、再卸载，观察 PATH 是否恢复。若需手工修复，用 `HKCU\Software\${PRODUCT_NAME}\PathBackup` 的值还原 |
+| Windows PATH | 优先用「设置 → 命令行工具 → 撤销登记」——它只移除 DSH 自己那一条。**不要手改注册表**；确需手工修复时用 `HKCU\Software\${PRODUCT_NAME}\PathBackup` 的值还原（**不要用 `setx`**，它会展开 `%VAR%` 并可能静默截断） |
+| Windows shim | 删 `%USERPROFILE%\.dsh\bin\mnemon.cmd` 只影响 mnemon；`codegraph.cmd` 与那条 PATH 条目由 codegraph 继续使用，**不要删 `.dsh\bin` 目录本身** |
 
 > **macOS 回滚的一个陷阱**：因为 mnemon 与 codegraph **共用**那个标记块，
 > 删掉块会让 codegraph 也失效。如果只想让 mnemon 消失，删 `~/.dsh/bin/mnemon`

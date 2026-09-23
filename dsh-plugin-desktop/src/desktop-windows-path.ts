@@ -24,6 +24,7 @@ import { win32 } from 'node:path'
 
 const ERROR_PREFIX = 'dsh-plugin-desktop:'
 const PATH_VALUE_ENVIRONMENT_VARIABLE = 'DSH_WINDOWS_PATH_VALUE'
+const KEY_ENVIRONMENT_VARIABLE = 'DSH_WINDOWS_REGISTRY_KEY'
 const POWER_SHELL_TIMEOUT_MS = 15_000
 
 /**
@@ -80,6 +81,46 @@ public static extern IntPtr SendMessageTimeout(IntPtr hWnd, uint Msg, UIntPtr wP
 $result = [UIntPtr]::Zero
 [void][Dsh.NativeMethods]::SendMessageTimeout([IntPtr]0xFFFF, 0x001A, [UIntPtr]::Zero, 'Environment', 0x0002, 5000, [ref]$result)
 `
+
+/**
+ * Answer whether one registry key exists, as a space-free `0`/`1` on stdout.
+ *
+ * The key to test arrives through `${KEY_ENVIRONMENT_VARIABLE}` rather than in
+ * the script text, matching the write script: a key name is data, and the
+ * product name it is built from is not guaranteed to be quote-free.
+ */
+export const DESKTOP_WINDOWS_KEY_EXISTS_SCRIPT = `${POWER_SHELL_PREAMBLE}
+$path = $env:${KEY_ENVIRONMENT_VARIABLE}
+if ([string]::IsNullOrEmpty($path)) { throw '${KEY_ENVIRONMENT_VARIABLE} is required' }
+if ($null -eq [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey($path)) { '0' } else { '1' }
+`
+
+/** Runs one registry existence question and reports whether the key was found. */
+export type DesktopWindowsKeyExistsRunner = DesktopWindowsPathRunner
+
+/**
+ * Build the real registry probe the install-kind decision is injected with.
+ *
+ * A failure is deliberately not swallowed into `false`: "the registry could not
+ * be read" and "the key is absent" are different answers, and collapsing them
+ * would tell an installed user they are portable and show a prompt they should
+ * never see. The caller decides what a failed probe means.
+ */
+export function createPowerShellWindowsKeyProbe(
+  run: DesktopWindowsKeyExistsRunner = runPowerShell,
+): (key: string) => boolean {
+  return key => {
+    const stdout = run(DESKTOP_WINDOWS_KEY_EXISTS_SCRIPT, {
+      ...process.env,
+      [KEY_ENVIRONMENT_VARIABLE]: key,
+    }).trim()
+    // Only the two literals the script can emit are accepted, so a truncated or
+    // polluted stdout cannot be mistaken for a "found" answer.
+    if (stdout === '1') return true
+    if (stdout === '0') return false
+    fail(`Windows registry key probe returned unexpected output: ${JSON.stringify(stdout)}`)
+  }
+}
 
 /** Value type of the per-user `Path`, as reported by the registry. */
 export type DesktopWindowsPathValueKind = 'ExpandString' | 'String' | 'Unknown'

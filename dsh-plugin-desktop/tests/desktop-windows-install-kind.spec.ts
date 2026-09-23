@@ -175,6 +175,34 @@ describe('startup wiring in main.ts', () => {
     expect(dshHome).toBeGreaterThan(-1)
     expect(guard).toBeGreaterThan(dshHome)
   })
+
+  it('asks a portable user once, through the same publisher the settings entry uses', () => {
+    // The prompt must consume the install-kind decision rather than merely
+    // compute it, and must reuse `cliPublisher` so the two routes to a working
+    // terminal cannot disagree about what they register.
+    expect(main).toContain('runDesktopCliPortablePrompt({')
+    expect(main).toContain('detectInstallKind: () => detectDesktopWindowsInstallKind(')
+    expect(main).toContain('publish: () => { cliPublisher.publish() },')
+    expect(main).toContain('if (cliPublisher !== undefined) {')
+  })
+
+  it('reads the real registry through the PowerShell probe', () => {
+    // The decision has to come from the installer's own records; a path-shape
+    // guess would misclassify a custom installation directory.
+    expect(main).toContain('createPowerShellWindowsKeyProbe()')
+    expect(main).not.toContain('PORTABLE_EXECUTABLE_DIR')
+  })
+
+  it('never lets the prompt delay or break startup', () => {
+    // A modal window raised during the tail of startup would be a second
+    // problem, so the call is deliberately not awaited and every failure is
+    // caught and logged.
+    const call = main.indexOf('void runDesktopCliPortablePrompt({')
+    const caught = main.indexOf('portable CLI prompt failed', call)
+
+    expect(call).toBeGreaterThan(-1)
+    expect(caught).toBeGreaterThan(call)
+  })
 })
 
 describe('settings-entry wiring', () => {

@@ -292,3 +292,41 @@ describe('createPowerShellWindowsPathRegistry', () => {
     expect(() => registry.read()).toThrow(/dsh-plugin-desktop:/u)
   })
 })
+
+describe('createPowerShellWindowsKeyProbe', () => {
+  it('reports presence and absence from the two script literals', async () => {
+    const { createPowerShellWindowsKeyProbe } = await import('../src/desktop-windows-path.ts')
+
+    expect(createPowerShellWindowsKeyProbe(() => '1\n')('Software\\Thing')).toBe(true)
+    expect(createPowerShellWindowsKeyProbe(() => '0\n')('Software\\Thing')).toBe(false)
+  })
+
+  it('passes the key as data, never as script text', async () => {
+    const { createPowerShellWindowsKeyProbe, DESKTOP_WINDOWS_KEY_EXISTS_SCRIPT }
+      = await import('../src/desktop-windows-path.ts')
+    const calls: { script: string, env: NodeJS.ProcessEnv }[] = []
+    const probe = createPowerShellWindowsKeyProbe((script, env) => {
+      calls.push({ script, env })
+      return '0'
+    })
+
+    // A quote or `$` in a product name must not become script syntax.
+    probe('Software\\O\'Brien$Corp')
+
+    expect(calls).toHaveLength(1)
+    expect(calls[0]!.env.DSH_WINDOWS_REGISTRY_KEY).toBe('Software\\O\'Brien$Corp')
+    expect(calls[0]!.script).toBe(DESKTOP_WINDOWS_KEY_EXISTS_SCRIPT)
+    expect(calls[0]!.script).not.toContain('Brien')
+  })
+
+  it('refuses to read unexpected output as an answer', async () => {
+    const { createPowerShellWindowsKeyProbe } = await import('../src/desktop-windows-path.ts')
+
+    // Anything other than the two literals the script can emit is an error, so
+    // a truncated or polluted stdout cannot masquerade as "the key exists".
+    for (const stdout of ['', 'maybe', '1\n0\n', 'true']) {
+      expect(() => createPowerShellWindowsKeyProbe(() => stdout)('Software\\Thing'))
+        .toThrow(/dsh-plugin-desktop:/u)
+    }
+  })
+})

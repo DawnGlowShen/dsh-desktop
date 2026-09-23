@@ -509,17 +509,17 @@
 - **迁移说明存在**：当查阅文档时，说明升级后旧 PATH 条目的清理方式。验证方式：`grep -n 'PathBackup\|旧.*条目' docs/build-custom-client.zh.md` 有输出
 
 **增量计划**：
-- [ ] **增量 1**：`docs/build-custom-client.zh.md` 的 Windows 表格与说明
+- [x] **增量 1**：`docs/build-custom-client.zh.md` 的 Windows 表格与说明
   - 做什么：更新 PATH 目标、补便携版三步、补迁移清理说明
   - 交付：更新后的主文档
   - 对应验收标准：Windows PATH 目标描述已更新、便携版步骤完整
   - 完成判定：`grep` 断言通过
-- [ ] **增量 2**：两份 CLI 方案文档
+- [x] **增量 2**：两份 CLI 方案文档
   - 做什么：同步 Windows 章节的 PATH 目标与 shim 机制说明
   - 交付：两份文档更新
   - 对应验收标准：Windows PATH 目标描述已更新
   - 完成判定：`grep -rn 'resources..codegraph..bin' docs/` 无作为登记目标的描述
-- [ ] **增量 3**：README 便携版说明与迁移说明
+- [x] **增量 3**：README 便携版说明与迁移说明
   - 做什么：README 补一句；补迁移清理段落
   - 交付：README 更新
   - 对应验收标准：迁移说明存在

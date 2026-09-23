@@ -1,6 +1,6 @@
 # 把 codegraph CLI 随 DSH Desktop 一起离线安装（方案 · macOS + Windows）
 
-> **状态：macOS 部分已实施并验证通过（2026-09-18），并已扩展为双架构 universal 载荷（2026-09-23）；Windows 部分已实施——NSIS 安装器写用户 PATH，待原生 Windows 主机验证实际效果。**
+> **状态：macOS 部分已实施并验证通过（2026-09-18），并已扩展为双架构 universal 载荷（2026-09-23）；Windows 部分已实施——NSIS 安装器登记 `%USERPROFILE%\.dsh\bin` 并生成转发 shim，便携版首次启动另有一次提示，设置里也有可重复的登记/撤销入口，待原生 Windows 主机验证实际效果。**
 >
 > 目标读者：不熟悉构建流程的使用者。所有结论都标注了查证来源。
 >
@@ -211,10 +211,12 @@ node scripts/prepare-mnemon.mjs    --target darwin-arm64
 | 分发形式 | `.dmg` 拖拽 | `Setup.exe` 安装向导 |
 | **有安装钩子吗** | **没有** —— 拖拽就是拷贝，之外什么都不会发生 | **有** —— NSIS 支持 `customInstall` / `customUnInstall` |
 | PATH 写在哪 | 用户的 **`~/.zshrc`** | **`HKCU\Environment`** 的 `PATH`（注册表） |
-| 何时写 | **应用首次启动时** | **安装时**（卸载时移除） |
+| 登记哪个目录 | `~/.dsh/bin` | `%USERPROFILE%\.dsh\bin` |
+| 目录里放什么 | 指向包内二进制的 shim | 指向包内二进制的 `.cmd` 转发 shim（`codegraph.cmd`） |
+| 何时写 | **应用首次启动时** | **安装时**（卸载时移除 PATH 条目，保留 shim） |
 | 需要管理员权限吗 | 不需要 | 不需要（`perMachine: false`，用户级安装 → HKCU） |
 | 生效时机 | 需**新开终端窗口** | 新开的进程即可见（广播 `WM_SETTINGCHANGE` 后） |
-| 便携版怎么办 | 同 DMG（首次启动写） | `dist:win-portable` **没有安装器** → 退回首次启动写 |
+| 便携版怎么办 | 同 DMG（首次启动写） | `dist:win-portable` **没有安装器** → **首次启动弹一次提示**，也可随时用「设置 → 命令行工具」登记，可重复执行 |
 
 **为什么 Windows 不该照抄 macOS 的做法**：Windows 的「shell 配置」是分家的——PowerShell 用 `$PROFILE`，cmd.exe 用注册表 PATH。只写 PowerShell profile 的话，cmd.exe 里依然找不到 `codegraph`。**写注册表 PATH 才是 Windows 的正解**，而且它正好有安装钩子可用。
 
@@ -353,17 +355,32 @@ export PATH="$HOME/.dsh/bin:$PATH"     # 注意是 :$PATH 在后
 **4.4.1 安装时写 PATH（已实施）**
 
 仓库已有 `build/installer.nsh` 且 `package.json` 里已配置 `"include": "installer.nsh"`，
-新增的两个宏就放在这个文件里（两个变体各一份，逐字节相同；产品名走 electron-builder
-的 `${PRODUCT_NAME}`，不硬编码）。要点：
+两个宏就放在这个文件里（两个变体各一份，逐字节相同；产品名走 electron-builder
+的 `${PRODUCT_NAME}`，不硬编码）。
+
+**登记的是 `%USERPROFILE%\.dsh\bin`，不是安装目录。** 这是与早期方案的关键区别：
+安装目录会变（换盘、改名、便携版重新解压），写死进去的条目一旦失效就只能手工修；
+`.dsh\bin` 属于用户数据目录，位置稳定。里面放的是**转发 shim**——由应用每次启动
+重写成指向当前包内二进制的绝对路径，所以 PATH 本身永远不需要改。`codegraph.cmd`
+的内容形如：
+
+```bat
+@echo off
+"<当前安装目录>\resources\codegraph\node.exe" --liftoff-only --disable-warning=ExperimentalWarning "<当前安装目录>\resources\codegraph\lib\dist\bin\codegraph.js" %*
+```
+
+要点：
 
 ```nsis
+!define DSH_SHIM_DIR ".dsh\bin"   ; 相对 $PROFILE，跟随用户而不是机器
+
 !macro customInstall
   ${if} ${FileExists} "$INSTDIR\resources\codegraph\bin\codegraph.cmd"
     ReadRegStr $0 HKCU "Environment" "Path"
-    ${StrContains} $1 "resources\codegraph\bin" "$0"          ; 去重
+    ${StrContains} $1 "${DSH_SHIM_DIR}" "$0"                    ; 去重
     ${if} $1 == ""
       WriteRegExpandStr HKCU "Software\${PRODUCT_NAME}" "PathBackup" "$0"   ; 备份
-      StrCpy $0 "$0;$INSTDIR\resources\codegraph\bin"          ; 追加到末尾
+      StrCpy $0 "$0;$PROFILE\${DSH_SHIM_DIR}"                  ; 追加到末尾
       WriteRegExpandStr HKCU "Environment" "Path" "$0"
       SendMessage 0xFFFF 0x001A 0 "STR:Environment" /TIMEOUT=5000   ; 广播
     ${endIf}
@@ -371,7 +388,8 @@ export PATH="$HOME/.dsh/bin:$PATH"     # 注意是 :$PATH 在后
 !macroend
 
 !macro customUnInstall
-  ; 条目仍在 PATH 末尾时才移除，否则原样不动
+  ; 条目仍在 PATH 末尾时才移除（只移除这一条），否则原样不动
+  ; shim 文件保留：.dsh\bin 属于用户数据，另一个变体可能也在用
 !macroend
 ```
 
@@ -403,11 +421,17 @@ export PATH="$HOME/.dsh/bin:$PATH"     # 注意是 :$PATH 在后
 
 **4.4.2 便携版**
 
-`dist:win-portable` 没有安装器 → 退回**首次启动写**。但 Windows 没有 `.zshrc` 这种统一入口，写 `$PROFILE` 只覆盖 PowerShell。务实做法：便携版**不改 PATH**，只在文档里给出一次性的 `setx` 或临时 `set PATH=...` 说明，并依赖第二层（应用内已可用）。
+`dist:win-portable` 没有安装器，所以 PATH 不会自动写好。便携版**首次启动时会弹一次提示**，点「登记」即完成；点「暂不」或关掉就不会再问。无论当时选了什么，之后都可以走「设置 → 命令行工具」的**登记**动作：它会生成 `codegraph.cmd` 转发 shim 并登记 `%USERPROFILE%\.dsh\bin`，与安装版写的是同一条。这个动作**可重复执行**——搬了目录、换了盘、升级之后重跑一次，shim 就会被重写成新的绝对路径，不需要动 PATH。撤销用同区块的「撤销登记」。
 
-**4.4.3 应用内的 shim 不需要**
+判定「要不要弹」的依据是注册表里有没有这个产品的安装记录（`HKCU\Software\<GUID>` 与卸载项），**不靠猜解压路径，也不用 `PORTABLE_EXECUTABLE_DIR`**。是否弹过记在应用数据目录的 `cli-prompt\state.json`（不写注册表）。注册表读不出来时**不提示**并记日志：读不到安装记录不等于「这是便携版」，对已登记用户弹提示是在说假话。
 
-第二层已经把 `resources\codegraph\bin` 前置到 Host 的 PATH，而 `bin\codegraph.cmd` 就在那里。插件通过 `cmd.exe` 解析 `.cmd`，可直接命中。**不需要额外写 shim 文件。**
+> **不要用 `setx` 改 PATH。** 它会把 `%VAR%` 展开成字面路径，并且在超过 1024 字符时会静默截断——两者都会损坏用户的 PATH。
+
+**4.4.3 应用内不需要 shim**
+
+第二层已经把 `resources\codegraph\bin` 前置到 Host 的 PATH，而 `bin\codegraph.cmd` 就在那里。插件通过 `cmd.exe` 解析 `.cmd`，可直接命中。**应用内不读 `.dsh\bin` 里的 shim**——那个目录只服务于用户自己的终端。
+
+两套机制因此互不干扰：应用内永远用包内那份（版本随安装包升级），终端用 shim 指向包内那份（搬目录后重跑一次设置里的登记即可）。
 
 ---
 
@@ -544,16 +568,22 @@ Test-Path "$env:USERPROFILE\DSH Desktop Evo\resources\codegraph\bin\codegraph.cm
 # ② 包内 CLI 能独立跑
 & "$env:USERPROFILE\DSH Desktop Evo\resources\codegraph\bin\codegraph.cmd" --version
 
-# ③ 安装后 PATH 已写入（新开窗口）
-[Environment]::GetEnvironmentVariable('PATH','User') -split ';' | Select-String codegraph
+# ③ 安装后 .dsh\bin 已进 PATH（新开窗口）
+[Environment]::GetEnvironmentVariable('PATH','User') -split ';' | Select-String '\.dsh\\bin'
 
 # ④ cmd.exe 里也能用（证明写注册表而非只写 PowerShell profile）
 cmd /c "where codegraph"
 
-# ⑤ PATH 没有被破坏：对比安装前后的用户 PATH 条目数
+# ⑤ 转发 shim 指向当前安装目录内的二进制
+Get-Content "$env:USERPROFILE\.dsh\bin\codegraph.cmd"
+
+# ⑥ 便携版：没有安装器，用「设置 → 命令行工具 → 登记」，然后开新终端重跑 ③④
+#    把解压目录改名后再点一次「登记」，shim 应指向新路径（不需要动 PATH）
+
+# ⑦ PATH 没有被破坏：对比安装前后的用户 PATH 条目数
 #    安装器应在 HKCU\Software\DSH Desktop Evo\PathBackup 留有备份
 
-# ⑥ 卸载后 PATH 恢复
+# ⑧ 卸载后 PATH 恢复，但 .dsh\bin 里的 shim 文件仍在
 ```
 
 ### 8.3 两平台共同回归
@@ -639,8 +669,10 @@ node --test scripts/prepare-universal-bundle.test.mjs
 | vendor `codegraph-win32-x64` | ✅ 已放好 |
 | prepare 脚本 win32 分支 | ✅ 已支持 |
 | `extraResources` | ✅ 落地为 `resources\codegraph\bin\codegraph.cmd` |
-| NSIS `customInstall` / `customUnInstall` | ✅ 已实施（见 4.4.1） |
-| 便携版策略 | ⛔ 不做（见 4.4.2），应用内仍可用 |
+| NSIS `customInstall` / `customUnInstall` | ✅ 已实施，登记共用的 `%USERPROFILE%\.dsh\bin`（见 4.4.1） |
+| 转发 shim（`.cmd`）生成 | ✅ 已实施：应用每次启动重写，指向当前包内二进制 |
+| 设置里的可重复入口 | ✅ 已实施：登记 / 撤销，安装版与便携版都能用 |
+| 便携版策略 | ✅ 支持（见 4.4.2）：首次启动一次性提示 + 设置里可重复登记 PATH |
 
 > **注册表的实际效果待原生 Windows 主机验证。** 本机是 macOS，`package-win.ts` 又有
 > 「必须在原生 Windows 主机上构建」的硬断言，所以本地能验证的只有两层：扩展后的
@@ -656,7 +688,7 @@ node --test scripts/prepare-universal-bundle.test.mjs
 | 预设失败模式：两切片内容不一致导致合并失败 | **实际是 `x64ArchFiles` 未声明** | `@electron/universal` 对「两切片相同但未被声明的原生文件」报错，需在 `build.mac.x64ArchFiles` 里加上 `Resources/codegraph/**`。**这是实施中唯一卡住构建的问题** |
 | 计划设置 `CODEGRAPH_NO_DOWNLOAD=1` | **不需要** | 我们直接指向平台包的 `bin/codegraph`，**完全绕开了 `npm-shim.js`**，而下载兜底逻辑只在 shim 里 |
 | 计划让用户「显式选择是否加 PATH」 | 按用户后续要求改为**首次启动自动写** | 用户明确要求「首次启动的时候，写 .zshrc」 |
-| 计划给设置里的「移除 PATH」加 UI | 只实现了 `uninstallDesktopCodegraphShell()` 函数 | UI 开关属于品牌化/设置面板范畴，未做 |
+| 计划给设置里的「移除 PATH」加 UI | ✅ 已实现，「命令行工具」区块的「撤销登记」 | 便携版没有卸载器，撤销必须由应用提供，所以从可选项变成必需项 |
 | 双架构改造计划在 10 处打包调用点加 `--target darwin-universal` | **只在 prepare 脚本里改默认推断** | 5 个打包脚本的前置调用串本就无参数；把 `darwin` 主机的默认 target 定为 `darwin-universal` 即可，调用点零改动、回滚也更简单 |
 | 计划让两切片各带一份架构专属载荷 | **改为 `lipo` 合成单份** | `@electron/universal` 对非 Mach-O 文件逐个比对 SHA，两份 `package.json` 必然不同 → 合并必定失败 |
 
