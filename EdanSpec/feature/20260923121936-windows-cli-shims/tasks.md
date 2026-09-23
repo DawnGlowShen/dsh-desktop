@@ -463,17 +463,17 @@
 - **stable 侧类型检查通过**：验证方式：`yarn workspace dsh-plugin-desktop typecheck` 无错误
 
 **增量计划**：
-- [ ] **增量 1**：同步 `src/` 共享文件
+- [x] **增量 1**：同步 `src/` 共享文件
   - 做什么：逐文件把 beta 的内容复制到 stable，跳过 `product-identity.ts`
   - 交付：stable 侧同构源码
   - 对应验收标准：变体一致性校验通过
   - 完成判定：`corepack yarn check:desktop-variants` 退出码 0
-- [ ] **增量 2**：同步 `build/` 与 `tests/`
+- [x] **增量 2**：同步 `build/` 与 `tests/`
   - 做什么：同步 `installer.nsh` 与新增/修改的测试文件
   - 交付：stable 侧同构测试
   - 对应验收标准：installer.nsh 逐字节相同、stable 侧测试通过
   - 完成判定：`diff` 无输出且 stable 侧测试全绿
-- [ ] **增量 3**：stable 侧类型检查与构建
+- [x] **增量 3**：stable 侧类型检查与构建
   - 做什么：跑 stable 的类型检查与构建，确认无 beta 特有符号泄漏
   - 交付：stable 侧可构建
   - 对应验收标准：stable 侧类型检查通过
