@@ -185,17 +185,17 @@
 - **对运行中应用的处理不变**：当检查 `customCheckAppRunning` 时，`$R1 < 60`、`Sleep 500`、`KILL_PROCESS` 两类调用与 `--dsh-installer-quit` 链路仍在。验证方式：同一测试文件中 `Windows NSIS running-app handoff` describe 全部通过
 
 **增量计划**：
-- [ ] **增量 1**：合并安装分支
+- [x] **增量 1**：合并安装分支
   - 做什么：删除 mnemon 独立分支，保留一条追加 `$PROFILE\.dsh\bin` 的分支，简化 `PathBackup` 的"仅首次"判断（单写入点后不再需要 `$6` 检查）
   - 交付：新的 `customInstall`
   - 对应验收标准：登记目标为 shim 目录且写入次数收敛为两次
   - 完成判定：`yarn workspace dsh-plugin-desktop-beta vitest run tests/installer-nsh.spec.ts` 通过
-- [ ] **增量 2**：简化卸载分支
+- [x] **增量 2**：简化卸载分支
   - 做什么：删除 mnemon 卸载分支，保留一条对 `$PROFILE\.dsh\bin` 的末尾位置判断
   - 交付：新的 `customUnInstall`
   - 对应验收标准：登记目标为 shim 目录且写入次数收敛为两次
   - 完成判定：同一测试文件通过（含计数断言）
-- [ ] **增量 3**：测试断言同步与安全约定复核
+- [x] **增量 3**：测试断言同步与安全约定复核
   - 做什么：把计数断言从 4 改为 2、更新目标断言；确认 `setx` / `WriteRegStr` 的否定断言与 handoff describe 未动
   - 交付：更新后的测试文件
   - 对应验收标准：安全约定未被削弱、对运行中应用的处理不变
