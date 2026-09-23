@@ -226,6 +226,205 @@ describe('installDesktopCliShell', () => {
   })
 })
 
+describe('installDesktopCliShell on Windows', () => {
+  /**
+   * Windows paths inside the generated content, host paths for the filesystem.
+   *
+   * The shim text must be Windows-shaped because that is what cmd.exe resolves,
+   * but the files still have to be written to a real temporary directory on
+   * whatever host runs the suite — `yarn check` runs it on Linux too. Only the
+   * launcher paths are therefore spelled with backslashes, and the win32 branch
+   * must derive the bundle root with `win32` semantics rather than the host's.
+   */
+  const BUNDLE = 'C:\\app\\resources\\codegraph'
+
+  function windowsRoot(): { home: string; userHome: string } {
+    const root = mkdtempSync(join(tmpdir(), 'dsh-cli-win-'))
+    roots.push(root)
+    const userHome = join(root, 'user')
+    return { home: join(userHome, '.dsh'), userHome }
+  }
+
+  function windowsCli(options: { home: string; userHome: string; bundle?: string }): Parameters<typeof installDesktopCliShell>[0] {
+    return {
+      platform: 'win32',
+      homeDir: options.home,
+      userHomeDir: options.userHome,
+      launchers: [
+        { name: 'codegraph', launcherPath: `${options.bundle ?? BUNDLE}\\lib\\dist\\bin\\codegraph.js` },
+        { name: 'mnemon', launcherPath: `${options.bundle ?? BUNDLE}\\mnemon\\bin\\mnemon.exe` },
+      ],
+    }
+  }
+
+  function shim(home: string, name: string): string {
+    return join(home, 'bin', `${name}.cmd`)
+  }
+
+  it('generates a .cmd forwarder per launcher instead of copying the binary', () => {
+    const { home, userHome } = windowsRoot()
+    const installation = installDesktopCliShell(windowsCli({ home, userHome }))
+
+    expect(installation.changed).toBe(true)
+    expect(installation.shimPaths).toEqual([shim(home, 'codegraph'), shim(home, 'mnemon')])
+
+    const mnemon = readFileSync(shim(home, 'mnemon'), 'utf8')
+    expect(mnemon).toContain(`${BUNDLE}\\mnemon\\bin\\mnemon.exe`)
+    expect(mnemon).toMatch(/^@echo off\r\n/u)
+    expect(mnemon.endsWith(' %*\r\n')).toBe(true)
+
+    const codegraph = readFileSync(shim(home, 'codegraph'), 'utf8')
+    // The interpreter sits at the flat bundle root while the entry script is
+    // nested three levels down, so the root has to be re-derived.
+    expect(codegraph).toContain(`${BUNDLE}\\node.exe`)
+    expect(codegraph).toContain(`${BUNDLE}\\lib\\dist\\bin\\codegraph.js`)
+    expect(codegraph).toContain('--liftoff-only')
+    expect(codegraph).toContain('--disable-warning=ExperimentalWarning')
+    expect(codegraph).toMatch(/^@echo off\r\n/u)
+    expect(codegraph.endsWith(' %*\r\n')).toBe(true)
+  })
+
+  it('never references %~dp0 and is not a copy of the upstream shim', () => {
+    const { home, userHome } = windowsRoot()
+    installDesktopCliShell(windowsCli({ home, userHome }))
+
+    const codegraph = readFileSync(shim(home, 'codegraph'), 'utf8')
+    // %~dp0 resolves at call time, so a copied upstream shim would point at the
+    // shim directory instead of the bundle and break immediately.
+    expect(codegraph).not.toContain('%~dp0')
+    expect(codegraph).not.toContain('%~dpn0')
+    // A forwarder is a few dozen bytes; a copy would carry the launcher's bytes.
+    expect(codegraph.length).toBeLessThan(400)
+  })
+
+  it('rejects a CodeGraph path that is not in the packaged layout', () => {
+    const { home, userHome } = windowsRoot()
+
+    expect(() => installDesktopCliShell({
+      platform: 'win32',
+      homeDir: home,
+      userHomeDir: userHome,
+      launchers: [{ name: 'codegraph', launcherPath: 'C:\\elsewhere\\codegraph.js' }],
+    })).toThrow(/codegraph launcher path/u)
+  })
+
+  it('writes no shell profile at all on Windows', () => {
+    const { home, userHome } = windowsRoot()
+    const installation = installDesktopCliShell(windowsCli({ home, userHome }))
+
+    expect(installation.pathDir).toBe(join(home, 'bin'))
+    // Windows has no shell profile; its PATH entry belongs to the registry.
+    expect(installation.profilePath).toBe('')
+    expect(existsSync(join(userHome, '.zshrc'))).toBe(false)
+    expect(existsSync(join(userHome, '.bash_profile'))).toBe(false)
+  })
+
+  it('is idempotent on content rather than on existence', () => {
+    const { home, userHome } = windowsRoot()
+    const options = windowsCli({ home, userHome })
+
+    const first = installDesktopCliShell(options)
+    const afterFirst = readFileSync(shim(home, 'codegraph'), 'utf8')
+    const second = installDesktopCliShell(options)
+
+    expect(first.changed).toBe(true)
+    expect(second.changed).toBe(false)
+    expect(readFileSync(shim(home, 'codegraph'), 'utf8')).toBe(afterFirst)
+  })
+
+  it('rewrites a shim that points at a previous bundle location', () => {
+    const { home, userHome } = windowsRoot()
+    const moved = 'C:\\relocated\\codegraph'
+    installDesktopCliShell(windowsCli({ home, userHome }))
+
+    const result = installDesktopCliShell(windowsCli({ home, userHome, bundle: moved }))
+
+    expect(result.changed).toBe(true)
+    const codegraph = readFileSync(shim(home, 'codegraph'), 'utf8')
+    expect(codegraph).toContain(`${moved}\\node.exe`)
+    expect(codegraph).not.toContain(BUNDLE)
+  })
+
+  it('overwrites an empty or stale shim instead of skipping it', () => {
+    const { home, userHome } = windowsRoot()
+    mkdirSync(join(home, 'bin'), { recursive: true })
+    writeFileSync(shim(home, 'mnemon'), '', 'utf8')
+    writeFileSync(shim(home, 'codegraph'), '@echo off\r\ncodegraph %*\r\n', 'utf8')
+
+    const result = installDesktopCliShell(windowsCli({ home, userHome }))
+
+    expect(result.changed).toBe(true)
+    expect(readFileSync(shim(home, 'mnemon'), 'utf8')).toContain('mnemon.exe')
+    expect(readFileSync(shim(home, 'codegraph'), 'utf8')).toContain('codegraph.js')
+  })
+
+  it('doubles percent signs so a literal path cannot expand as a variable', () => {
+    const { home, userHome } = windowsRoot()
+    const bundle = 'C:\\tools\\%TEMP%\\codegraph'
+
+    installDesktopCliShell(windowsCli({ home, userHome, bundle }))
+
+    const mnemon = readFileSync(shim(home, 'mnemon'), 'utf8')
+    // cmd.exe expands %VAR% even inside quotes, so the literal must be doubled.
+    // Asserted exactly: "%%TEMP%%" still *contains* "%TEMP%" as a substring, so
+    // a `not.toContain('%TEMP%')` guard would prove nothing.
+    expect(mnemon).toBe('@echo off\r\n"C:\\tools\\%%TEMP%%\\codegraph\\mnemon\\bin\\mnemon.exe" %*\r\n')
+  })
+
+  it('rejects a launcher name that would escape the shim directory', () => {
+    const { home, userHome } = windowsRoot()
+
+    for (const name of ['..', '.', '../escape', '..\\escape', 'a/b', 'has space', '']) {
+      expect(() => installDesktopCliShell({
+        platform: 'win32',
+        homeDir: home,
+        userHomeDir: userHome,
+        launchers: [{ name, launcherPath: 'C:\\app\\resources\\codegraph\\mnemon.exe' }],
+      })).toThrow(/launcher name/u)
+    }
+    // Nothing may be written when a name is rejected.
+    expect(existsSync(join(home, 'bin'))).toBe(false)
+  })
+
+  it('leaves macOS artifacts untouched when the platform is darwin', () => {
+    const { home, userHome, launcher, mnemon } = makeRoot()
+    installDesktopCliShell(cli({ home, userHome, launcher, mnemon }))
+
+    expect(existsSync(shellPath(home))).toBe(true)
+    expect(existsSync(join(home, 'bin', 'codegraph.cmd'))).toBe(false)
+    expect(readFileSync(shellPath(home), 'utf8').startsWith('#!/bin/sh\n')).toBe(true)
+    expect(readFileSync(join(userHome, '.zshrc'), 'utf8')).toContain(MARKER_BEGIN)
+  })
+})
+
+describe('uninstallDesktopCliShell on Windows', () => {
+  it('removes the .cmd shims and touches no profile', () => {
+    const root = mkdtempSync(join(tmpdir(), 'dsh-cli-win-un-'))
+    roots.push(root)
+    const userHome = join(root, 'user')
+    const home = join(userHome, '.dsh')
+    const options = {
+      platform: 'win32' as const,
+      homeDir: home,
+      userHomeDir: userHome,
+      launchers: [
+        { name: 'codegraph', launcherPath: 'C:\\app\\resources\\codegraph\\lib\\dist\\bin\\codegraph.js' },
+        { name: 'mnemon', launcherPath: 'C:\\app\\resources\\codegraph\\mnemon\\bin\\mnemon.exe' },
+      ],
+    }
+
+    installDesktopCliShell(options)
+    const result = uninstallDesktopCliShell(options)
+
+    expect(result.changed).toBe(true)
+    expect(result.profilePath).toBe('')
+    expect(existsSync(join(home, 'bin', 'codegraph.cmd'))).toBe(false)
+    expect(existsSync(join(home, 'bin', 'mnemon.cmd'))).toBe(false)
+    expect(existsSync(join(userHome, '.zshrc'))).toBe(false)
+  })
+})
+
+
 describe('uninstallDesktopCliShell', () => {
   it('removes every shim and the block while leaving the rest byte-identical', () => {
     const { home, userHome, launcher, mnemon } = makeRoot()
