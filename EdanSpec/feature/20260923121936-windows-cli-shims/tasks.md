@@ -119,17 +119,17 @@
 - **失败不静默**：当注入的执行器返回非零退出码时，模块抛出带 `dsh-plugin-desktop:` 前缀的错误，而不是返回成功。验证方式：同一测试文件中的失败分支用例通过
 
 **增量计划**：
-- [ ] **增量 1**：可注入执行器接口与假实现
+- [x] **增量 1**：可注入执行器接口与假实现
   - 做什么：定义读 PATH / 写 PATH 的接口（含值类型与广播），实现 PowerShell 版本，测试注入记录型假实现
   - 交付：接口 + 真实实现 + 假实现
   - 对应验收标准：失败不静默
   - 完成判定：`yarn workspace dsh-plugin-desktop-beta vitest run tests/desktop-windows-path.spec.ts` 通过 && `yarn workspace dsh-plugin-desktop-beta typecheck` 无错误
-- [ ] **增量 2**：登记路径（查重 + 追加 + 备份语义 + 广播）
+- [x] **增量 2**：登记路径（查重 + 追加 + 备份语义 + 广播）
   - 做什么：实现登记逻辑，PATH 未变化时不写盘
   - 交付：可用的登记函数
   - 对应验收标准：登记保持值类型、查重、且不用被排除的手段
   - 完成判定：同一测试文件通过（含"已含目标目录"用例与命令文本否定断言）
-- [ ] **增量 3**：撤销路径
+- [x] **增量 3**：撤销路径
   - 做什么：实现撤销逻辑，只移除自身条目
   - 交付：可用的撤销函数
   - 对应验收标准：撤销只移除自身条目
@@ -145,11 +145,11 @@
 **触发条件**：Task-001、Task-002 完成
 
 **验证项**（仅包含可自动验证项）：
-- [ ] 类型检查：`yarn workspace dsh-plugin-desktop-beta typecheck` 无错误
-- [ ] 测试：`yarn workspace dsh-plugin-desktop-beta vitest run tests/desktop-cli-shell.spec.ts tests/desktop-windows-path.spec.ts` 全部通过
-- [ ] 分支穷举：上述两个测试文件的用例数较改动前分别增加 ≥4 与 ≥6，覆盖「重复调用不写盘」「路径变化覆盖」「非法名被拒」「已含条目不重复写」「撤销不动其余条目」「执行器失败抛错」
-- [ ] 依赖变更：`git diff --stat dsh-plugin-desktop-beta/package.json` 为空（未引入新的第三方依赖）
-- [ ] 手段排除：`grep -rn "setx\|reg add\|reg query" dsh-plugin-desktop-beta/src/desktop-windows-path.ts dsh-plugin-desktop-beta/src/desktop-cli-shell.ts` 无输出
+- [x] 类型检查：`yarn workspace dsh-plugin-desktop-beta typecheck` 无错误
+- [x] 测试：`yarn workspace dsh-plugin-desktop-beta vitest run tests/desktop-cli-shell.spec.ts tests/desktop-windows-path.spec.ts` 全部通过
+- [x] 分支穷举：上述两个测试文件的用例数较改动前分别增加 ≥4 与 ≥6，覆盖「重复调用不写盘」「路径变化覆盖」「非法名被拒」「已含条目不重复写」「撤销不动其余条目」「执行器失败抛错」
+- [x] 依赖变更：`git diff --stat dsh-plugin-desktop-beta/package.json` 为空（未引入新的第三方依赖）
+- [x] 手段排除：`grep -rn "setx\|reg add\|reg query" dsh-plugin-desktop-beta/src/desktop-windows-path.ts dsh-plugin-desktop-beta/src/desktop-cli-shell.ts` 无输出
 
 → Agent：检查点作为 Task 类别参与统一编号，与开发任务按实施顺序交替排列。
 
