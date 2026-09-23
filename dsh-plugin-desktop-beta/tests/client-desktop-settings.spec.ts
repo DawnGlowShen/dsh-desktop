@@ -368,6 +368,9 @@ describe('Desktop settings API', () => {
         || path === desktopSettingsPaths.diagnosticsExport) {
         return json({ accepted: true })
       }
+      if (path === desktopSettingsPaths.cliPublish || path === desktopSettingsPaths.cliRevoke) {
+        return json({ changed: path === desktopSettingsPaths.cliPublish, registered: path === desktopSettingsPaths.cliPublish })
+      }
       return path === desktopSettingsPaths.settings || path === desktopSettingsPaths.profileCreate || path === desktopSettingsPaths.profileDelete
         ? json(VIEW)
         : json({ accepted: true, restartRequired: true })
@@ -386,6 +389,8 @@ describe('Desktop settings API', () => {
     await expect(api.toggleDeveloperTools()).resolves.toBeUndefined()
     await expect(api.checkForUpdates()).resolves.toBeUndefined()
     await expect(api.exportDiagnostics()).resolves.toBeUndefined()
+    await expect(api.publishCli?.()).resolves.toEqual({ changed: true, registered: true })
+    await expect(api.revokeCli?.()).resolves.toEqual({ changed: false, registered: false })
 
     expect(fetcher.mock.calls.map(call => call[0])).toEqual([
       desktopSettingsPaths.settings,
@@ -400,6 +405,8 @@ describe('Desktop settings API', () => {
       desktopSettingsPaths.developerToolsToggle,
       desktopSettingsPaths.updateCheck,
       desktopSettingsPaths.diagnosticsExport,
+      desktopSettingsPaths.cliPublish,
+      desktopSettingsPaths.cliRevoke,
     ])
     expect(fetcher.mock.calls[1]?.[1]).toMatchObject({
       method: 'POST',
@@ -443,6 +450,15 @@ describe('Desktop settings API', () => {
     const api = createDesktopSettingsApi(async () => json({ error: '/Users/private/profile failed' }, 400))
     await expect(api.read()).rejects.toThrow('Desktop settings request failed (400)')
     await expect(api.read()).rejects.not.toThrow('/Users/private')
+  })
+
+  it('rejects a command-line result that is not two booleans', async () => {
+    const malformed = createDesktopSettingsApi(async () => json({ changed: 'yes', registered: true }))
+    await expect(malformed.publishCli?.()).rejects.toThrow('invalid command-line publication response')
+
+    const acceptanceShaped = createDesktopSettingsApi(async () => json({ accepted: true }))
+    await expect(acceptanceShaped.publishCli?.()).rejects.toThrow('invalid command-line publication response')
+    await expect(acceptanceShaped.revokeCli?.()).rejects.toThrow('invalid command-line publication response')
   })
 })
 

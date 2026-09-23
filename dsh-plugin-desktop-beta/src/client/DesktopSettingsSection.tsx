@@ -53,7 +53,9 @@ export type DesktopSettingsSectionProps =
   & InjectFace<DesktopSettingsSectionInjected>
 
 type Translate = DesktopSettingsSectionProps['t']
-type BusyOperation = 'load' | 'create-profile' | 'select-profile' | 'delete-profile' | 'select-aa' | 'select-market' | 'mode' | 'material' | 'web' | 'notification'
+type BusyOperation = 'load' | 'create-profile' | 'select-profile' | 'delete-profile' | 'select-aa' | 'select-market' | 'mode' | 'material' | 'web' | 'notification' | 'cli'
+type CliOutcome = 'idle' | 'busy' | 'failed'
+type CliFeedback = 'registered' | 'current' | 'removed' | 'absent'
 type RestartState = 'none' | 'restarting' | 'required'
 type LanPollWait = (signal: AbortSignal) => Promise<void>
 
@@ -66,6 +68,13 @@ const LAN_STATE_LOCALE_KEYS = {
   ready: 'lanStatusReady',
   failed: 'lanStatusFailed',
 } as const satisfies Record<DesktopSettingsView['web']['lanState'], DesktopSettingsLocaleKey>
+
+const CLI_FEEDBACK_LOCALE_KEYS = {
+  registered: 'cliUpdated',
+  current: 'cliUpToDate',
+  removed: 'cliRemoved',
+  absent: 'cliAbsent',
+} as const satisfies Record<CliFeedback, DesktopSettingsLocaleKey>
 
 function waitForLanPoll(signal: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -320,6 +329,9 @@ export function DesktopSettingsSection({
   const [restart, setRestart] = useState<RestartState>('none')
   const [pendingProfileDelete, setPendingProfileDelete] = useState<string>()
   const [confirmLan, setConfirmLan] = useState(false)
+  const [cliOutcome, setCliOutcome] = useState<CliOutcome>('idle')
+  const [cliFeedback, setCliFeedback] = useState<CliFeedback>()
+  const [confirmCliRevoke, setConfirmCliRevoke] = useState(false)
   const lanPoll = useRef<AbortController>()
 
   const refreshView = useCallback(async () => {
@@ -485,6 +497,50 @@ export function DesktopSettingsSection({
       await persistDesktopNetworkExposureHot(desktopSettings, exposure, refreshView)
     })
   }
+
+  const runCli = (
+    action: 'register' | 'revoke',
+    invoke: () => Promise<{ changed: boolean; registered: boolean }>,
+  ): void => {
+    void run('cli', async () => {
+      setCliOutcome('busy')
+      setCliFeedback(undefined)
+      try {
+        const result = await invoke()
+        setCliOutcome('idle')
+        if (action === 'register') {
+          setCliFeedback(result.changed ? 'registered' : 'current')
+        } else {
+          setCliFeedback(result.changed ? 'removed' : 'absent')
+        }
+      } catch (cause) {
+        setCliOutcome('failed')
+        throw cause
+      }
+    })
+  }
+
+  const publishCli = (): void => {
+    const publish = api.publishCli
+    if (publish === undefined) {
+      setCliOutcome('failed')
+      return
+    }
+    runCli('register', async () => await publish())
+  }
+
+  const revokeCli = (): void => {
+    const revoke = api.revokeCli
+    if (revoke === undefined) {
+      setCliOutcome('failed')
+      return
+    }
+    runCli('revoke', async () => await revoke())
+  }
+
+  const cliAvailable = api.publishCli !== undefined && api.revokeCli !== undefined
+  const cliBusy = busy !== undefined || !cliAvailable
+
 
   return (
     <div className="dshDesktopSettings">
@@ -774,6 +830,64 @@ export function DesktopSettingsSection({
           </>
         )}
       </section>
+
+      <section className="dshDesktopSettingsGroup" aria-labelledby="dsh-desktop-cli-title">
+        <div>
+          <h3 id="dsh-desktop-cli-title">{t('cliTitle')}</h3>
+          <p className="dshDesktopSettingsGroupIntro">{t('cliIntro')}</p>
+        </div>
+        <p className="dshDesktopSettingsHint">{t('cliHint')}</p>
+        {cliFeedback !== undefined && (
+          <p className="dshDesktopSettingsSuccess" role="status">{t(CLI_FEEDBACK_LOCALE_KEYS[cliFeedback])}</p>
+        )}
+        {cliOutcome === 'failed' && <p className="dshDesktopSettingsError" role="alert">{t('cliFailed')}</p>}
+        <div className="dshDesktopSettingsDeleteActions">
+          <button
+            type="button"
+            className="dshDesktopSettingsButton"
+            disabled={cliBusy}
+            onClick={publishCli}
+          >
+            {busy === 'cli' ? t('cliPublishing') : t('cliPublish')}
+          </button>
+          <button
+            type="button"
+            className="dshDesktopSettingsButton dshDesktopSettingsButtonSecondary"
+            disabled={cliBusy}
+            onClick={() => { setConfirmCliRevoke(true) }}
+          >
+            {t('cliRevoke')}
+          </button>
+        </div>
+      </section>
+
+      {confirmCliRevoke && (
+        <div className="dshDesktopSettingsDialogBackdrop" role="presentation">
+          <div className="dshDesktopSettingsDialog" role="alertdialog" aria-modal="true" aria-labelledby="dsh-desktop-cli-revoke-title" aria-describedby="dsh-desktop-cli-revoke-body">
+            <h3 id="dsh-desktop-cli-revoke-title">{t('cliRevokeTitle')}</h3>
+            <p id="dsh-desktop-cli-revoke-body">{t('cliRevokeBody')}</p>
+            <div className="dshDesktopSettingsDialogActions">
+              <button
+                type="button"
+                className="dshDesktopSettingsButton dshDesktopSettingsButtonSecondary"
+                onClick={() => { setConfirmCliRevoke(false) }}
+              >
+                {t('cliRevokeCancel')}
+              </button>
+              <button
+                type="button"
+                className="dshDesktopSettingsButton dshDesktopSettingsButtonDanger"
+                onClick={() => {
+                  setConfirmCliRevoke(false)
+                  revokeCli()
+                }}
+              >
+                {t('cliRevokeConfirm')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <section className="dshDesktopSettingsGroup" aria-labelledby="dsh-desktop-notifications-title">
         <div>

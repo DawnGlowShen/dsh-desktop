@@ -13,6 +13,8 @@ const RENDERER_RELOAD_PATH = '/api/desktop/developer/reload'
 const DEVELOPER_TOOLS_TOGGLE_PATH = '/api/desktop/developer/devtools'
 const UPDATE_CHECK_PATH = '/api/desktop/updates/check'
 const DIAGNOSTICS_EXPORT_PATH = '/api/desktop/diagnostics/export'
+const CLI_PUBLISH_PATH = '/api/desktop/cli/publish'
+const CLI_REVOKE_PATH = '/api/desktop/cli/revoke'
 const MAX_PROFILES = 256
 const MAX_PROFILE_NAME_LENGTH = 255
 const MAX_LAN_URLS = 32
@@ -69,6 +71,14 @@ export interface DesktopRestartAcceptance {
   readonly restartRequired: boolean
 }
 
+/** Outcome of registering or revoking the command-line PATH entry. */
+export interface DesktopCliPathResult {
+  /** True when shim files or the PATH entry actually changed. */
+  readonly changed: boolean
+  /** True when the shim directory is present in the user PATH afterwards. */
+  readonly registered: boolean
+}
+
 /** Browser operations consumed by the Desktop settings section. */
 export interface DesktopSettingsApi {
   read(): Promise<DesktopSettingsView>
@@ -84,6 +94,8 @@ export interface DesktopSettingsApi {
   toggleDeveloperTools(): Promise<void>
   checkForUpdates(): Promise<void>
   exportDiagnostics(): Promise<void>
+  publishCli?(): Promise<DesktopCliPathResult>
+  revokeCli?(): Promise<DesktopCliPathResult>
 }
 
 type FetchLike = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
@@ -281,6 +293,16 @@ export function parseDesktopActionAcceptance(value: unknown): void {
   }
 }
 
+/** Validate the outcome of a command-line publication or revocation. */
+export function parseDesktopCliPathResult(value: unknown): DesktopCliPathResult {
+  if (!isObject(value)
+    || typeof value.changed !== 'boolean'
+    || typeof value.registered !== 'boolean') {
+    throw new Error('dsh-plugin-desktop: invalid command-line publication response')
+  }
+  return Object.freeze({ changed: value.changed, registered: value.registered })
+}
+
 async function readResponse(response: Response): Promise<unknown> {
   if (!response.ok) {
     throw new Error(`dsh-plugin-desktop: Desktop settings request failed (${String(response.status)})`)
@@ -354,6 +376,12 @@ export function createDesktopSettingsApi(fetcher: FetchLike = globalThis.fetch.b
     async exportDiagnostics() {
       parseDesktopActionAcceptance(await readResponse(await post(fetcher, DIAGNOSTICS_EXPORT_PATH, {})))
     },
+    async publishCli() {
+      return parseDesktopCliPathResult(await readResponse(await post(fetcher, CLI_PUBLISH_PATH, {})))
+    },
+    async revokeCli() {
+      return parseDesktopCliPathResult(await readResponse(await post(fetcher, CLI_REVOKE_PATH, {})))
+    },
   })
 }
 
@@ -370,4 +398,6 @@ export const desktopSettingsPaths = Object.freeze({
   developerToolsToggle: DEVELOPER_TOOLS_TOGGLE_PATH,
   updateCheck: UPDATE_CHECK_PATH,
   diagnosticsExport: DIAGNOSTICS_EXPORT_PATH,
+  cliPublish: CLI_PUBLISH_PATH,
+  cliRevoke: CLI_REVOKE_PATH,
 })

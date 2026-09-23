@@ -384,24 +384,26 @@
 - `dsh-plugin-desktop-beta/src/client/desktop-settings-api.ts` — 修改，新增两个调用方法
 - `dsh-plugin-desktop-beta/src/client/DesktopSettingsSection.tsx` — 修改，新增命令行工具区块
 - `dsh-plugin-desktop-beta/src/client/desktop-settings-locales.ts` — 修改，新增文案
+- `dsh-plugin-desktop-beta/tests/client-cli-settings.spec.ts` — 新增，覆盖两个动作的调用、四种结果反馈与文案完整性
+- `dsh-plugin-desktop-beta/tsconfig.tests.json` / `tsconfig.tests.client.json` — 修改，把新客户端用例从 node 测试集移入 jsdom 客户端测试集
 
 **验收标准**：
-- **两个动作可触发**：当用户点击登记或撤销时，对应 API 被调用。验证方式：`yarn workspace dsh-plugin-desktop-beta vitest run --project client` 或 `yarn workspace dsh-plugin-desktop-beta typecheck`（`tsconfig.client.json`）无错误，且组件测试中注入的假 API 记录到调用
-- **结果可见**：当 API 返回 `changed: true` 与 `changed: false` 时，界面分别展示"已更新"与"已是最新"两种反馈。验证方式：组件测试中的两条用例通过
+- **两个动作可触发**：当用户点击登记或撤销时，对应 API 被调用。验证方式：`yarn workspace dsh-plugin-desktop-beta typecheck`（含 `tsconfig.client.json`）无错误，且 `vitest run tests/client-cli-settings.spec.ts` 中注入的假 API 记录到调用（该仓库无 `--project` 划分，客户端用例靠 `tsconfig.tests.client.json` 白名单进入 jsdom 套件）
+- **结果可见**：当 API 返回 `changed: true` 与 `changed: false` 时，界面分别展示"已更新"与"已是最新"两种反馈。验证方式：`vitest run tests/client-cli-settings.spec.ts` 中两条反馈用例通过
 - **文案完整**：当检查 locale 文件时，新键在同一语言的多个 locale 中均存在。验证方式：既有的 locale 一致性测试通过
 
 **增量计划**：
-- [ ] **增量 1**：API 客户端方法
+- [x] **增量 1**：API 客户端方法
   - 做什么：在 `desktop-settings-api.ts` 中新增两个 POST 方法
   - 交付：可调用方法
   - 对应验收标准：两个动作可触发
   - 完成判定：`yarn workspace dsh-plugin-desktop-beta typecheck` 无错误
-- [ ] **增量 2**：设置区块与反馈
+- [x] **增量 2**：设置区块与反馈
   - 做什么：在设置面板新增区块，展示当前状态与执行结果
   - 交付：可见入口
   - 对应验收标准：结果可见
-  - 完成判定：`yarn workspace dsh-plugin-desktop-beta vitest run tests/desktop-settings-api.spec.ts` 通过 && `yarn workspace dsh-plugin-desktop-beta build` 无错误
-- [ ] **增量 3**：文案与多语言
+  - 完成判定：`yarn workspace dsh-plugin-desktop-beta vitest run tests/client-cli-settings.spec.ts` 通过 && `yarn workspace dsh-plugin-desktop-beta build` 无错误
+- [x] **增量 3**：文案与多语言
   - 做什么：补齐新键的文案，覆盖两种状态与两种结果
   - 交付：完整文案
   - 对应验收标准：文案完整
