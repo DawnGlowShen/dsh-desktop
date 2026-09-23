@@ -41,17 +41,17 @@ function runRecorder({ failure, archs = 'x86_64 arm64' } = {}) {
   const run = (command, args) => {
     calls.push({ command, args: [...args] })
     if (failure !== undefined && failure(command, args) === true) {
-      return { status: 1, stdout: '', stderr: 'boom' }
+      return { status: 1, signal: null, stdout: '', stderr: 'boom' }
     }
     if (command === 'lipo' && args.includes('-archs')) {
-      return { status: 0, stdout: archs, stderr: '' }
+      return { status: 0, signal: null, stdout: archs, stderr: '' }
     }
     // Real `lipo -create` writes the fat binary; the double must too, because
     // the merge chmods and re-inspects the output afterwards.
     if (command === 'lipo' && args.includes('-create')) {
       writeFileSync(args[args.indexOf('-output') + 1], Buffer.concat([MACHO_MAGIC_64, Buffer.from('fat')]))
     }
-    return { status: 0, stdout: '', stderr: '' }
+    return { status: 0, signal: null, stdout: '', stderr: '' }
   }
   return { calls, run }
 }
@@ -68,7 +68,6 @@ test('plans every Mach-O pair and leaves plain files to the copy step', () => {
     const plan = planUniversalMerge({ arm64Dir: trees.arm64, x64Dir: trees.x64 })
     assert.deepEqual(plan.machOFiles, ['lib/kernel/codegraph-kernel.node', 'node'])
     assert.deepEqual(plan.plainFiles, ['bin/codegraph', 'package.json'])
-    assert.equal(plan.fileCount, 4)
   } finally {
     trees.dispose()
   }
@@ -93,6 +92,7 @@ test('allows declared plain-file differences', () => {
   const trees = makeTrees({
     'package.json': { arm64: '{"cpu":["arm64"]}', x64: '{"cpu":["x64"]}' },
     'README.md': { arm64: '# mnemon darwin-arm64\n', x64: '# mnemon darwin-x64\n' },
+    'bin/mnemon': { arm64: 'arm', x64: 'x64', machO: true },
   })
 
   try {
@@ -213,19 +213,96 @@ test('merges Mach-O pairs through lipo and verifies both architectures', () => {
   }
 })
 
-test('preserves the executable bit of copied plain files', () => {
-  const trees = makeTrees({ 'bin/mnemon': { arm64: '#!/bin/sh\n' } })
+test(
+  'preserves the executable bit of copied plain files',
+  { skip: process.platform === 'win32' ? 'POSIX permission bits are not representable on Windows' : false },
+  () => {
+    const trees = makeTrees({ 'bin/mnemon': { arm64: '#!/bin/sh\n' }, node: { arm64: 'arm', x64: 'x64', machO: true } })
+    const outputRoot = join(trees.arm64, '..', 'host')
+    chmodSync(join(trees.arm64, 'bin', 'mnemon'), 0o755)
+
+    try {
+      mergeUniversalBundle({
+        arm64Dir: trees.arm64,
+        x64Dir: trees.x64,
+        outputRoot,
+        run: runRecorder().run,
+      })
+      assert.equal(statSync(join(outputRoot, 'bin', 'mnemon')).mode & 0o777, 0o755)
+    } finally {
+      trees.dispose()
+      rmSync(outputRoot, { recursive: true, force: true })
+    }
+  },
+)
+
+test('rejects a pair of empty trees instead of producing an empty bundle', () => {
+  const trees = makeTrees({})
   const outputRoot = join(trees.arm64, '..', 'host')
-  chmodSync(join(trees.arm64, 'bin', 'mnemon'), 0o755)
 
   try {
-    mergeUniversalBundle({
-      arm64Dir: trees.arm64,
-      x64Dir: trees.x64,
-      outputRoot,
-      run: runRecorder().run,
-    })
-    assert.equal(statSync(join(outputRoot, 'bin', 'mnemon')).mode & 0o777, 0o755)
+    assert.throws(
+      () => planUniversalMerge({ arm64Dir: trees.arm64, x64Dir: trees.x64 }),
+      /contains no files; the merge would produce an empty payload/u,
+    )
+    assert.throws(
+      () => mergeUniversalBundle({ arm64Dir: trees.arm64, x64Dir: trees.x64, outputRoot, run: runRecorder().run }),
+      /contains no files; the merge would produce an empty payload/u,
+    )
+  } finally {
+    trees.dispose()
+    rmSync(outputRoot, { recursive: true, force: true })
+  }
+})
+
+test('rejects a pair of trees with no Mach-O file', () => {
+  const trees = makeTrees({ 'package.json': { arm64: '{}' } })
+
+  try {
+    assert.throws(
+      () => planUniversalMerge({ arm64Dir: trees.arm64, x64Dir: trees.x64 }),
+      /no runnable runtime/u,
+    )
+  } finally {
+    trees.dispose()
+  }
+})
+
+test('reports a lipo killed by signal', () => {
+  const trees = makeTrees({ node: { arm64: 'arm', x64: 'x64', machO: true } })
+  const outputRoot = join(trees.arm64, '..', 'host')
+  const base = runRecorder()
+  const run = (command, args) =>
+    command === 'lipo' && args.includes('-create')
+      ? { status: null, signal: 'SIGKILL', stdout: '', stderr: '' }
+      : base.run(command, args)
+
+  try {
+    assert.throws(
+      () => mergeUniversalBundle({ arm64Dir: trees.arm64, x64Dir: trees.x64, outputRoot, run }),
+      /lipo -create failed for node: killed by SIGKILL/u,
+    )
+  } finally {
+    trees.dispose()
+    rmSync(outputRoot, { recursive: true, force: true })
+  }
+})
+
+test('reports lipo -archs emitting no architecture', () => {
+  const trees = makeTrees({ node: { arm64: 'arm', x64: 'x64', machO: true } })
+  const outputRoot = join(trees.arm64, '..', 'host')
+
+  try {
+    assert.throws(
+      () =>
+        mergeUniversalBundle({
+          arm64Dir: trees.arm64,
+          x64Dir: trees.x64,
+          outputRoot,
+          run: runRecorder({ archs: '' }).run,
+        }),
+      /reported no architectures for node/u,
+    )
   } finally {
     trees.dispose()
     rmSync(outputRoot, { recursive: true, force: true })
