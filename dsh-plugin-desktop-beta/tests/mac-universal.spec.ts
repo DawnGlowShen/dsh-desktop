@@ -1,6 +1,7 @@
 import { join, resolve } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import {
+  MACOS_UNIVERSAL_BUNDLED_CLI_ENTRIES,
   MACOS_UNIVERSAL_NATIVE_ENTRIES,
   prepareMacUniversalRuntime,
 } from '../scripts/mac-universal.ts'
@@ -42,5 +43,18 @@ describe('universal macOS native runtime preparation', () => {
       chmod,
     })).toThrow(join(desktopRoot, missing))
     expect(chmod).not.toHaveBeenCalled()
+  })
+
+  // Pinned as literals rather than read back from the same constant the smoke
+  // fixture builds from: if that fixture and the assertions both derive from the
+  // list, dropping an entry would remove its file and its expectation together
+  // and the main smoke case would stay green — the silent regression this whole
+  // change exists to catch.
+  it('verifies exactly the three bundled CLI payloads', () => {
+    expect(MACOS_UNIVERSAL_BUNDLED_CLI_ENTRIES).toEqual([
+      { path: 'Resources/codegraph/node', executable: true, machO: true },
+      { path: 'Resources/codegraph/lib/kernel/codegraph-kernel.node', executable: false, machO: true },
+      { path: 'Resources/mnemon/bin/mnemon', executable: true, machO: true },
+    ])
   })
 })

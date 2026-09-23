@@ -205,11 +205,41 @@ describe('macOS DMG smoke artifact verification', () => {
 
   it('rejects an application whose bundled CodeGraph runtime is absent', () => {
     const value = fixture()
-    const missing = value.bundledClis.get('Resources/codegraph/node')!
-    rmSync(missing)
+    rmSync(value.bundledClis.get('Resources/codegraph/node')!)
     const harness = options({ makeMountPoint: () => value.root }, value.modeOverrides)
 
-    expectSmokeFailure(harness, missing)
+    expectSmokeFailure(harness, 'missing bundled CLI')
+    expect(harness.removeMountPoint).toHaveBeenCalledWith(value.root)
+  })
+
+  it('accepts the kernel without an execute bit, because the runtime opens it', () => {
+    const value = fixture()
+    const kernel = value.bundledClis.get('Resources/codegraph/lib/kernel/codegraph-kernel.node')!
+    // The shipped archive really carries 0644 here; asserting it locally keeps a
+    // stray `entry.executable &&` removal from killing a valid DMG.
+    expect(statSync(kernel).mode & 0o111).toBe(0)
+    const harness = options({ makeMountPoint: () => value.root }, value.modeOverrides)
+
+    expect(() => verifyMacSmoke(harness.value)).not.toThrow()
+  })
+
+  it('rejects a bundled CLI that lost one of its architecture slices', () => {
+    const value = fixture()
+    const codegraph = value.bundledClis.get('Resources/codegraph/node')!
+    const base = options({ makeMountPoint: () => value.root }, value.modeOverrides)
+    const harness = {
+      ...base,
+      value: {
+        ...base.value,
+        run: (command: string, args: readonly string[]) => {
+          if (command === 'lipo' && args[0] === codegraph && args[2] === 'x86_64') {
+            throw new Error(`${command} ${args.join(' ')} exited with 1`)
+          }
+        },
+      },
+    }
+
+    expectSmokeFailure(harness, 'x86_64')
     expect(harness.removeMountPoint).toHaveBeenCalledWith(value.root)
   })
 

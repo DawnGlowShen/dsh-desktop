@@ -159,6 +159,8 @@ export function verifyMacSmoke(
       if (entry.executable && (cliStat.mode & 0o111) === 0) {
         throw new Error(`universal application has a non-executable bundled CLI: ${cliPath}`)
       }
+      // Only Mach-O entries have architecture slices; `lipo` exits 1 on text.
+      if (!entry.machO) continue
       options.run('lipo', [cliPath, '-verify_arch', 'x86_64'])
       options.run('lipo', [cliPath, '-verify_arch', 'arm64'])
     }

@@ -101,12 +101,21 @@ export const FORBIDDEN_MACOS_UNIVERSAL_ENTRIES = [
  * `executable` mirrors the upstream archives: both launchers are spawned
  * directly, while the CodeGraph kernel is opened by the bundled Node runtime and
  * ships without an execute bit.
+ *
+ * `machO` states the precondition the slice check needs: only a Mach-O file can
+ * be handed to `lipo`, and a new entry that is not a binary (the CodeGraph
+ * launcher is a POSIX shell script) must say so instead of failing the smoke run
+ * against a real DMG.
  */
 export const MACOS_UNIVERSAL_BUNDLED_CLI_ENTRIES = [
-  { path: 'Resources/codegraph/node', executable: true },
-  { path: 'Resources/codegraph/lib/kernel/codegraph-kernel.node', executable: false },
-  { path: 'Resources/mnemon/bin/mnemon', executable: true },
-] as const satisfies readonly { readonly path: string; readonly executable: boolean }[]
+  { path: 'Resources/codegraph/node', executable: true, machO: true },
+  { path: 'Resources/codegraph/lib/kernel/codegraph-kernel.node', executable: false, machO: true },
+  { path: 'Resources/mnemon/bin/mnemon', executable: true, machO: true },
+] as const satisfies readonly {
+  readonly path: string
+  readonly executable: boolean
+  readonly machO: boolean
+}[]
 
 /** Injectable filesystem seam for source-runtime preparation. */
 export interface MacUniversalPreparationOptions {

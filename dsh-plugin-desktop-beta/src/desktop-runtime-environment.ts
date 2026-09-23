@@ -606,10 +606,13 @@ export function desktopMnemonBundleSupportsHost(
  * architecture.
  *
  * Upstream publishes each CLI as one self-contained bundle per platform and
- * architecture. A macOS universal installer therefore carries a single slice in
- * both architectures, so on the other one the bundled runtime cannot execute:
- * publishing it would only replace a missing command with an obscure
- * `bad CPU type in executable` failure. The caller skips it instead.
+ * architecture, so the packaging step merges the darwin slices into a single
+ * payload whose manifest declares both. If a build ever regresses to a
+ * single-architecture payload, the mismatching slice cannot execute that
+ * runtime: publishing it would only replace a missing command with an obscure
+ * `bad CPU type in executable` failure. The caller skips it instead, and
+ * `MACOS_UNIVERSAL_BUNDLED_CLI_ENTRIES` catches the regression on the packaged
+ * artifact before anyone installs it.
  *
  * @param bundleDir - packaged bundle root containing the upstream manifest.
  * @param platform - host platform compared against the manifest `os` field.
