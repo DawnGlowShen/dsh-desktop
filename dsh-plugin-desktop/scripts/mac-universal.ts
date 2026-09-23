@@ -88,6 +88,26 @@ export const FORBIDDEN_MACOS_UNIVERSAL_ENTRIES = [
   'node_modules/node-pty/build/Release/spawn-helper',
 ] as const
 
+/**
+ * Bundled CLI payloads that must carry both architectures inside `Contents`.
+ *
+ * These are copied in as `extraResources`, so their paths are relative to
+ * `Contents` rather than to `Contents/Resources/app` like
+ * {@link MACOS_UNIVERSAL_NATIVE_ENTRIES}. A single merged bundle now serves both
+ * slices, and a regression to a single-architecture payload would leave the
+ * other slice without `~/.dsh/bin` — silently, since publishing a
+ * non-matching CLI is not a startup failure.
+ *
+ * `executable` mirrors the upstream archives: both launchers are spawned
+ * directly, while the CodeGraph kernel is opened by the bundled Node runtime and
+ * ships without an execute bit.
+ */
+export const MACOS_UNIVERSAL_BUNDLED_CLI_ENTRIES = [
+  { path: 'Resources/codegraph/node', executable: true },
+  { path: 'Resources/codegraph/lib/kernel/codegraph-kernel.node', executable: false },
+  { path: 'Resources/mnemon/bin/mnemon', executable: true },
+] as const satisfies readonly { readonly path: string; readonly executable: boolean }[]
+
 /** Injectable filesystem seam for source-runtime preparation. */
 export interface MacUniversalPreparationOptions {
   readonly desktopRoot: string

@@ -6,7 +6,11 @@ import {
   verifyMacSmoke,
   type MacSmokeVerificationOptions,
 } from '../scripts/verify-mac-smoke.ts'
-import { MACOS_UNIVERSAL_NATIVE_ENTRIES } from '../scripts/mac-universal.ts'
+import {
+  MACOS_UNIVERSAL_BUNDLED_CLI_ENTRIES,
+  MACOS_UNIVERSAL_NATIVE_ENTRIES,
+} from '../scripts/mac-universal.ts'
+import { DESKTOP_ARTIFACT_STEM, DESKTOP_PRODUCT_NAME } from '../src/product-identity.ts'
 
 const temporaryRoots: string[] = []
 
@@ -15,19 +19,21 @@ interface AppFixture {
   readonly infoPlist: string
   readonly executable: string
   readonly appAsar: string
+  /** Absolute paths of the bundled CLIs copied in through `extraResources`. */
+  readonly bundledClis: Map<string, string>
   readonly modeOverrides: Map<string, number>
 }
 
 function fixture(): AppFixture {
   const root = mkdtempSync(join(tmpdir(), 'dsh-mac-smoke-'))
   temporaryRoots.push(root)
-  const contents = join(root, 'DSH Desktop.app', 'Contents')
+  const contents = join(root, `${DESKTOP_PRODUCT_NAME}.app`, 'Contents')
   const macos = join(contents, 'MacOS')
   const resources = join(contents, 'Resources')
   mkdirSync(macos, { recursive: true })
   mkdirSync(resources, { recursive: true })
   const infoPlist = join(contents, 'Info.plist')
-  const executable = join(macos, 'DSH Desktop')
+  const executable = join(macos, DESKTOP_PRODUCT_NAME)
   const appAsar = join(resources, 'app', 'package.json')
   const modeOverrides = new Map<string, number>()
   writeFileSync(infoPlist, '<?xml version="1.0" encoding="UTF-8"?>')
@@ -46,7 +52,17 @@ function fixture(): AppFixture {
       modeOverrides.set(path, 0o755)
     }
   }
-  return { root, infoPlist, executable, appAsar, modeOverrides }
+  const bundledClis = new Map<string, string>()
+  for (const entry of MACOS_UNIVERSAL_BUNDLED_CLI_ENTRIES) {
+    const path = join(contents, entry.path)
+    mkdirSync(join(path, '..'), { recursive: true })
+    writeFileSync(path, 'binary')
+    const mode = entry.executable ? 0o755 : 0o644
+    chmodSync(path, mode)
+    modeOverrides.set(path, mode)
+    bundledClis.set(entry.path, path)
+  }
+  return { root, infoPlist, executable, appAsar, bundledClis, modeOverrides }
 }
 
 function options(
@@ -57,8 +73,8 @@ function options(
   const removeMountPoint = vi.fn()
   const value: MacSmokeVerificationOptions = {
     distDir: '/release/dist',
-    productName: 'DSH Desktop',
-    listDmgs: () => ['/release/dist/DSH Desktop-2.0.1.dmg'],
+    productName: DESKTOP_PRODUCT_NAME,
+    listDmgs: () => [`/release/dist/${DESKTOP_ARTIFACT_STEM}-2.0.1.dmg`],
     makeMountPoint: () => '/private/tmp/dsh-desktop-dmg-smoke-test',
     run: (command, args) => { calls.push({ command, args: [...args] }) },
     removeMountPoint,
@@ -100,18 +116,18 @@ describe('macOS DMG smoke artifact verification', () => {
   it('mounts one DMG and accepts a well-formed unsigned application bundle', () => {
     const value = fixture()
     const harness = options({ makeMountPoint: () => value.root }, value.modeOverrides)
-    const appPath = join(value.root, 'DSH Desktop.app')
+    const appPath = join(value.root, `${DESKTOP_PRODUCT_NAME}.app`)
 
     expect(verifyMacSmoke(harness.value)).toEqual({
       appPath,
-      dmgPath: '/release/dist/DSH Desktop-2.0.1.dmg',
+      dmgPath: `/release/dist/${DESKTOP_ARTIFACT_STEM}-2.0.1.dmg`,
     })
 
     expect(harness.calls).toEqual([
       {
         command: 'hdiutil',
         args: [
-          'attach', '/release/dist/DSH Desktop-2.0.1.dmg',
+          'attach', `/release/dist/${DESKTOP_ARTIFACT_STEM}-2.0.1.dmg`,
           '-mountpoint', value.root, '-nobrowse', '-readonly',
         ],
       },
@@ -125,6 +141,11 @@ describe('macOS DMG smoke artifact verification', () => {
         command: 'lipo',
         args: [join(join(value.appAsar, '..'), entry.path), '-verify_arch', entry.arch],
       })),
+      // Each bundled CLI must be verified for both architectures.
+      ...MACOS_UNIVERSAL_BUNDLED_CLI_ENTRIES.flatMap(entry => [
+        { command: 'lipo', args: [value.bundledClis.get(entry.path)!, '-verify_arch', 'x86_64'] },
+        { command: 'lipo', args: [value.bundledClis.get(entry.path)!, '-verify_arch', 'arm64'] },
+      ]),
       { command: 'hdiutil', args: ['detach', value.root] },
     ])
     expect(harness.removeMountPoint).toHaveBeenCalledWith(value.root)
@@ -147,7 +168,7 @@ describe('macOS DMG smoke artifact verification', () => {
     expect(harness.calls).toEqual([
       {
         command: 'hdiutil',
-        args: ['attach', '/release/dist/DSH Desktop-2.0.1.dmg', '-mountpoint', value.root, '-nobrowse', '-readonly'],
+        args: ['attach', `/release/dist/${DESKTOP_ARTIFACT_STEM}-2.0.1.dmg`, '-mountpoint', value.root, '-nobrowse', '-readonly'],
       },
       { command: 'hdiutil', args: ['detach', value.root] },
     ])
@@ -179,6 +200,27 @@ describe('macOS DMG smoke artifact verification', () => {
     const harness = options({ makeMountPoint: () => value.root }, value.modeOverrides)
 
     expectSmokeFailure(harness, 'package.json')
+    expect(harness.removeMountPoint).toHaveBeenCalledWith(value.root)
+  })
+
+  it('rejects an application whose bundled CodeGraph runtime is absent', () => {
+    const value = fixture()
+    const missing = value.bundledClis.get('Resources/codegraph/node')!
+    rmSync(missing)
+    const harness = options({ makeMountPoint: () => value.root }, value.modeOverrides)
+
+    expectSmokeFailure(harness, missing)
+    expect(harness.removeMountPoint).toHaveBeenCalledWith(value.root)
+  })
+
+  it('rejects a bundled CLI that lost its execute bit', () => {
+    const value = fixture()
+    const mnemon = value.bundledClis.get('Resources/mnemon/bin/mnemon')!
+    chmodSync(mnemon, 0o644)
+    value.modeOverrides.set(mnemon, 0o644)
+    const harness = options({ makeMountPoint: () => value.root }, value.modeOverrides)
+
+    expectSmokeFailure(harness, 'non-executable bundled CLI')
     expect(harness.removeMountPoint).toHaveBeenCalledWith(value.root)
   })
 })

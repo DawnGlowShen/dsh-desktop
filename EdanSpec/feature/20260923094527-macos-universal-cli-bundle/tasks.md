@@ -351,17 +351,17 @@
 - **stable 侧测试通过**：当 stable 工作区运行相关测试时全部通过。验证方式：`yarn workspace dsh-plugin-desktop vitest run tests/desktop-runtime-environment.spec.ts tests/verify-mac-smoke.spec.ts` 退出码 0
 
 **增量计划**：
-- [ ] **增量 1**：同步测试与脚本
+- [x] **增量 1**：同步测试与脚本
   - 做什么：把 Task-006、Task-007 在 beta 落地的四处改动复制到 stable 对应文件
   - 交付：stable 侧同构文件
   - 对应验收标准：两个变体的共享文件逐字节一致
   - 完成判定：四条 `diff` 命令退出码均为 0
-- [ ] **增量 2**：跑变体一致性门禁
+- [x] **增量 2**：跑变体一致性门禁
   - 做什么：执行仓库规定的变体检查，确认未引入未声明漂移
   - 交付：门禁通过记录
   - 对应验收标准：变体一致性门禁通过
   - 完成判定：`corepack yarn check:desktop-variants` 退出码 0
-- [ ] **增量 3**：stable 侧测试与类型检查
+- [x] **增量 3**：stable 侧测试与类型检查
   - 做什么：在 stable 工作区跑两个相关测试文件与 typecheck
   - 交付：stable 侧验证通过
   - 对应验收标准：stable 侧测试通过
