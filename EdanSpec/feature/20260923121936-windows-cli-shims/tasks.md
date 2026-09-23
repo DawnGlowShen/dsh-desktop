@@ -231,17 +231,17 @@
 - **失败不阻断启动**：当 shim 生成抛错时，异常被捕获并以错误日志记录，宿主继续启动。验证方式：`grep -n "CLI shell integration failed" dsh-plugin-desktop-beta/src/main.ts` 有输出，且该分支位于 try/catch 内（由 typecheck 与既有启动测试保证不被移除）
 
 **增量计划**：
-- [ ] **增量 1**：安装形态判定模块
+- [x] **增量 1**：安装形态判定模块
   - 做什么：定义可注入的注册表键存在性查询接口，实现判定函数
   - 交付：判定模块 + 全分支单测
   - 对应验收标准：便携版判定查安装记录
   - 完成判定：`yarn workspace dsh-plugin-desktop-beta vitest run tests/desktop-windows-install-kind.spec.ts` 通过
-- [ ] **增量 2**：`main.ts` 平台判断放开
+- [x] **增量 2**：`main.ts` 平台判断放开
   - 做什么：把 `process.platform === 'darwin'` 改为 darwin 或 win32；Windows 分支传入与 mac 相同的 launcher 集合（codegraph 传 `codegraph.js` 路径）
   - 交付：Windows 启动即生成 shim
   - 对应验收标准：Windows 也生成 shim
   - 完成判定：`yarn workspace dsh-plugin-desktop-beta typecheck` 无错误 && `yarn workspace dsh-plugin-desktop-beta vitest run tests/desktop-cli-shell.spec.ts` 通过
-- [ ] **增量 3**：异常处理与日志路径复核
+- [x] **增量 3**：异常处理与日志路径复核
   - 做什么：确认 Windows 分支复用既有 try/catch，日志前缀与 mac 一致
   - 交付：失败不阻断的行为
   - 对应验收标准：失败不阻断启动
@@ -257,11 +257,12 @@
 **触发条件**：Task-004、Task-005 完成
 
 **验证项**（仅包含可自动验证项）：
-- [ ] 类型检查：`yarn workspace dsh-plugin-desktop-beta typecheck` 无错误
-- [ ] 测试：`yarn workspace dsh-plugin-desktop-beta vitest run tests/installer-nsh.spec.ts tests/desktop-windows-install-kind.spec.ts tests/desktop-cli-shell.spec.ts tests/desktop-windows-path.spec.ts` 全部通过
-- [ ] 计数断言：`grep -c 'WriteRegExpandStr HKCU "Environment" "Path"' dsh-plugin-desktop-beta/build/installer.nsh` 输出为 2
-- [ ] 目标收敛：`grep -n 'resources\\\\codegraph\\\\bin\|resources\\\\mnemon\\\\bin' dsh-plugin-desktop-beta/build/installer.nsh` 无输出
-- [ ] 打包测试未回归：`yarn workspace dsh-plugin-desktop-beta vitest run tests/package.spec.ts` 通过
+- [x] 类型检查：`yarn workspace dsh-plugin-desktop-beta typecheck` 无错误
+- [x] 测试：`yarn workspace dsh-plugin-desktop-beta vitest run tests/installer-nsh.spec.ts tests/desktop-windows-install-kind.spec.ts tests/desktop-cli-shell.spec.ts tests/desktop-windows-path.spec.ts` 全部通过
+- [x] 计数断言：`grep -c 'WriteRegExpandStr HKCU "Environment" "Path"' dsh-plugin-desktop-beta/build/installer.nsh` 输出为 2
+- [x] 目标收敛（登记语句不含安装目录）：`grep -nE '(StrCpy \$0|WriteRegExpandStr HKCU "Environment" "Path")' dsh-plugin-desktop-beta/build/installer.nsh | grep 'resources'` 无输出
+  - 注：`resources\codegraph\bin` 仍合法出现在 `DSH_CODEGRAPH_BIN` 定义为与 `FileExists` 存在性探测中（见 `installer.nsh:108,116`）；spec 约束的是它不得**作为 PATH 登记目标**，故本项只检查所有写入 `$0` 与 `Path` 的语句。更强的 `$INSTDIR` 唯一性断言由 `tests/installer-nsh.spec.ts:78` 承担。
+- [x] 打包测试未回归：`yarn workspace dsh-plugin-desktop-beta vitest run tests/package.spec.ts` 通过
 
 **工时估算**：0.15 人天
 - 基础：0.15 人天（XS）
