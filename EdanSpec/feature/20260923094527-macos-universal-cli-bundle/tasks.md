@@ -420,15 +420,15 @@
 **触发条件**：Task-009、Task-010 完成后触发
 
 **验证项**（仅包含可自动验证项）：
-- [ ] 架构门禁：`corepack yarn check:layout` 退出码 0
-- [ ] 变体一致：`corepack yarn check:desktop-variants` 退出码 0
-- [ ] prepare 单测：`node --test scripts/prepare-universal-bundle.test.mjs` 全部通过
-- [ ] 双变体 mac 打包检查：`yarn workspace dsh-plugin-desktop check:mac-package` 与 `yarn workspace dsh-plugin-desktop-beta check:mac-package` 均退出码 0
-- [ ] stable 端到端：`yarn workspace dsh-plugin-desktop dist:mac-smoke` 退出码 0 && `node dsh-plugin-desktop/scripts/verify-mac-smoke.ts dsh-plugin-desktop/dist/mac-smoke` 退出码 0
-- [ ] Windows 未回归：`node scripts/prepare-codegraph.mjs --desktop dsh-plugin-desktop --target win32-x64` 与 `node scripts/prepare-mnemon.mjs --desktop dsh-plugin-desktop --target win32-x64` 均退出码 0
-- [ ] Linux 未触碰：`git diff --stat scripts/prepare-codegraph.mjs scripts/prepare-mnemon.mjs` 显示两个脚本的改动中不含 `linux` 字样新增行；`git diff scripts/ | grep -c '^+.*linux'` 返回 0
-- [ ] 任务完整性：Task-001 至 Task-010 的增量 checkbox 全勾
-- [ ] 依赖变更：无未声明的新增第三方依赖
+- [x] 架构门禁：`corepack yarn check:layout` 退出码 0
+- [x] 变体一致：`corepack yarn check:desktop-variants` 退出码 0
+- [x] prepare 单测：`node --test scripts/prepare-universal-bundle.test.mjs` 全部通过
+- [x] 双变体 mac 打包检查：`yarn workspace dsh-plugin-desktop check:mac-package` 与 `yarn workspace dsh-plugin-desktop-beta check:mac-package` 均退出码 0
+- [x] stable 端到端：`yarn workspace dsh-plugin-desktop dist:mac-smoke` 退出码 0 && `node dsh-plugin-desktop/scripts/verify-mac-smoke.ts dsh-plugin-desktop/dist/mac-smoke` 退出码 0
+- [x] Windows 未回归：`node scripts/prepare-codegraph.mjs --desktop dsh-plugin-desktop --target win32-x64` 与 `node scripts/prepare-mnemon.mjs --desktop dsh-plugin-desktop --target win32-x64` 均退出码 0
+- [x] Linux 未触碰：`git diff --stat scripts/prepare-codegraph.mjs scripts/prepare-mnemon.mjs` 显示两个脚本的改动中不含 `linux` 字样新增行；`git diff scripts/ | grep -c '^+.*linux'` 返回 0
+- [x] 任务完整性：Task-001 至 Task-010 的增量 checkbox 全勾
+- [x] 依赖变更：无未声明的新增第三方依赖
 
 ---
 
