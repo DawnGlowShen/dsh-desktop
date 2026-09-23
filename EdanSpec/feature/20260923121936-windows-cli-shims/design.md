@@ -149,7 +149,7 @@ mac 的模型已经验证过：`~/.dsh/bin` 里只有 172–178 字节的转发�
 | `mnemon` | `@echo off` + `<bundleDir>\bin\mnemon.exe %*` |
 | `codegraph` | `@echo off` + `<bundleDir>\node.exe --liftoff-only --disable-warning=ExperimentalWarning <bundleDir>\lib\dist\bin\codegraph.js %*` |
 
-`launcherPath` 对 codegraph 传入的是 `codegraph.js` 的路径，渲染时取其 `dirname` 的上一级推导 `node.exe`——避免在调用点重复拼路径逻辑。
+`launcherPath` 对 codegraph 传入的是 `codegraph.js` 的路径。渲染时不能只取 `dirname` 的上一级——入口脚本嵌套在 `lib\dist\bin`，`node.exe` 在包的**根**，相差三层。实现按 `['bin','dist','lib']` 逐层校验上溯到 bundle 根（`desktop-cli-shell.ts` 的 `CODEGRAPH_SCRIPT_DIRECTORIES` 与 `windowsBundleRoot`）：布局不符时直接报错，而不是静默拼出一条无法解析的路径。这样也避免了在调用点重复拼路径逻辑。
 
 ### PATH 登记 API
 
