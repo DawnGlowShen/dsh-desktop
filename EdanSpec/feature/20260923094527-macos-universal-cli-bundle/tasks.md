@@ -248,17 +248,17 @@
 - **畸形与缺失清单仍被拒**：当 manifest 缺失或非 JSON 时两架构均返回 false。验证方式：同一测试文件中原「rejects a missing or malformed manifest」用例仍通过
 
 **增量计划**：
-- [ ] **增量 1**：补 universal manifest 用例
+- [x] **增量 1**：补 universal manifest 用例
   - 做什么：在两个 `describe` 内各新增一个 `it`，构造 `{ os: ['darwin'], cpu: ['arm64','x64'] }` 的 bundle，断言 arm64 与 x64 两侧均为 true
   - 交付：新增测试用例
   - 对应验收标准：universal 清单在两架构均通过
   - 完成判定：`yarn workspace dsh-plugin-desktop-beta vitest run tests/desktop-runtime-environment.spec.ts` 通过且新用例在报告中出现
-- [ ] **增量 2**：复核既有守卫用例
+- [x] **增量 2**：复核既有守卫用例
   - 做什么：运行整文件测试，确认单架构拒绝与畸形清单拒绝两条既有用例未因改动失效
   - 交付：回归确认结论
   - 对应验收标准：既有单架构守卫未被削弱、畸形与缺失清单仍被拒
   - 完成判定：`yarn workspace dsh-plugin-desktop-beta vitest run tests/desktop-runtime-environment.spec.ts` 全绿且用例数较改动前增加 2
-- [ ] **增量 3**：类型检查
+- [x] **增量 3**：类型检查
   - 做什么：对测试改动执行工作区 typecheck（测试文件纳入 `tsconfig.tests.json`）
   - 交付：类型检查通过
   - 对应验收标准：universal 清单在两架构均通过（借由可编译性确认用例真的被执行）
