@@ -334,6 +334,10 @@
 **涉及文件**：
 - `dsh-plugin-desktop-beta/src/desktop-settings-controller.ts` — 修改，新增两个方法与错误封装
 - `dsh-plugin-desktop-beta/src/index.ts` — 修改，在 `settingsRoutes` 注册表（`:304-317`）新增两项
+- `dsh-plugin-desktop-beta/src/desktop-cli-publication.ts` — 新增，`createDesktopCliPublisher` / `desktopCliLaunchers` 把 shim 生成与 PATH 读写合成一对可注入、可测试的操作
+- `dsh-plugin-desktop-beta/src/desktop-cli-shell.ts` — 修改，导出 `desktopCliShimDirectory`，使 PATH 登记目标与 shim 落盘目录同源
+- `dsh-plugin-desktop-beta/src/host-bootstrap.ts` — 修改，isolated Host 侧注入 `publishCli` / `revokeCli`，并新增 `userHomeDir` / `codegraphCliPathDir` / `mnemonCliPathDir` 三个入参
+- `dsh-plugin-desktop-beta/src/main.ts` — 修改，in-process 回退侧注入同一对能力；launcher 路径经 `DesktopHostOptions` 作为数据传入 Host
 
 **验收标准**：
 - **操作可被路由触达**：当请求命中两个新路径时，控制器方法被调用且返回结构符合契约。验证方式：`yarn workspace dsh-plugin-desktop-beta vitest run tests/desktop-settings-api.spec.ts` 通过
@@ -341,17 +345,17 @@
 - **失败有反馈**：当底层操作抛错时，路由返回错误响应而非静默成功。验证方式：路由测试中的失败分支用例通过
 
 **增量计划**：
-- [ ] **增量 1**：控制器方法
+- [x] **增量 1**：控制器方法
   - 做什么：实现"修复/登记"与"撤销"两个方法，内部调用 shim 生成与 PATH 读写
   - 交付：控制器可用
   - 对应验收标准：操作可被路由触达
   - 完成判定：`yarn workspace dsh-plugin-desktop-beta typecheck` 无错误
-- [ ] **增量 2**：路由注册
+- [x] **增量 2**：路由注册
   - 做什么：在 `settingsRoutes` 数组中新增两项
   - 交付：端到端可请求
   - 对应验收标准：入口不限安装形态
   - 完成判定：`yarn workspace dsh-plugin-desktop-beta vitest run tests/desktop-settings-api.spec.ts` 通过
-- [ ] **增量 3**：错误封装
+- [x] **增量 3**：错误封装
   - 做什么：把底层错误包装成既有的 settings 错误响应形态
   - 交付：失败反馈
   - 对应验收标准：失败有反馈

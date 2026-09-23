@@ -116,6 +116,16 @@ export interface DesktopCliShellInstallation {
   changed: boolean
 }
 
+/**
+ * Directory that receives the generated shims for one harness home.
+ *
+ * Exported so the PATH registration code addresses the same directory the
+ * shims are written to, instead of re-deriving `<homeDir>/bin` and drifting.
+ */
+export function desktopCliShimDirectory(homeDir: string): string {
+  return join(homeDir, SHIM_DIRECTORY)
+}
+
 function fail(message: string): never {
   throw new Error(`dsh-plugin-desktop: ${message}`)
 }

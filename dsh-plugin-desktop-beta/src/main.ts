@@ -27,7 +27,8 @@ import {
   isDesktopInstallerQuitRequest,
 } from './desktop-installer-quit.ts'
 import { createDesktopBrowserAccess } from './desktop-browser-access.ts'
-import { installDesktopCliShell, type DesktopCliLauncher } from './desktop-cli-shell.ts'
+import { installDesktopCliShell } from './desktop-cli-shell.ts'
+import { createDesktopCliPublisher, desktopCliLaunchers } from './desktop-cli-publication.ts'
 import { seedDesktopDreamSkin } from './desktop-dream-skin-default.ts'
 import {
   installDesktopDshRuntime,
@@ -745,32 +746,11 @@ async function start(): Promise<void> {
     // failure here must never block startup: the CLIs stay available to the
     // Host through their runtime installers.
     if (process.platform === 'darwin' || process.platform === 'win32') {
-      const windows = process.platform === 'win32'
-      const launchers = [
-        codegraphRuntime === undefined
-          ? undefined
-          : {
-              name: 'codegraph',
-              // Windows ships a batch shim that resolves `%~dp0` at call time,
-              // which would bind the generated file to the packaged directory
-              // and break as soon as the bundle moved. Point the forwarder at
-              // the entry script and the `node.exe` beside it instead: that
-              // script sits three levels below the published `bin` directory.
-              launcherPath: windows
-                ? join(dirname(codegraphRuntime.pathDir), 'lib', 'dist', 'bin', 'codegraph.js')
-                : join(codegraphRuntime.pathDir, 'codegraph'),
-            },
-        mnemonRuntime === undefined
-          ? undefined
-          : {
-              name: 'mnemon',
-              // Mnemon ships a real executable, not a batch shim.
-              launcherPath: join(
-                mnemonRuntime.pathDir,
-                windows ? 'mnemon.exe' : 'mnemon',
-              ),
-            },
-      ].filter((launcher): launcher is DesktopCliLauncher => launcher !== undefined)
+      const launchers = desktopCliLaunchers({
+        platform: process.platform,
+        codegraphPathDir: codegraphRuntime?.pathDir,
+        mnemonPathDir: mnemonRuntime?.pathDir,
+      })
       if (launchers.length > 0) {
         try {
           installDesktopCliShell({
@@ -788,6 +768,24 @@ async function start(): Promise<void> {
         }
       }
     }
+    // Built once and shared by both settings-controller construction sites —
+    // the isolated Host and the in-process fallback — so the two entries behave
+    // identically. Absent away from Windows, where the marked profile block
+    // already carries the shim directory and there is no registry entry to
+    // repair or revoke.
+    const cliPublisher = process.platform === 'win32'
+      ? createDesktopCliPublisher({
+          homeDir,
+          userHomeDir: app.getPath('home'),
+          platform: process.platform,
+          launchers: desktopCliLaunchers({
+            platform: process.platform,
+            codegraphPathDir: codegraphRuntime?.pathDir,
+            mnemonPathDir: mnemonRuntime?.pathDir,
+          }),
+          shell: process.env.SHELL,
+        })
+      : undefined
     // Give a fresh installation the prepared dream-skin appearance. The plugin
     // reads this file when it mounts, so seeding has to happen before the Host
     // starts. An existing file belongs to the user and is left untouched.
@@ -1508,7 +1506,10 @@ async function start(): Promise<void> {
       await startIsolatedDesktopHost({
         host: { prepared, profilePreferences, homeDir, activeProfileName, pluginManagementStatePath,
           selectionStatePath, marketUserDataDir, releaseUserDataLocations, desktopLaunchEnvironment,
-          desktopPnpmBootstrap, logDirectory: join(desktopUserDataDir, 'logs', 'host') },
+          desktopPnpmBootstrap, logDirectory: join(desktopUserDataDir, 'logs', 'host'),
+          userHomeDir: app.getPath('home'),
+          codegraphCliPathDir: codegraphRuntime?.pathDir,
+          mnemonCliPathDir: mnemonRuntime?.pathDir },
         runtime, rendererToken: browserAccess.rendererHeader.value,
         prepareCertificate: prepareHostCertificate,
         bindHost: host => generation.bindHost(host), requestQuit,
@@ -1714,6 +1715,12 @@ async function start(): Promise<void> {
             reloadRenderer: () => { runtime.reloadRenderer() },
             toggleDeveloperTools: () => { runtime.toggleDeveloperTools() },
             exportDiagnostics: () => runtime.exportDiagnostics(),
+            ...(cliPublisher === undefined
+              ? {}
+              : {
+                  publishCli: async () => cliPublisher.publish(),
+                  revokeCli: async () => cliPublisher.revoke(),
+                }),
           }))
           provideCmdline(hostCtx, {
             args: [

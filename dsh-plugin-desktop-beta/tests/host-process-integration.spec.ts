@@ -62,7 +62,8 @@ it.each([false, true])('boots a separate Web Host with client plugins (AA enable
     const result = await rpc.call<{ pid: number; services: { aaRuntime: boolean; aaOnboarding: boolean } }>('boot', [{
       prepared, profilePreferences: { mode: 'advanced', openBrowser: false, networkExposure: 'loopback',
         macosMaterial: 'auto', windowsMaterial: 'auto', market: 'disabled', notifications: { enabled: false }, aaEnabled },
-      homeDir: home, activeProfileName: prepared.profile.name, pluginManagementStatePath: join(home, 'plugins.json'),
+      homeDir: home, userHomeDir: home, activeProfileName: prepared.profile.name,
+      pluginManagementStatePath: join(home, 'plugins.json'),
       selectionStatePath: join(home, 'selection.json'), marketUserDataDir: join(home, 'userdata'),
       releaseUserDataLocations: desktopReleaseUserDataLocations(home, join(home, 'userdata')),
       launchEnvironmentLayers: [],
