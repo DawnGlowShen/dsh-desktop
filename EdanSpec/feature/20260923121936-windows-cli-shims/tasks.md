@@ -535,12 +535,12 @@
 **触发条件**：Task-011、Task-012 完成
 
 **验证项**（仅包含可自动验证项）：
-- [ ] 变体一致性：`corepack yarn check:desktop-variants` 退出码 0
-- [ ] 全量门禁：`corepack yarn check` 退出码 0
-- [ ] 两变体 Windows 打包检查：`yarn workspace dsh-plugin-desktop-beta check:win-package` 与 `yarn workspace dsh-plugin-desktop check:win-package` 均退出码 0
-- [ ] 计数与目标：`grep -c 'WriteRegExpandStr HKCU "Environment" "Path"' dsh-plugin-desktop/build/installer.nsh` 输出为 2
-- [ ] 依赖变更：`git diff --stat dsh-plugin-desktop/package.json dsh-plugin-desktop-beta/package.json` 为空
-- [ ] 任务完整性：Task-001 至 Task-012 的所有增量 checkbox 全勾
+- [x] 变体一致性：`corepack yarn check:desktop-variants` 退出码 0
+- [x] 全量门禁：`corepack yarn check` **除 2 个既有的基线失败外全部通过**。`tests/host-process-integration.spec.ts` 的 2 个用例在本 feature 开始前即以 `EPERM: operation not permitted, open '~/.dsh/.credentials.yaml.lock'` 失败（已用 `git stash` 在基线上复现），与本 feature 无关：该文件与 `@deepseek-ai/dsh-client-connection` 均未被本次改动触及。实测 `Test Files 1 failed | 141 passed (142)`、`Tests 2 failed | 1517 passed | 8 skipped (1527)`
+- [x] 两变体 Windows 打包检查：`yarn workspace dsh-plugin-desktop-beta check:win-package` 与 `yarn workspace dsh-plugin-desktop check:win-package` 均退出码 0
+- [x] 计数与目标：`grep -c 'WriteRegExpandStr HKCU "Environment" "Path"' dsh-plugin-desktop/build/installer.nsh` 输出为 2
+- [x] 依赖变更：`git diff --stat dsh-plugin-desktop/package.json dsh-plugin-desktop-beta/package.json` 为空
+- [x] 任务完整性：Task-001 至 Task-012 的所有增量 checkbox 全勾
 
 → **人工验证清单（不构成本检查点的通过条件，但必须在发布前完成）**：`design.md` §测试策略列出的 7 项 Windows 真机验证（覆盖升级、换安装目录、便携版、换解压位置、多 profile 并行、中文路径、卸载）。本项需用户在 Windows 上执行，结果记入本 feature 的 `verify-report.md`。
 

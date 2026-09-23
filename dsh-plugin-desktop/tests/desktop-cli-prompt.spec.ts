@@ -50,7 +50,7 @@ function harness(overrides: {
     if (overrides.publishThrows !== undefined) throw overrides.publishThrows
   })
   const confirm = vi.fn(async () => overrides.response ?? DESKTOP_CLI_PROMPT_CONFIRM_INDEX)
-  const reportFailure = vi.fn(async () => {})
+  const reportFailure = vi.fn(async (_detail: string) => {})
   const logError = vi.fn()
   const detectInstallKind = vi.fn(() => {
     if (overrides.detectThrows !== undefined) throw overrides.detectThrows
