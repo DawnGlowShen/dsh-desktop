@@ -38,16 +38,20 @@ describe('Windows NSIS running-app handoff', () => {
 describe('Windows NSIS bundled-CLI PATH integration', () => {
   const readScript = (): string => readFileSync(join(process.cwd(), 'build', 'installer.nsh'), 'utf8')
 
-  it('publishes each CLI to the per-user PATH and nothing machine-wide', () => {
+  it('publishes one shim directory to the per-user PATH and nothing machine-wide', () => {
     const script = readScript()
     const writes = script.match(/WriteRegExpandStr HKCU "Environment" "Path"/gu) ?? []
 
     expect(script).toContain('!macro customInstall')
     expect(script).toContain('!macro customUnInstall')
-    // Two writes each for install and uninstall — one CodeGraph, one Mnemon;
-    // both target the user hive, which needs no administrator rights and leaves
-    // other accounts alone.
-    expect(writes).toHaveLength(4)
+    // One write for install and one for uninstall. The two per-CLI entries that
+    // used to point at the installation directory are gone: both CLIs are now
+    // reached through the same `<home dir>\.dsh\bin` shim directory.
+    expect(writes).toHaveLength(2)
+    // The target is the user's shim directory, never the installation
+    // directory, which an upgrade renames away and then deletes.
+    expect(script).toContain('StrCpy $0 "$PROFILE\\${DSH_SHIM_DIR}"')
+    expect(script).toContain('StrCpy $0 "$0;$PROFILE\\${DSH_SHIM_DIR}"')
     // REG_EXPAND_SZ is what Windows expects of PATH. Writing it as a plain
     // string would freeze any %VAR% the user had in there.
     expect(script).not.toContain('WriteRegStr HKCU "Environment"')
@@ -60,52 +64,73 @@ describe('Windows NSIS bundled-CLI PATH integration', () => {
     expect(script).toContain('${DSH_HWND_BROADCAST} ${DSH_WM_WININICHANGE}')
   })
 
+  it('never registers an installation subdirectory as a PATH entry', () => {
+    const script = readScript()
+    const install = script.slice(script.indexOf('!macro customInstall'), script.indexOf('!macro customUnInstall'))
+
+    // The old target was `<install dir>\resources\codegraph\bin`. A directory
+    // under $INSTDIR must never reach PATH again: an upgrade wipes it, a
+    // `C:\Program Files` install cannot be written by the non-elevated process
+    // that generates the shims, and uninstalling would leave a dead entry.
+    //
+    // $INSTDIR may appear only in the existence check that decides whether
+    // there is a command worth publishing. Any other occurrence would mean the
+    // installation directory is being used as a value.
+    expect(install.match(/\$INSTDIR/gu) ?? []).toHaveLength(1)
+    expect(install).toContain('${if} ${FileExists} "$INSTDIR\\${DSH_CODEGRAPH_BIN}\\codegraph.cmd"')
+    // Mnemon has no branch of its own left: both CLIs ship in the same
+    // extraResources block and are reached through the same shim directory.
+    expect(script).not.toContain('DSH_MNEMON_BIN')
+  })
+
   it('survives reinstalling and never rewrites a PATH the user reordered', () => {
     const script = readScript()
 
     // An upgrade runs customInstall again over the same directory.
-    expect(script).toContain('${StrContains} $1 "${DSH_CODEGRAPH_BIN}" "$0"')
-    expect(script).toContain('${StrContains} $1 "${DSH_MNEMON_BIN}" "$0"')
+    expect(script).toContain('${StrContains} $1 "${DSH_SHIM_DIR}" "$0"')
     // Removal only fires when the entry is still the last one.
     expect(script).toContain('StrCpy $4 "$0" $3 -$3')
-    expect(script).toContain('${if} $4 == ";$INSTDIR\\${DSH_CODEGRAPH_BIN}"')
-    expect(script).toContain('${if} $4 == ";$INSTDIR\\${DSH_MNEMON_BIN}"')
+    expect(script).toContain('${if} $4 == ";$PROFILE\\${DSH_SHIM_DIR}"')
   })
 
-  it('peels the two entries off in the reverse of the order they were added', () => {
+  it('backs up the pristine PATH exactly once, at the single write point', () => {
     const script = readScript()
-    const install = script.indexOf('${DSH_CODEGRAPH_BIN}\\codegraph.cmd')
-    const installMnemon = script.indexOf('${DSH_MNEMON_BIN}\\mnemon.exe')
-    const uninstallStart = script.indexOf('!macro customUnInstall')
-    const uninstallMnemon = script.indexOf('${DSH_MNEMON_BIN}', uninstallStart)
-    const uninstallCodegraph = script.indexOf('${DSH_CODEGRAPH_BIN}', uninstallStart)
+    const install = script.indexOf('!macro customInstall')
+    const uninstall = script.indexOf('!macro customUnInstall')
+    const guard = script.indexOf('${if} $1 == ""', install)
+    const backup = script.indexOf('"PathBackup" "$0"', install)
 
-    // Install appends CodeGraph then Mnemon, so uninstall must remove Mnemon
-    // first: each entry is only removed when it is still last.
-    expect(install).toBeGreaterThan(-1)
-    expect(installMnemon).toBeGreaterThan(install)
-    expect(uninstallMnemon).toBeGreaterThan(uninstallStart)
-    expect(uninstallCodegraph).toBeGreaterThan(uninstallMnemon)
+    // With one write point there is no second branch that could overwrite the
+    // backup with an already-modified PATH, so the `$6` re-read that guarded
+    // the two-branch version is gone rather than merely unused.
+    expect(script).not.toContain('ReadRegStr $6 HKCU')
+    expect(guard).toBeGreaterThan(install)
+    expect(backup).toBeGreaterThan(guard)
+    expect(backup).toBeLessThan(uninstall)
   })
 
-  it('keeps the pristine PATH recoverable no matter which branch writes first', () => {
-    const script = readScript()
-
-    // Both branches run on the same install, so the second one must not
-    // overwrite the backup with an already-modified PATH.
-    expect(script).toContain('ReadRegStr $6 HKCU "Software\\${PRODUCT_NAME}" "PathBackup"')
-  })
-
-  it('publishes the CLI only when it actually shipped in the package', () => {
+  it('publishes the shim directory only when the packaged CLI actually shipped', () => {
     const script = readScript()
 
     // Only when the CLI really shipped is there a command worth publishing.
+    // CodeGraph and Mnemon come from the same extraResources block, so one
+    // check covers both.
     expect(script).toContain('${if} ${FileExists} "$INSTDIR\\${DSH_CODEGRAPH_BIN}\\codegraph.cmd"')
-    // Mnemon ships a real executable rather than a .cmd shim.
-    expect(script).toContain('${if} ${FileExists} "$INSTDIR\\${DSH_MNEMON_BIN}\\mnemon.exe"')
     // ${StrContains} reaches the macro through assistedInstaller.nsh, which a
     // oneClick installer does not pull in; the dependency is recorded in a
     // comment because the include is processed before that file is read.
-    expect(script).toContain('${StrContains} $1 "${DSH_CODEGRAPH_BIN}" "$0"')
+    expect(script).toContain('${StrContains} $1 "${DSH_SHIM_DIR}" "$0"')
+  })
+
+  it('leaves the shim files in the user data directory on uninstall', () => {
+    const script = readScript()
+    const uninstall = script.slice(script.indexOf('!macro customUnInstall'))
+
+    // The shim directory belongs to the user's data, not to this installation,
+    // and another edition may be using the same directory. Uninstalling removes
+    // the PATH entry only.
+    expect(uninstall).not.toContain('RMDir')
+    expect(uninstall).not.toContain('Delete')
+    expect(uninstall).not.toContain('$PROFILE\\${DSH_SHIM_DIR}\\')
   })
 })
