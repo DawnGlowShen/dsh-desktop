@@ -149,11 +149,16 @@ installBundledCliRuntime('mnemon',    'mnemon.exe',    options)   // 真实可�
 
 ```
 @mnemon-dev/mnemon   version 0.2.9-darwin-arm64   os:["darwin"]  cpu:["arm64"]
+@mnemon-dev/mnemon   version 0.2.9-darwin-x64     os:["darwin"]  cpu:["x64"]      ← 现在也用
 @mnemon-dev/mnemon   version 0.2.9-win32-x64      os:["win32"]   cpu:["x64"]
 ```
 
 **平台写在 `version` 里，`name` 保持主包名**。CodeGraph 则相反
 （`@colbymchenry/codegraph-darwin-arm64`，后缀在 `name`）。
+
+因为平台写在 `version` 里，两份 macOS 归档的 `package.json` 必然不同（`version`、
+`description`、`cpu` 都不同），`README.md` 的第 1、3 行也不同。这正是 2.8 说
+「两切片各带一份」不可行的直接原因。
 
 `scripts/prepare-mnemon.mjs` 的注释里明确记录了这一点，并**两个字段都校验**：
 
@@ -271,7 +276,7 @@ ${endIf}
 
 ### 4.1 第一层：把 CLI 放进安装包
 
-`vendor/mnemon/` 放两个 tgz，`scripts/prepare-mnemon.mjs` 按主机解压到
+`vendor/mnemon/` 放三个 tgz，`scripts/prepare-mnemon.mjs` 按主机选 target 解压到
 `build/mnemon/host/`，再由 `build.extraResources` 静态拷贝：
 
 ```jsonc
@@ -284,9 +289,14 @@ ${endIf}
 }
 ```
 
-**为什么同样不用 yarn 依赖**：平台包声明了 `os` / `cpu`。macOS universal 构建里，
-被 `cpu` 过滤掉的那个切片会拿不到包，两切片内容不一致，`@electron/universal` 合并失败。
-**与 CodeGraph 是同一个原因**，见姊妹篇 4.1。
+**为什么同样不用 yarn 依赖**：平台包声明了 `os` / `cpu`，且 universal 的两个切片
+**共用同一份资源**。被 `cpu` 过滤掉的那个切片会拿不到包，两切片内容不一致，
+`@electron/universal` 合并失败。**与 CodeGraph 是同一个原因**，见姊妹篇 4.1。
+
+**macOS 走 `lipo` 合成 universal**（2026-09-23）：两份归档各自解包，Mach-O
+（mnemon 只有 `bin/mnemon` 一个）用 `lipo -create` 合成，其余文件从 arm64 侧拷贝，
+`package.json` 归一为 `cpu: ["arm64","x64"]`、`version` 去掉 `-darwin-x64` 后缀。
+完整机制见姊妹篇 2.8。
 
 `prepare-mnemon.mjs` 相对 `prepare-codegraph.mjs` 的差异：
 
@@ -296,14 +306,29 @@ ${endIf}
 | 期望包名 | `@colbymchenry/codegraph-<platform>` | **`@mnemon-dev/mnemon`**（无后缀） |
 | 版本校验 | — | **版本后缀必须等于 target key** |
 | 可执行位 | `chmod 0o755` | 同（仅 POSIX） |
+| 源归档 sha256 钉值 | 无（只用 `.prepared.json` 复用） | **每个 target 都钉**，见下 |
+| `allowPlainDifferences` | `['package.json']` | `['package.json', 'README.md']` |
 | `--check` | 有一个已知 bug | **不复制该 bug**，见下 |
 
-> **关于 `--check`**：`prepare-codegraph.mjs` 的 `--check` 分支用
+**每个 target 的 sha256 钉值**（不符即非零退出，并同时输出实际与期望值）：
+
+| target | sha256 |
+|---|---|
+| `darwin-arm64` | `004d6454625db1e880d83da057a801f9ec87fd08654af715d5d906ea1b2d464a` |
+| `darwin-x64` | `cbdc4053f889008d34c831888420132fcfe367578b120f660bbf90252c02eb9d` |
+| `win32-x64` | `10e2d8d9e5f93d185018495b5c4822715bd0ad16873202f6d3b1a7696d6f69ef` |
+
+> **关于 `--check`**：`prepare-codegraph.mjs` 的 `--check` 分支曾用
 > `existsSync(existing.entryPoint)` 判断，而 `entryPoint` 是**相对仓库根**的路径；
 > 从 workspace 目录调用时会误报「未准备」。`prepare-mnemon.mjs` 改为拼接
 > `join(outputRoot, target.executables[0])` 做探测，从仓库根或 workspace 都能正确判断。
+> （CodeGraph 侧在本轮改造中已一并修好，两脚本现在一致。）
 
-打包脚本前置换成一个链条（codegraph 在前、mnemon 在后；两者无顺序依赖）：
+> **幂等复用把 target 也纳入判据**：universal 与 `darwin-x64` 共用同一份 x64 归档的
+> sha256，只比对校验和会让 `--target darwin-x64` 误复用那份双架构产物，回滚静默失效。
+
+打包脚本前置换成一个链条（codegraph 在前、mnemon 在后；两者无顺序依赖），
+且**不需要显式传 target**：macOS 主机默认 `darwin-universal`，Windows 主机默认 `win32-x64`。
 
 ```
 node ../scripts/prepare-codegraph.mjs && node ../scripts/prepare-mnemon.mjs && electron-builder ...
@@ -388,13 +413,33 @@ gzip -9 -c build/mnemon/host/bin/mnemon | wc -c   →  6,153,199 字节
 **结论：mnemon 的 6 MB 相对于 CodeGraph 的 54 MB 可以忽略。** 两者合计仍是
 CodeGraph 主导。
 
+### 6.1 双架构扩展后的体积（2026-09-23）
+
+改成 universal 载荷后，只有一个 Mach-O 翻倍：
+
+| 文件 | arm64 | x64 | 合成后 |
+|------|-------|-----|--------|
+| `bin/mnemon` | 15,519,186 | 16,308,816 | 31,837,650 |
+
+解压总量 15 → **30 MB**（**+16 MB**）。x64 切片的 `gzip -9` 后为 6.5 MB。
+
+**在 DMG 里的实际增量已与 CodeGraph 一起受控实测**：两份只差内置 CLI 载荷的
+universal DMG 相差 **+48.33 MB**，其中 mnemon 贡献约 **+6.5 MB**，其余是 CodeGraph
+新增的 x64 切片。完整方法与数字见姊妹篇 6.1。
+
+双架构扩展后「mnemon 可忽略」这个结论不变：mnemon x64 切片约 6.5 MB，
+CodeGraph 新增切片约 42 MB。
+
 ---
 
 ## 7. 风险与坑
 
 **与 CodeGraph 共有的风险**（解压丢可执行位、universal 合并、写坏 `~/.zshrc`、
-写坏注册表 PATH、Gatekeeper 隔离属性、应用移动位置、便携版无安装器、上游版本不匹配）
-见姊妹篇第 7 节，此处不重复。mnemon 特有的：
+写坏注册表 PATH、Gatekeeper 隔离属性、应用移动位置、便携版无安装器、上游版本不匹配、
+Intel Mac 上静默失效、回滚路径被幂等复用吃掉）
+见姊妹篇第 7 节，此处不重复。**注意「Intel Mac 上静默失效」对 mnemon 是同一根因**：
+两份 CLI 的平台包都在 x64 切片上 `cpu` 不匹配，于是两个 launcher 一起为空，
+`~/.dsh/bin` 整个目录都不会被创建。mnemon 特有的：
 
 | 风险 | 平台 | 后果 | 处理 |
 |------|------|------|------|
@@ -404,6 +449,7 @@ CodeGraph 主导。
 | **卸载顺序写反** ✅ 已解决 | win | 两个条目都留在 PATH 里 | 反序剥离；测试断言「卸载分支里 mnemon 出现在 codegraph 之前」 |
 | **平台包 `name`/`version` 约定与 CodeGraph 相反** | 两者 | 校验错字段会接受不相干的归档 | `prepare-mnemon.mjs` 两个字段都校验 |
 | **许可证是 Apache-2.0 而非 MIT** | 两者 | 若沿用 CodeGraph 的断言会直接失败 | 常量改为 `Apache-2.0`；它在 `ALLOWED_LICENSES` 里 |
+| **两份 macOS 归档的 `README.md` 也不同** ✅ 已处理 | mac | 若非 Mach-O 文件在两份归档间有差异而未被允许，`planUniversalMerge()` 会拒绝合并 | `allowPlainDifferences` 同时含 `package.json` 与 `README.md`（两份 README 仅第 1、3 行不同） |
 | **`--check` 的相对路径 bug 被复制** ✅ 已避免 | 两者 | CI 里误报「未准备」 | 用绝对路径探测入口 |
 | **用户已装全局 mnemon**（npm / brew） | mac | 内置版会优先命中（prepend），版本可能与全局那份不同 | **属预期行为**；想反过来就把 PATH 那行改成 append |
 
@@ -417,12 +463,24 @@ CodeGraph 主导。
 # ① 归档可追溯：sha256 与脚本里 pin 的值一致
 node scripts/prepare-mnemon.mjs --desktop dsh-plugin-desktop --target darwin-arm64 --check
 
+# ①b 默认 target 在 macOS 上是 universal（双架构）
+node scripts/prepare-mnemon.mjs --desktop dsh-plugin-desktop --check
+node -p "require('./dsh-plugin-desktop/build/mnemon/.prepared.json').target"   # → darwin-universal
+lipo dsh-plugin-desktop/build/mnemon/host/bin/mnemon -archs                   # → x86_64 arm64
+node -p "require('./dsh-plugin-desktop/build/mnemon/host/package.json').cpu"  # → [ 'arm64', 'x64' ]
+
 # ② 幂等：连跑两次，第二次输出「reusing」
 node scripts/prepare-mnemon.mjs --desktop dsh-plugin-desktop --target darwin-arm64
 node scripts/prepare-mnemon.mjs --desktop dsh-plugin-desktop --target darwin-arm64
 
+# ②b 回滚路径不被误复用：显式单架构 target 必须真的产出单架构
+node scripts/prepare-mnemon.mjs --desktop dsh-plugin-desktop --target darwin-arm64
+lipo dsh-plugin-desktop/build/mnemon/host/bin/mnemon -archs                   # → arm64
+# 复原（macOS 默认 universal）
+node scripts/prepare-mnemon.mjs --desktop dsh-plugin-desktop
+
 # ③ 归档内容与许可证
-tar -tzf vendor/mnemon/mnemon-darwin-arm64-0.2.9.tgz
+tar -tzf vendor/mnemon/mnemon-darwin-x64-0.2.9.tgz
 #   package/LICENSE  package/bin/mnemon  package/package.json  package/README.md
 
 # ④ 两个内置 CLI 都进了 extraResources，且 universal 声明齐备
@@ -445,6 +503,10 @@ corepack yarn check:layout
 env -i ./dsh-plugin-desktop/build/mnemon/host/bin/mnemon --version
 #   → mnemon version 0.2.9
 
+# ①b 两个架构都能跑（Intel Mac 可用的关键）
+arch -x86_64 ./dsh-plugin-desktop/build/mnemon/host/bin/mnemon --version
+#   → mnemon version 0.2.9
+
 # ② 动态依赖只有系统库
 otool -L dsh-plugin-desktop/build/mnemon/host/bin/mnemon
 
@@ -452,6 +514,10 @@ otool -L dsh-plugin-desktop/build/mnemon/host/bin/mnemon
 ls -l ~/.dsh/bin
 #   codegraph
 #   mnemon                     ← 新增
+
+# ③b 包里 mnemon 是双架构（smoke 校验会自动断言三条路径）
+APP="dsh-plugin-desktop/dist/mac-smoke/mac-universal/DSH Desktop Evo.app"
+lipo "$APP/Contents/Resources/mnemon/bin/mnemon" -archs    # → x86_64 arm64
 
 # ④ 标记块只有一个，且内容未变（关键回归）
 grep -c 'dsh-desktop codegraph' ~/.zshrc     # → 2（一开一闭，仍是原来的那一个块）
@@ -504,6 +570,7 @@ cmd /c "where mnemon"
 | 层次 | 回滚动作 |
 |---|---|
 | 打包 | `package.json` 去掉 `extraResources` 里 mnemon 那项、`x64ArchFiles` 去掉 `Resources/mnemon/**`、脚本去掉 prepare 前缀 |
+| 单架构退回 | 不需要改代码：`node scripts/prepare-mnemon.mjs --target darwin-arm64` 即回到「仅 arm64」载荷（回滚后 Intel Mac 会重新失去 `~/.dsh/bin`） |
 | prepare | 删 `scripts/prepare-mnemon.mjs`、删 `vendor/mnemon/`、`.gitignore` 去掉两行 |
 | 运行时 | `main.ts` 去掉 mnemon 的 install/release 接线 |
 | macOS shell | shim 文件由 `installDesktopCliShell()` 每次启动重写；卸载时不主动删（与 codegraph 同为持久产物）。**不要手工删 `~/.zshrc` 的块**——它正被 codegraph 使用 |
@@ -521,7 +588,7 @@ cmd /c "where mnemon"
 
 | 步骤 | 结果 |
 |------|------|
-| vendor 两个平台 tgz | `vendor/mnemon/`，mac 6.0 MB + win 5.4 MB，sha256 已 pin |
+| vendor 三个平台 tgz | `vendor/mnemon/`，mac arm64 6.0 MB + mac x64 6.3 MB + win 5.4 MB，sha256 全已 pin |
 | `scripts/prepare-mnemon.mjs` | 解压、断言 Apache-2.0、名字/版本后缀双校验、`chmod 0o755`、幂等；`--check` 修掉了 CodeGraph 版本的相对路径 bug |
 | `.gitignore` | 忽略 `dsh-plugin-desktop{,-beta}/build/mnemon/` |
 | `package.json` | `extraResources` + `mac.x64ArchFiles` + 5 个打包脚本前置 prepare |
@@ -533,6 +600,21 @@ cmd /c "where mnemon"
 | stable 同步 | 184 个共享源文件对齐 |
 | 测试 | 新增/改写：shell 15、runtime 27、installer-nsh 7；**stable 1399 通过 / beta 1385 通过** |
 | 三个内置插件 | `billion-context` `dsh-mnemon` `dsh-rewind-plugin` 进 dependencies + `DEFAULT_PROFILE_PLUGIN_BUNDLES` |
+
+### 双架构扩展（2026-09-23）
+
+| 步骤 | 结果 |
+|------|------|
+| vendor 补 `darwin-x64` | `mnemon-darwin-x64-0.2.9.tgz`，6,658,278 B，sha256 `cbdc4053f889008d34c831888420132fcfe367578b120f660bbf90252c02eb9d` |
+| `TARGETS` 新增两项 | `darwin-x64` 与 `darwin-universal`（后者 `sources: ['darwin-arm64','darwin-x64']`） |
+| 默认 target 推断 | macOS 主机默认 `darwin-universal`；`--target` 可覆盖 |
+| 归一清单 | `version: 0.2.9-darwin`、`description: Mnemon native binary for darwin`、`cpu: ["arm64","x64"]` |
+| `planUniversalMerge` | mnemon 的 Mach-O 只有 `bin/mnemon` 一个；`package.json` 与 `README.md` 走 `allowPlainDifferences` |
+| 复用判据 | `--check` 与复用分支都要求 `existing.target === targetKey`，避免 x64 target 误复用双架构产物 |
+| 打包脚本调用串 | **未改动**（5 个脚本的前置 prepare 无参数） |
+| 测试 | `desktop-runtime-environment.spec.ts` 对应 describe 加 universal 用例；`verify-mac-smoke.spec.ts` 断言 `Resources/mnemon/bin/mnemon` 的双架构与执行位 |
+| 包内实测 | `lipo -archs` → `x86_64 arm64`；原生与 `arch -x86_64` 执行 `--version` 均 `mnemon version 0.2.9`；权限 `0o755`、31,837,650 B |
+| Windows 未回归 | `--target win32-x64` 的 prepare 与 `--check` 均通过 |
 
 ### 门禁实测
 

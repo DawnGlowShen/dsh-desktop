@@ -1,6 +1,6 @@
 # 把 codegraph CLI 随 DSH Desktop 一起离线安装（方案 · macOS + Windows）
 
-> **状态：macOS 部分已实施并验证通过（2026-09-18）；Windows 部分已实施——NSIS 安装器写用户 PATH，待原生 Windows 主机验证实际效果。**
+> **状态：macOS 部分已实施并验证通过（2026-09-18），并已扩展为双架构 universal 载荷（2026-09-23）；Windows 部分已实施——NSIS 安装器写用户 PATH，待原生 Windows 主机验证实际效果。**
 >
 > 目标读者：不熟悉构建流程的使用者。所有结论都标注了查证来源。
 >
@@ -20,6 +20,7 @@
 | Windows 的 PATH 怎么做？ | **NSIS 安装时写注册表**（Windows 安装器**有**安装钩子，比 macOS 更正规） |
 | 两平台机制一样吗？ | **不一样**，见第 3 节。这是本方案最容易搞错的地方 |
 | **macOS 实测结果** | DMG **338 → 392 MB**（+54 MB），`codegraph init` 在新终端可用 |
+| **双架构（universal）扩展** | 内置载荷改为 `lipo` 合成的 universal 二进制，**Intel Mac 也得到 `~/.dsh/bin`**。受控实测 DMG **467.46 → 515.79 MB**（**+48.33 MB**），见 2.8 |
 
 ---
 
@@ -41,11 +42,14 @@
   bin: { codegraph: "npm-shim.js" }      ← 只是个启动器
   optionalDependencies（按平台自动装一个）:
     @colbymchenry/codegraph-darwin-arm64   278 MB 解压 / 55 MB tgz
-    @colbymchenry/codegraph-darwin-x64     292 MB 解压
+    @colbymchenry/codegraph-darwin-x64     278 MB 解压 / 56 MB tgz   ← 现在也用
     @colbymchenry/codegraph-win32-x64      261 MB 解压 / 51 MB tgz
     @colbymchenry/codegraph-win32-arm64    250 MB 解压
     @colbymchenry/codegraph-linux-{arm64,x64}
 ```
+
+> **macOS 现在同时打包 arm64 与 x64 两份归档**，由 `lipo` 合成一份 universal 载荷。
+> 见 2.8。Windows 仍然只用 `win32-x64`。
 
 **两个平台的内容结构不一样：**
 
@@ -139,9 +143,62 @@ shim，没有真正的 `.exe`（codegraph 就是如此）。而 `execFile` 默�
 
 `scripts/package-mac.ts:135` 传 `--universal`；`verify-mac-smoke.ts:117-118` 用 `lipo` 校验主可执行文件同时含 `x86_64` 与 `arm64`。
 
-但逐个文件的原生校验用的是**显式白名单** `MACOS_UNIVERSAL_NATIVE_ENTRIES`（`scripts/mac-universal.ts:9`），里面是 sharp / koffi / ripgrep 等已知条目。**codegraph 不在其中，不会被 `lipo` 检查。**
+但逐个文件的原生校验用的是**显式白名单** `MACOS_UNIVERSAL_NATIVE_ENTRIES`（`scripts/mac-universal.ts:9`），里面是 sharp / koffi / ripgrep 等已知条目，**路径相对 `Contents/Resources/app`**。
+
+内置 CLI 走的是 `extraResources`，落地在 **`Contents/Resources/`** 下，路径语义与前者不同，所以单独用一份清单 `MACOS_UNIVERSAL_BUNDLED_CLI_ENTRIES` 校验（`scripts/mac-universal.ts`，2026-09-23 新增）：
+
+```ts
+export const MACOS_UNIVERSAL_BUNDLED_CLI_ENTRIES = [
+  { path: 'Resources/codegraph/node', executable: true },
+  { path: 'Resources/codegraph/lib/kernel/codegraph-kernel.node', executable: false },
+  { path: 'Resources/mnemon/bin/mnemon', executable: true },
+] as const satisfies readonly { readonly path: string; readonly executable: boolean }[]
+```
+
+`verify-mac-smoke.ts` 对每条路径跑两次 `lipo -verify_arch`（`x86_64` 与 `arm64`），共 6 次调用；`executable: false` 的 `codegraph-kernel.node` 只校验存在与非空（上游归档里它本就是 `0o644`，由内置 `node` 打开而非直接执行）。
+
+> **不要把它合进 `MACOS_UNIVERSAL_NATIVE_ENTRIES`**：那份清单的路径相对 `Resources/app`，混在一起会得到错误的绝对路径。
 
 Windows 侧：`win.target = [{ target: "nsis", arch: ["x64"] }]`，且 `scripts/package-win.ts` 有**「必须在原生 Windows 主机上构建」的硬断言**。
+
+### 2.8 双架构载荷与 `lipo` 合成（2026-09-23）
+
+**问题**：universal `.app` 的两个切片共用**同一份** `extraResources`。改造前它只有 arm64 载荷，于是 Intel 切片上 `process.arch === 'x64'` 与平台包的 `cpu: ["arm64"]` 不匹配：
+
+```
+bundleSupportsHost() 返回 false
+  → publishBundledCliRuntime() 返回空对象（不是失败，连日志都没有）
+  → launchers 为空
+  → 不调 installDesktopCliShell()
+  → ~/.dsh/bin 不创建、~/.zshrc 不写块
+```
+
+主界面照常启动，所以现象是「Intel Mac 上 `.dsh` 目录没有 `bin` 文件夹」——**静默失效**。
+
+**做法**：`scripts/prepare-codegraph.mjs` 与 `scripts/prepare-mnemon.mjs` 新增 `darwin-universal` target，把 arm64 与 x64 两份归档各自解到临时目录，再用 `lipo -create` 逐个合成 Mach-O，其余文件从 arm64 侧拷贝；合成结果写入 `build/{codegraph,mnemon}/host/`，**仍由同一条静态 `extraResources` 拷进包**——所以 electron-builder 侧零改动。
+
+**为什么必须合成而不是让两切片各带一份**：`@electron/universal` 会对两切片的**所有非 Mach-O 文件**逐个比对 SHA，不一致就直接报错。两份平台包的 `package.json`（`name`/`cpu`/`description`）必然不同，因此「每架构一份」必然破坏合并。合成后的单份载荷在两切片里完全相同，合并自然通过（这也是 4.1 说不用 yarn 依赖的同一个原因）。
+
+合成后的 `package.json` 被归一为 `cpu: ["arm64", "x64"]`，于是**同一个包在两架构宿主上都能通过校验**，Intel 切片也会正常创建 `~/.dsh/bin` 并写 `~/.zshrc` 块。
+
+**回滚路径**：显式指定单架构 target 即可退回改造前状态，无需改代码：
+
+```bash
+node scripts/prepare-codegraph.mjs --target darwin-arm64
+node scripts/prepare-mnemon.mjs    --target darwin-arm64
+```
+
+> **`--check` 与幂等复用都把 target 纳入产物身份**。universal 与 `darwin-x64` 共用同一份 x64 归档的 sha256，只比对校验和会让 `--target darwin-x64` 误复用 universal 产物、使回滚静默失效。
+
+**受控实测体积**（比较两份只差内置 CLI 载荷的 universal DMG；主可执行与其他原生依赖两边都是双架构）：
+
+| 项目 | DMG |
+|------|-----|
+| 内置载荷为 arm64 单架构 | 467.46 MB |
+| 内置载荷为 universal | 515.79 MB |
+| **增量** | **+48.33 MB** |
+
+与按 `gzip -9` 单独压缩三个新增 x64 切片所得 **+48.29 MB** 吻合（`node` 122.9 MB→39.9 MB、`codegraph-kernel.node` 35.3 MB→4.2 MB、`mnemon` 16.3 MB→6.5 MB）。设计预算是 ≤ 60 MB。
 
 ---
 
@@ -173,13 +230,13 @@ Windows 侧：`win.target = [{ target: "nsis", arch: ["x64"] }]`，且 `scripts/
 
 **为什么不用 yarn 依赖**（像 edan-spec 那样）：
 
-- 平台包声明了 `"cpu": ["arm64"]` / `["x64"]`。**macOS universal 构建的 x64 切片可能被 electron-builder 跳过它**，导致两个切片内容不一致，`@electron/universal` 合并时报「文件有差异但不是 Mach-O」而失败
+- 平台包声明了 `"cpu": ["arm64"]` / `["x64"]`，且 universal 的两个切片**共用同一份资源**。直接放 yarn 依赖的话，被 `cpu` 过滤掉的那个切片拿不到包，两切片内容不一致，`@electron/universal` 合并时报「文件有差异但不是 Mach-O」而失败
 - `extraResources` 是**静态拷贝**，两个切片拿到完全相同的内容 → 合并安全
 - 也避免 261~278 MB 进入 yarn 依赖树和许可证审计
 
 **来源放哪**：仿照 `vendor/edan-spec/` 的既有约定，把 tgz 放进 `vendor/codegraph/`，打包前解压。这个动作写成 `scripts/prepare-codegraph.mjs`，仿照现有的 `scripts/prepare-agents-anywhere-release.mjs`。
 
-**关键简化**：因为 `package-win.ts` **要求原生 Windows 主机**，所以「构建主机 == 目标平台」恒成立。于是可以让 prepare 脚本按**当前主机**只准备一个平台，用单条 `extraResources`：
+**macOS 与 Windows 的分野**：因为 `package-win.ts` **要求原生 Windows 主机**，所以 Windows 侧「构建主机 == 目标平台」恒成立，prepare 脚本按主机选一个平台即可。**macOS 不行**——universal 构建在一台机器上同时产出两个切片，必须自带两份载荷，故 macOS 走 2.8 的 `lipo` 合成，落到单条静态 `extraResources`：
 
 ```jsonc
 // dsh-plugin-desktop/package.json 的 build
@@ -191,7 +248,15 @@ Windows 侧：`win.target = [{ target: "nsis", arch: ["x64"] }]`，且 `scripts/
 }
 ```
 
-prepare 脚本按 `process.platform` 选 `darwin-arm64` 或 `win32-x64` 解压到 `build/codegraph/host/`。
+target 推断规则：
+
+| 主机 | 默认 target | 产物 |
+|------|-------------|------|
+| macOS | `darwin-universal` | 一份 `lipo` 合成的双架构载荷 |
+| Windows | `win32-x64` | 单架构 |
+| 其它 | `${process.platform}-${process.arch}` | 单架构 |
+
+可用 `--target` 覆盖（如 `--target darwin-arm64` 回滚为单架构）。
 
 > 如果以后要跨平台构建，改用平台作用域配置（`mac.extraResources` / `win.extraResources`），并在落地路径里带上平台与架构。
 
@@ -379,9 +444,32 @@ macOS 的推算依据：当前 app 解压 1051 MB → DMG 338 MB，压缩比 **0
 
 > ⚠️ **修正记录**：我最初按「解压体积」估成 627 MB，那是错的——DMG 是压缩镜像。实测压缩比后，真实增量约 **55 ~ 89 MB**。
 
-`vendor/` 里的两个 tgz 会进 git 仓库（和 `vendor/dsh-runtime/` 的 265 个 tgz 同样性质）。
+`vendor/` 里的三个 tgz 会进 git 仓库（和 `vendor/dsh-runtime/` 的 265 个 tgz 同样性质）：macOS 的 arm64 与 x64 各一份，Windows 一份。
 
 **macOS 实测**：338 MB → **392 MB**（**+54 MB**，落在估算区间低端）。
+
+### 6.1 双架构扩展后的体积（2026-09-23）
+
+上面那张表描述的是**单臂（arm64）**时的数字。改成 universal 载荷后，只有 Mach-O 部分翻倍，JS 与资源部分仍共享：
+
+| 文件 | arm64 | x64 | 合成后 |
+|------|-------|-----|--------|
+| `node` | 120,573,328 | 122,894,848 | 243,486,096 |
+| `lib/kernel/codegraph-kernel.node` | 35,267,056 | 35,259,940 | 70,541,808 |
+
+解压总量 278 → **427 MB**（**+149 MB**）。
+
+**压缩到 DMG 后的增量用受控对照实测**（两份 DMG 只差内置 CLI 载荷，主可执行与其他原生依赖都是双架构）：
+
+| | DMG |
+|---|---|
+| 内置载荷 arm64 单架构 | 467.46 MB |
+| 内置载荷 universal | 515.79 MB |
+| **增量** | **+48.33 MB** |
+
+与 `gzip -9` 单独压缩新增切片算出的 +48.29 MB 一致。**设计预算是 ≤ 60 MB。**
+
+> **不要把 515.79 MB 直接与上一节的 392 MB 相减**：那 392 MB 是 2026-09-18 的包，其间 app 自身还长了很多（解压 1051 MB → 1876 MB），那些增长与本变更无关。只有上面的受控对照才能隔离出本变更的 +48.33 MB。
 
 ---
 
@@ -391,6 +479,8 @@ macOS 的推算依据：当前 app 解压 1051 MB → DMG 338 MB，压缩比 **0
 |------|------|------|------|
 | **解压后丢可执行位** | mac | Terminal 报 `Permission denied`，应用内报 `spawn ENOENT` | prepare 脚本里显式 `chmod 0o755`；`afterPack` 钩子再校验（已有 `afterPack: ./scripts/verify-packaged-runtime.ts`） |
 | **universal 合并被拒** ✅ 已解决 | mac | 构建直接失败：`Detected file "Contents/Resources/codegraph/lib/kernel/codegraph-kernel.node" that's the same in both x64 and arm64 builds and not covered by the x64ArchFiles rule` | 用 `extraResources` 静态拷贝保证两切片内容相同（这也是 4.1 不用 yarn 依赖的原因），并把它加进 `build.mac.x64ArchFiles` |
+| **Intel Mac 上静默失效** ✅ 已解决 | mac | 单臂载荷在 x64 切片上 `cpu` 不匹配 → `bundleSupportsHost()` false → **返回空对象而非失败** → 不建 `~/.dsh/bin`、不写 `~/.zshrc`，且没有任何日志。现象就是「Intel Mac 装完 `.dsh` 下没有 `bin`」 | 载荷改为 `lipo` 合成的 universal 二进制并把清单归一为 `cpu:["arm64","x64"]`，见 2.8；`verify-mac-smoke.ts` 对三条内置 CLI 路径逐条 `lipo -verify_arch` 断言双架构，防止回归 |
+| **回滚路径被幂等复用悄悄吃掉** ✅ 已解决 | mac | universal 与 `darwin-x64` 共用同一份 x64 归档的 sha256；只比对校验和时，`--target darwin-x64` 会复用那份双架构产物，回滚失效且无提示 | `--check` 与复用分支都把 `target` 纳入产物身份，要求 `existing.target === targetKey` |
 | **写坏用户的 `~/.zshrc`** | mac | 用户的 shell 起不来 | 4.3.2 的 7 条；**先备份 + 原子写 + 幂等** |
 | **写坏用户的注册表 PATH** | win | 系统命令全找不到，**影响面比 mac 大得多** | 4.4.1 的 7 条；**先备份 + 只追加 + 绝不用 setx + 只动 HKCU** |
 | **Gatekeeper 隔离属性** | mac | 未签名的 `node` 被执行时被系统杀掉 | 已需 `xattr -dr com.apple.quarantine`，该命令**递归**覆盖包内所有文件 |
@@ -413,8 +503,16 @@ APP="dsh-plugin-desktop/dist/mac-smoke/mac-universal/DSH Desktop Evo.app"
 # ① 平台包进了安装包，且可执行位正确
 test -x "$APP/Contents/Resources/codegraph/bin/codegraph" && echo "可执行位 ✓"
 
-# ② 包内 CLI 能独立跑
+# ①b 内置载荷是双架构（Intel Mac 能用的关键）
+lipo "$APP/Contents/Resources/codegraph/node" -archs                     # → x86_64 arm64
+lipo "$APP/Contents/Resources/codegraph/lib/kernel/codegraph-kernel.node" -archs
+lipo "$APP/Contents/Resources/mnemon/bin/mnemon" -archs
+# 归一后的清单也必须声明双架构
+node -p "require('$APP/Contents/Resources/codegraph/package.json').cpu"  # → [ 'arm64', 'x64' ]
+
+# ② 包内 CLI 能独立跑（两个架构都要能跑）
 "$APP/Contents/Resources/codegraph/bin/codegraph" --version    # → 1.6.0
+arch -x86_64 "$APP/Contents/Resources/codegraph/bin/codegraph" --version   # → 1.6.0
 
 # ③ 证明不依赖系统 Node（清空 PATH）
 env -i HOME="$HOME" PATH=/usr/bin:/bin \
@@ -467,7 +565,12 @@ node scripts/verify-desktop-variants.mjs
 corepack yarn workspace dsh-plugin-desktop test
 corepack yarn workspace dsh-plugin-desktop verify:licenses
 corepack yarn workspace dsh-plugin-desktop verify:closure
+
+# 双架构合成模块的单测（10 个用例）
+node --test scripts/prepare-universal-bundle.test.mjs
 ```
+
+> **打包脚本不需要显式传 target**：macOS 主机上 `prepare-codegraph.mjs` 与 `prepare-mnemon.mjs` 默认推断为 `darwin-universal`，Windows 主机推断为 `win32-x64`，因此 5 个打包脚本（`package:dir` / `dist:mac` / `dist:mac-smoke` / `dist:win` / `dist:win-portable`）的既有前置调用串**无需改动**。
 
 > **许可证注意**：两个平台包都是 **MIT**，不在白名单问题之列。但因为它走 `extraResources` 而非 yarn 依赖，`verify:licenses` **不会检查它**——需要在 `prepare-codegraph.mjs` 里自己断言一次。
 
@@ -490,10 +593,10 @@ corepack yarn workspace dsh-plugin-desktop verify:closure
 
 | 步骤 | 结果 |
 |------|------|
-| vendor 两个平台 tgz | `vendor/codegraph/`，mac 55 MB + win 51 MB |
-| `scripts/prepare-codegraph.mjs` | 按主机解压、断言 MIT、`chmod 0o755`、校验入口存在；幂等（比对 tgz sha256） |
+| vendor 三个平台 tgz | `vendor/codegraph/`，mac arm64 55 MB + mac x64 56 MB + win 51 MB |
+| `scripts/prepare-codegraph.mjs` | 按主机选 target 解压、断言 MIT、`chmod 0o755`、校验入口存在；幂等（比对 tgz sha256 + target）；macOS 走 `lipo` 合成 universal，见 2.8 |
 | `.gitignore` | 忽略 `dsh-plugin-desktop{,-beta}/build/codegraph/` |
-| `package.json` | `build.extraResources` + 5 个打包脚本前置 prepare |
+| `package.json` | `build.extraResources` + 5 个打包脚本前置 prepare（调用串未改，目标由脚本自行推断） |
 | `installDesktopCodegraphRuntime()` | `src/desktop-runtime-environment.ts`，复用既有 `installPathDirectory`，可逆 |
 | `desktopCodegraphBundleSupportsHost()` | 读平台包自带 `package.json` 的 `os`/`cpu`，架构不匹配时跳过而不是发布坏命令 |
 | `src/desktop-codegraph-shell.ts` | shim + `~/.zshrc` 幂等写入（备份/原子写/可逆），含 `uninstallDesktopCodegraphShell()` |
@@ -501,6 +604,21 @@ corepack yarn workspace dsh-plugin-desktop verify:closure
 | beta 同步 | 183 个共享源文件对齐 |
 | 测试 | 新增 20 个（shell 13 + runtime 7）；stable 1379 / beta 1365 全绿 |
 | DMG | **338 → 392 MB**，smoke 校验通过 |
+
+### 双架构扩展（2026-09-23）
+
+| 步骤 | 结果 |
+|------|------|
+| vendor 补 `darwin-x64` | `colbymchenry-codegraph-darwin-x64-1.6.0.tgz`，58,680,727 B，sha256 `0573a6322db1ff72d1b1a5f30f2e8893712c224423655d2b46e56842e7237627` |
+| `scripts/prepare-universal-bundle.mjs`（新建） | 通用合成模块：`planUniversalMerge()` 按 Mach-O 魔数分类并拒绝两树差异、`normalizeUniversalManifest()` 归一双架构、`mergeUniversalBundle()` 跑 `lipo -create` 后立刻用 `lipo -archs` 反查两架构 |
+| `scripts/prepare-universal-bundle.test.mjs`（新建） | 10 个 `node:test` 用例，覆盖差异拒绝、单侧 Mach-O、可执行位保留、`lipo` 失败与单架构产物拒绝 |
+| `prepare-codegraph.mjs` | 新增 `darwin-x64` 与 `darwin-universal` target；darwin 默认推断为 universal |
+| `prepare-mnemon.mjs` | 同上，`darwin-x64` 钉 sha256 `cbdc4053f889008d34c831888420132fcfe367578b120f660bbf90252c02eb9d`；`allowPlainDifferences` 含 `package.json` 与 `README.md` |
+| 归一清单 | `cpu: ["arm64","x64"]`；codegraph 另把 `name` 改为 `@colbymchenry/codegraph-universal` |
+| `MACOS_UNIVERSAL_BUNDLED_CLI_ENTRIES` | `scripts/mac-universal.ts` 新增；`verify-mac-smoke.ts` 对三条路径跑 6 次 `lipo -verify_arch` |
+| 测试 | `desktop-runtime-environment.spec.ts` 两个 describe 各加 universal 用例（35→37）；`verify-mac-smoke.spec.ts` 加 2 个负例（缺 CLI、丢执行位） |
+| 包内实测 | `codegraph/node`、`codegraph-kernel.node`、`mnemon/bin/mnemon` 三者 `lipo -archs` 均 `x86_64 arm64`；原生与 `arch -x86_64` 执行 `--version` 均成功 |
+| DMG | 受控实测 **+48.33 MB**（预算 ≤ 60 MB），smoke 校验通过 |
 
 **真实安装验证**（清空 userData 与 `~/.dsh/bin` 后从 DMG 装）：
 
@@ -539,6 +657,8 @@ corepack yarn workspace dsh-plugin-desktop verify:closure
 | 计划设置 `CODEGRAPH_NO_DOWNLOAD=1` | **不需要** | 我们直接指向平台包的 `bin/codegraph`，**完全绕开了 `npm-shim.js`**，而下载兜底逻辑只在 shim 里 |
 | 计划让用户「显式选择是否加 PATH」 | 按用户后续要求改为**首次启动自动写** | 用户明确要求「首次启动的时候，写 .zshrc」 |
 | 计划给设置里的「移除 PATH」加 UI | 只实现了 `uninstallDesktopCodegraphShell()` 函数 | UI 开关属于品牌化/设置面板范畴，未做 |
+| 双架构改造计划在 10 处打包调用点加 `--target darwin-universal` | **只在 prepare 脚本里改默认推断** | 5 个打包脚本的前置调用串本就无参数；把 `darwin` 主机的默认 target 定为 `darwin-universal` 即可，调用点零改动、回滚也更简单 |
+| 计划让两切片各带一份架构专属载荷 | **改为 `lipo` 合成单份** | `@electron/universal` 对非 Mach-O 文件逐个比对 SHA，两份 `package.json` 必然不同 → 合并必定失败 |
 
 ### 一个实施中发现的细节
 
