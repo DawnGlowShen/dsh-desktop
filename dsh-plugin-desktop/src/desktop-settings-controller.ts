@@ -7,6 +7,8 @@ import type {
 import type { DesktopProfileSummary } from './profile-manager.ts'
 import type { DesktopProfiles } from './profile-service.ts'
 import type {
+  DesktopCliPublishResponse,
+  DesktopCliRevokeResponse,
   DesktopMarketSelectResponse,
   DesktopDeveloperToolsToggleResponse,
   DesktopDiagnosticsExportResponse,
@@ -48,6 +50,16 @@ export interface DesktopSettingsControllerBootstrap {
   toggleDeveloperTools(): void
   /** Export diagnostics through the launcher-owned privacy flow. */
   exportDiagnostics(): void | Promise<void>
+  /**
+   * Register the CLI shim directory on the user PATH and refresh the shims.
+   *
+   * Available in every installation form: a portable copy has no installer to
+   * do this, and an installed copy still needs it after the user moves the
+   * directory, so the operation is never refused based on install kind.
+   */
+  publishCli?(): Promise<{ readonly changed: boolean; readonly registered: boolean }>
+  /** Remove this installation's own PATH entry, keeping the generated shims. */
+  revokeCli?(): Promise<{ readonly changed: boolean; readonly registered: boolean }>
 }
 
 /** A persisted response plus work that must run only after `res.end()`. */
@@ -207,6 +219,32 @@ export class DesktopSettingsController {
   async exportDiagnostics(): Promise<DesktopDiagnosticsExportResponse> {
     await this.bootstrap.exportDiagnostics()
     return Object.freeze({ accepted: true })
+  }
+
+  /**
+   * Publish the CLI commands and register their directory on the user PATH.
+   *
+   * The bootstrap owns the platform-specific work; this layer only refuses to
+   * pretend the capability exists when it does not, so the route can answer
+   * with a real failure instead of a success that changed nothing.
+   */
+  async publishCli(): Promise<DesktopCliPublishResponse> {
+    const publish = this.bootstrap.publishCli
+    if (publish === undefined) {
+      throw new Error('dsh-plugin-desktop: CLI publication is unavailable')
+    }
+    const result = await publish()
+    return Object.freeze({ changed: result.changed, registered: result.registered })
+  }
+
+  /** Remove this installation's PATH entry without deleting the shim files. */
+  async revokeCli(): Promise<DesktopCliRevokeResponse> {
+    const revoke = this.bootstrap.revokeCli
+    if (revoke === undefined) {
+      throw new Error('dsh-plugin-desktop: CLI revocation is unavailable')
+    }
+    const result = await revoke()
+    return Object.freeze({ changed: result.changed, registered: result.registered })
   }
 }
 
