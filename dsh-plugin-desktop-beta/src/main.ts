@@ -27,7 +27,7 @@ import {
   isDesktopInstallerQuitRequest,
 } from './desktop-installer-quit.ts'
 import { createDesktopBrowserAccess } from './desktop-browser-access.ts'
-import { installDesktopCliShell } from './desktop-cli-shell.ts'
+import { installDesktopCliShell, type DesktopCliLauncher } from './desktop-cli-shell.ts'
 import { seedDesktopDreamSkin } from './desktop-dream-skin-default.ts'
 import {
   installDesktopDshRuntime,
@@ -734,20 +734,43 @@ async function start(): Promise<void> {
       homeDir = dataDirectoryLocation.homeDir
     }
     process.env.DSH_HOME = homeDir
-    // Expose the packaged CLIs to the user's own terminal. A `.dmg` has no
-    // install hook, so a shim plus a PATH entry is the only way these commands
-    // resolve in a shell the user starts. Both CLIs share one shim directory and
-    // therefore one marked PATH block. A failure here must never block startup:
-    // the CLIs stay available to the Host through their runtime installers.
-    if (process.platform === 'darwin') {
+    // Expose the packaged CLIs to the user's own terminal. On macOS a `.dmg`
+    // has no install hook at all; on Windows the installer publishes the shim
+    // directory but cannot know where a portable copy was unpacked. In both
+    // cases a shim plus a PATH entry is what makes these commands resolve in a
+    // shell the user starts, so shim generation runs on every launch and is
+    // driven by the content already on disk rather than by a first-run flag:
+    // that is also what makes it follow an upgrade or a moved directory. Both
+    // CLIs share one shim directory and therefore one marked PATH block. A
+    // failure here must never block startup: the CLIs stay available to the
+    // Host through their runtime installers.
+    if (process.platform === 'darwin' || process.platform === 'win32') {
+      const windows = process.platform === 'win32'
       const launchers = [
         codegraphRuntime === undefined
           ? undefined
-          : { name: 'codegraph', launcherPath: join(codegraphRuntime.pathDir, 'codegraph') },
+          : {
+              name: 'codegraph',
+              // Windows ships a batch shim that resolves `%~dp0` at call time,
+              // which would bind the generated file to the packaged directory
+              // and break as soon as the bundle moved. Point the forwarder at
+              // the entry script and the `node.exe` beside it instead: that
+              // script sits three levels below the published `bin` directory.
+              launcherPath: windows
+                ? join(dirname(codegraphRuntime.pathDir), 'lib', 'dist', 'bin', 'codegraph.js')
+                : join(codegraphRuntime.pathDir, 'codegraph'),
+            },
         mnemonRuntime === undefined
           ? undefined
-          : { name: 'mnemon', launcherPath: join(mnemonRuntime.pathDir, 'mnemon') },
-      ].filter((launcher): launcher is { name: string; launcherPath: string } => launcher !== undefined)
+          : {
+              name: 'mnemon',
+              // Mnemon ships a real executable, not a batch shim.
+              launcherPath: join(
+                mnemonRuntime.pathDir,
+                windows ? 'mnemon.exe' : 'mnemon',
+              ),
+            },
+      ].filter((launcher): launcher is DesktopCliLauncher => launcher !== undefined)
       if (launchers.length > 0) {
         try {
           installDesktopCliShell({
@@ -755,6 +778,7 @@ async function start(): Promise<void> {
             userHomeDir: app.getPath('home'),
             launchers,
             shell: process.env.SHELL,
+            platform: process.platform,
           })
         } catch (cause) {
           electronLogger.error(
