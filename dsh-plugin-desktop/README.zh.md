@@ -239,7 +239,7 @@ corepack.cmd yarn dist:win
 corepack.cmd yarn dist:win-portable
 ```
 
-产物为 `dsh-plugin-desktop\\dist\\DSH-Desktop-2.0.5-x64-Portable.zip`。用户解压到任意可写目录后运行其中的 `DSH Desktop.exe`，不需要安装器、管理员权限、开始菜单注册或卸载步骤。它仍会把 profile、日志和缓存写入 Windows 默认用户数据目录，因此这是便携分发方式，不是把数据完全封装在 exe 旁边的自包含沙箱。绿色 ZIP 不会交给 NSIS 自动更新流程，新版本需要手动替换并重新解压。本地构建没有签名，Windows 可能显示 Unknown publisher 或 SmartScreen 警告；签名后的绿色版仍属于正式发布 gate。
+产物为 `dsh-plugin-desktop\\dist\\DSH-Desktop-2.0.5-x64-Portable.zip`。用户解压到任意可写目录后运行其中的 `DSH Desktop.exe`，不需要安装器、管理员权限、开始菜单注册或卸载步骤。它仍会把 profile、日志和缓存写入 Windows 默认用户数据目录，因此这是便携分发方式，不是把数据完全封装在 exe 旁边的自包含沙箱。绿色 ZIP 不会交给 NSIS 自动更新流程，新版本需要手动替换并重新解压。便携版没有安装器，所以不会自动把命令行工具写进 PATH：启动时应用会在 `%USERPROFILE%\.dsh\bin` 生成转发 shim，并**弹一次提示**问你是否登记 PATH（点「暂不」就不会再问）；之后随时可以到「设置 → 命令行工具」点登记，换了目录、换了盘或升级之后再点一次同一个按钮即可修复。本地构建没有签名，Windows 可能显示 Unknown publisher 或 SmartScreen 警告；签名后的绿色版仍属于正式发布 gate。
 
 ### macOS DMG 冒烟构建
 

@@ -29,6 +29,14 @@ import {
 import { createDesktopBrowserAccess } from './desktop-browser-access.ts'
 import { installDesktopCliShell } from './desktop-cli-shell.ts'
 import { createDesktopCliPublisher, desktopCliLaunchers } from './desktop-cli-publication.ts'
+import {
+  DESKTOP_CLI_PROMPT_CANCEL_INDEX,
+  DESKTOP_CLI_PROMPT_CONFIRM_INDEX,
+  desktopCliPromptCopy,
+  runDesktopCliPortablePrompt,
+} from './desktop-cli-prompt.ts'
+import { detectDesktopWindowsInstallKind } from './desktop-windows-install-kind.ts'
+import { createPowerShellWindowsKeyProbe } from './desktop-windows-path.ts'
 import { seedDesktopDreamSkin } from './desktop-dream-skin-default.ts'
 import {
   installDesktopDshRuntime,
@@ -147,7 +155,7 @@ import type { DesktopSetupWizardResult } from './setup-wizard-contract.ts'
 import { DesktopSetupWizardWindow } from './setup-wizard-window.ts'
 import { ProfileCreateWindow } from './profile-create-window.ts'
 import { DesktopProfileSelectionWindow } from './profile-selection-window.ts'
-import { showDesktopDialog } from './desktop-dialog-window.ts'
+import { showDesktopDialog, showDesktopMessageBox } from './desktop-dialog-window.ts'
 import {
   clearDesktopProfileUsageHistory,
   desktopReleaseUserDataLocations,
@@ -1796,6 +1804,51 @@ async function start(): Promise<void> {
     }
     if (sessionProjectionCacheRecovery !== undefined) {
       notifySessionProjectionCacheRecovery(runtime, electronLogger, sessionProjectionCacheRecovery)
+    }
+    // A portable copy has no installer to write `Path`, and where it was unpacked
+    // cannot be known from inside. Ask its user once whether to register the
+    // bundled CLIs, and remember the answer under the application data directory.
+    // Shown after the renderer is healthy, and never awaited: a confirmation is a
+    // window, and one raised during the tail of startup would be a second
+    // problem rather than the one the user was invited to solve.
+    if (cliPublisher !== undefined) {
+      void runDesktopCliPortablePrompt({
+        userDataDir: marketUserDataDir,
+        locale: runtime.locale,
+        platform: runtime.platform,
+        safeMode: safeModePaths !== undefined,
+        // Read the registry for real, but only on Windows; the prompt never
+        // reaches this on another platform.
+        detectInstallKind: () => detectDesktopWindowsInstallKind(createPowerShellWindowsKeyProbe()),
+        confirm: async copy => (await showDesktopMessageBox({
+          type: 'question',
+          title: copy.title,
+          message: copy.message,
+          detail: copy.detail,
+          buttons: [copy.confirm, copy.cancel],
+          defaultId: DESKTOP_CLI_PROMPT_CONFIRM_INDEX,
+          cancelId: DESKTOP_CLI_PROMPT_CANCEL_INDEX,
+        })).response,
+        publish: () => { cliPublisher.publish() },
+        reportFailure: async detail => {
+          const copy = desktopCliPromptCopy(runtime.locale)
+          await showDesktopMessageBox({
+            type: 'error',
+            title: copy.title,
+            message: copy.failed,
+            detail,
+            buttons: [copy.dismiss],
+            defaultId: 0,
+            cancelId: 0,
+          })
+        },
+        logError: message => { electronLogger.error(message) },
+      }).catch((cause: unknown) => {
+        electronLogger.error(
+          `${BIN_NAME}: portable CLI prompt failed: `
+            + `${cause instanceof Error ? cause.message : String(cause)}`,
+        )
+      })
     }
   } catch (cause) {
     runtime.stopRendererBootMonitoring()
