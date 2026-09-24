@@ -497,6 +497,52 @@ export async function handleDesktopDiagnosticsExportRequest(
   }
 }
 
+/** Register the CLI shim directory and report whether anything changed. */
+export async function handleDesktopCliPublishRequest(
+  req: IncomingMessage,
+  res: ServerResponse,
+  expectedOrigin: string,
+  controller: DesktopSettingsController,
+  reportError: (operation: string, cause: unknown) => void = () => {},
+): Promise<void> {
+  if (req.method !== 'POST') return finishJson(res, 405, error('method not allowed'), 'POST')
+  if (!isSameOriginLoopbackRequest(req, expectedOrigin, true)) {
+    return finishJson(res, 403, error('forbidden'))
+  }
+  const value = await parsePostBody(req, res)
+  if (value === INVALID_BODY) return
+  if (!isEmptyRequest(value)) return finishJson(res, 400, error('invalid CLI publication request'))
+  try {
+    finishJson(res, 200, await controller.publishCli())
+  } catch (cause) {
+    reportError('publish CLI commands', cause)
+    finishJson(res, 500, error('CLI commands could not be published'))
+  }
+}
+
+/** Remove this installation's PATH entry, leaving the generated shims in place. */
+export async function handleDesktopCliRevokeRequest(
+  req: IncomingMessage,
+  res: ServerResponse,
+  expectedOrigin: string,
+  controller: DesktopSettingsController,
+  reportError: (operation: string, cause: unknown) => void = () => {},
+): Promise<void> {
+  if (req.method !== 'POST') return finishJson(res, 405, error('method not allowed'), 'POST')
+  if (!isSameOriginLoopbackRequest(req, expectedOrigin, true)) {
+    return finishJson(res, 403, error('forbidden'))
+  }
+  const value = await parsePostBody(req, res)
+  if (value === INVALID_BODY) return
+  if (!isEmptyRequest(value)) return finishJson(res, 400, error('invalid CLI revocation request'))
+  try {
+    finishJson(res, 200, await controller.revokeCli())
+  } catch (cause) {
+    reportError('revoke CLI commands', cause)
+    finishJson(res, 500, error('CLI registration could not be removed'))
+  }
+}
+
 export const desktopSettingsRouteConstants = Object.freeze({
   maxBodyBytes: MAX_SETTINGS_BODY_BYTES,
 })

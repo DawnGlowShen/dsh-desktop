@@ -19,6 +19,8 @@ import {
   handleDesktopDirectoryValidationRequest,
 } from './directory-picker-route.ts'
 import {
+  DESKTOP_CLI_PUBLISH_PATH,
+  DESKTOP_CLI_REVOKE_PATH,
   DESKTOP_DIAGNOSTICS_EXPORT_PATH,
   DESKTOP_DEVELOPER_TOOLS_TOGGLE_PATH,
   DESKTOP_AA_SELECT_PATH,
@@ -33,6 +35,8 @@ import {
   DESKTOP_TERMINAL_OPEN_PATH,
 } from './desktop-settings-contract.ts'
 import {
+  handleDesktopCliPublishRequest,
+  handleDesktopCliRevokeRequest,
   handleDesktopDiagnosticsExportRequest,
   handleDesktopDeveloperToolsToggleRequest,
   handleDesktopAaSelectRequest,
@@ -235,6 +239,8 @@ export function apply(ctx: Context, config: DesktopShellConfig): void {
       [DESKTOP_AA_SELECT_PATH, handleDesktopAaSelectRequest],
       [DESKTOP_MARKET_SELECT_PATH, handleDesktopMarketSelectRequest],
       [DESKTOP_TERMINAL_OPEN_PATH, handleDesktopTerminalOpenRequest],
+      [DESKTOP_CLI_PUBLISH_PATH, handleDesktopCliPublishRequest],
+      [DESKTOP_CLI_REVOKE_PATH, handleDesktopCliRevokeRequest],
       [DESKTOP_RESTART_PATH, handleDesktopRestartRequest],
       [DESKTOP_RECOVERY_RESTART_PATH, handleDesktopRecoveryRestartRequest],
       [DESKTOP_RENDERER_RELOAD_PATH, handleDesktopRendererReloadRequest],

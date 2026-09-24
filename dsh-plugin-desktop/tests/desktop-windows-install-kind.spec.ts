@@ -140,14 +140,14 @@ describe('startup wiring in main.ts', () => {
   })
 
   it('points the CodeGraph forwarder at the entry script on Windows', () => {
-    // The packaged `codegraph.cmd` resolves `%~dp0` at call time, so a copy of
-    // it would break the moment the bundle moved. The generated forwarder names
-    // the `.js` entry script instead, which also lets the renderer find the
-    // `node.exe` beside it.
-    expect(main).toContain(
-      "join(dirname(codegraphRuntime.pathDir), 'lib', 'dist', 'bin', 'codegraph.js')",
-    )
-    expect(main).toContain("windows ? 'mnemon.exe' : 'mnemon'")
+    // The derivation now lives in `desktop-cli-publication.ts`, where it is
+    // unit-tested against a real bundle layout; what matters here is that the
+    // startup path and the isolated Host both route through it rather than
+    // re-deriving launcher paths of their own.
+    expect(main).toContain('desktopCliLaunchers({')
+    expect(main).toContain('codegraphPathDir: codegraphRuntime?.pathDir,')
+    expect(main).toContain('mnemonPathDir: mnemonRuntime?.pathDir,')
+    expect(main).not.toContain("windows ? 'mnemon.exe' : 'mnemon'")
   })
 
   it('passes the resolved platform so a test host can exercise the win32 branch', () => {
@@ -174,5 +174,38 @@ describe('startup wiring in main.ts', () => {
 
     expect(dshHome).toBeGreaterThan(-1)
     expect(guard).toBeGreaterThan(dshHome)
+  })
+})
+
+describe('settings-entry wiring', () => {
+  const main = readFileSync(join(process.cwd(), 'src', 'main.ts'), 'utf8')
+  const bootstrap = readFileSync(join(process.cwd(), 'src', 'host-bootstrap.ts'), 'utf8')
+
+  it('offers publish and revoke on both controller construction sites', () => {
+    // The isolated Host and the in-process fallback must behave identically:
+    // whichever one the launcher picks, the settings entry does the same thing.
+    for (const source of [main, bootstrap]) {
+      expect(source).toContain('publishCli: async () => cliPublisher.publish(),')
+      expect(source).toContain('revokeCli: async () => cliPublisher.revoke(),')
+    }
+  })
+
+  it('constructs the publisher, and therefore the capability, only on Windows', () => {
+    // Elsewhere the capability stays absent so the route answers with a real
+    // failure instead of reporting a no-op success. The Host reads the
+    // platform from the launcher's snapshot, not from `process`.
+    expect(main).toContain("process.platform === 'win32'")
+    expect(bootstrap).toContain("runtime.platform === 'win32'")
+    expect(bootstrap).not.toContain("process.platform === 'win32'")
+  })
+
+  it('passes the launcher-resolved bundle directories to the Host as data', () => {
+    // Only the launcher knows `process.resourcesPath` and whether the bundle
+    // matched this architecture, so the paths travel rather than being
+    // re-derived where the answer may differ.
+    expect(main).toContain('codegraphCliPathDir: codegraphRuntime?.pathDir,')
+    expect(main).toContain('mnemonCliPathDir: mnemonRuntime?.pathDir')
+    expect(main).toContain("userHomeDir: app.getPath('home'),")
+    expect(bootstrap).toContain('userHomeDir: options.userHomeDir,')
   })
 })

@@ -13,6 +13,7 @@ import { DesktopActionsService } from './desktop-actions.ts'
 import { clearDesktopProfilePluginState, DesktopPluginsService } from './desktop-plugins.ts'
 import { desktopMarketSnapshotWithEffective, selectDesktopMarketProvider, type DesktopMarketProvider, type DesktopMarketSnapshot } from './desktop-market.ts'
 import DesktopSettingsController from './desktop-settings-controller.ts'
+import { createDesktopCliPublisher, desktopCliLaunchers } from './desktop-cli-publication.ts'
 import { clearDesktopProfilePreferences, desktopProfilePreferencesFromSettings, readDesktopProfilePreferences, writeDesktopProfilePreferences, type DesktopProfilePreferences, type DesktopProfilePreferencesStateV1 } from './profile-preferences.ts'
 import { clearDesktopProfileUsageHistory, type DesktopReleaseUserDataLocations } from './profile-channel-admission.ts'
 import { desktopInstallAnchor, type PreparedDesktopProfile } from './profile.ts'
@@ -55,6 +56,19 @@ export interface DesktopHostOptions {
   desktopProxyOverlay: Readonly<Record<string, string>>
   desktopPnpmBootstrap: DesktopPnpmBootstrap
   logDirectory: string
+  /** User's home directory, as `app.getPath('home')` resolved it in the launcher. */
+  userHomeDir: string
+  /**
+   * Published CodeGraph `bin` directory, or absent when the bundle was skipped.
+   *
+   * Sent as data instead of re-derived in the Host: only the launcher knows
+   * `process.resourcesPath`, and it already decided whether the bundle matched
+   * this architecture. Re-deriving would risk advertising a path that is not
+   * there, and a shim pointing at a missing launcher is worse than no shim.
+   */
+  codegraphCliPathDir?: string | undefined
+  /** Published Mnemon `bin` directory, or absent when the bundle was skipped. */
+  mnemonCliPathDir?: string | undefined
 }
 
 export async function bootDesktopHost(options: DesktopHostOptions, runtime: DesktopRuntime,
@@ -203,6 +217,28 @@ export async function bootDesktopHost(options: DesktopHostOptions, runtime: Desk
           desktopProfileMarketSnapshot(readProfilePreferences().market),
           prepared.market.effective,
         )
+        // On-demand CLI publication exists only where a registry-backed `Path`
+        // entry is the mechanism holding the shim directory: Windows. A POSIX
+        // host already reaches its shim directory through the marked profile
+        // block written at startup, and revoking that block on demand would
+        // break a working setup. Leaving the capability absent makes the
+        // settings route answer with a real failure instead of a success that
+        // did nothing. The platform comes from the launcher's snapshot rather
+        // than from `process`, so this Host process keeps making no assumptions
+        // about the machine it runs on.
+        const cliPublisher = runtime.platform === 'win32'
+          ? createDesktopCliPublisher({
+              homeDir,
+              userHomeDir: options.userHomeDir,
+              platform: runtime.platform,
+              launchers: desktopCliLaunchers({
+                platform: runtime.platform,
+                codegraphPathDir: options.codegraphCliPathDir,
+                mnemonPathDir: options.mnemonCliPathDir,
+              }),
+              shell: process.env.SHELL,
+            })
+          : undefined
         hostCtx.provide('desktopSettingsController', new DesktopSettingsController({
           profiles: hostCtx.desktopProfiles,
           readMarket,
@@ -257,6 +293,12 @@ export async function bootDesktopHost(options: DesktopHostOptions, runtime: Desk
           reloadRenderer: () => { runtime.reloadRenderer() },
           toggleDeveloperTools: () => { runtime.toggleDeveloperTools() },
           exportDiagnostics: () => runtime.exportDiagnostics(),
+          ...(cliPublisher === undefined
+            ? {}
+            : {
+                publishCli: async () => cliPublisher.publish(),
+                revokeCli: async () => cliPublisher.revoke(),
+              }),
         }))
         provideCmdline(hostCtx, {
           args: [

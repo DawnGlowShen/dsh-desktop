@@ -6,6 +6,8 @@ import DesktopSettingsController, {
   type DesktopSettingsControllerBootstrap,
 } from '../src/desktop-settings-controller.ts'
 import {
+  handleDesktopCliPublishRequest,
+  handleDesktopCliRevokeRequest,
   handleDesktopDeveloperToolsToggleRequest,
   handleDesktopDiagnosticsExportRequest,
   handleDesktopAaSelectRequest,
@@ -799,5 +801,149 @@ describe('desktop settings HTTP boundary', () => {
     expect(res.statusCode).toBe(405)
     expect(res.setHeader).toHaveBeenCalledWith('allow', 'GET')
     expect(readMarket).not.toHaveBeenCalled()
+  })
+})
+
+describe('CLI publication', () => {
+  it('reports whether the PATH value actually changed', async () => {
+    const publishCli = vi.fn(async () => ({ changed: true, registered: true }))
+    const controller = new DesktopSettingsController(bootstrap({ publishCli }))
+
+    await expect(controller.publishCli()).resolves.toEqual({ changed: true, registered: true })
+    expect(publishCli).toHaveBeenCalledOnce()
+
+    // The already-registered case is not an error, but it must be reported as
+    // unchanged so the panel does not claim work it did not do.
+    publishCli.mockResolvedValueOnce({ changed: false, registered: true })
+    await expect(controller.publishCli()).resolves.toEqual({ changed: false, registered: true })
+  })
+
+  it('refuses to fake success when the capability is missing on this platform', async () => {
+    const controller = new DesktopSettingsController(bootstrap())
+
+    // macOS and Linux have no user PATH registry; a bare `{ accepted: true }`
+    // here would tell the user their commands are registered when they are not.
+    await expect(controller.publishCli()).rejects.toThrow('CLI publication is unavailable')
+    await expect(controller.revokeCli()).rejects.toThrow('CLI revocation is unavailable')
+  })
+
+  it('revokes without deleting the generated shim files', async () => {
+    const revokeCli = vi.fn(async () => ({ changed: true, registered: false }))
+    const controller = new DesktopSettingsController(bootstrap({ revokeCli }))
+    const res = response()
+
+    await handleDesktopCliRevokeRequest(jsonRequest({}), res, ORIGIN, controller)
+
+    expect(revokeCli).toHaveBeenCalledOnce()
+    expect(res.statusCode).toBe(200)
+    expect(JSON.parse(res.body)).toEqual({ changed: true, registered: false })
+  })
+
+  it('serves both actions in an installed edition as well as a portable one', async () => {
+    // Nothing in the request path consults the install kind: a portable copy
+    // needs the action because it has no installer, and an installed copy
+    // needs it after the directory moves. The same controller answers both.
+    const publishCli = vi.fn(async () => ({ changed: false, registered: true }))
+    const controller = new DesktopSettingsController(bootstrap({ publishCli }))
+    const res = response()
+
+    await handleDesktopCliPublishRequest(jsonRequest({}), res, ORIGIN, controller)
+
+    expect(res.statusCode).toBe(200)
+    expect(JSON.parse(res.body)).toEqual({ changed: false, registered: true })
+  })
+
+  it('never leaks the PATH value or the shim directory to the renderer', async () => {
+    const controller = new DesktopSettingsController(bootstrap({
+      publishCli: async () => ({ changed: true, registered: true }),
+    }))
+    const res = response()
+
+    await handleDesktopCliPublishRequest(jsonRequest({}), res, ORIGIN, controller)
+
+    expect(res.body).not.toContain('.dsh')
+    expect(res.body).not.toContain('C:')
+    expect(Object.keys(JSON.parse(res.body)).sort()).toEqual(['changed', 'registered'])
+  })
+
+  for (const [name, handler] of [
+    ['publish', handleDesktopCliPublishRequest],
+    ['revoke', handleDesktopCliRevokeRequest],
+  ] as const) {
+    it(`rejects forged ${name} requests before touching the registry`, async () => {
+      const publishCli = vi.fn(async () => ({ changed: true, registered: true }))
+      const revokeCli = vi.fn(async () => ({ changed: true, registered: false }))
+      const controller = new DesktopSettingsController(bootstrap({ publishCli, revokeCli }))
+      const operations = [publishCli, revokeCli]
+
+      // A body the contract does not accept, a caller outside the loopback
+      // origin, a non-loopback peer, a POST without the JSON content type, and
+      // the wrong method. Only the empty JSON body is legitimate for these
+      // endpoints, so each of these must fail on its own.
+      const rejected: readonly (readonly [IncomingMessage, number])[] = [
+        [jsonRequest({ extra: true }), 400],
+        [jsonRequest({}, { headers: { origin: 'https://example.com' } }), 403],
+        [jsonRequest({}, { remoteAddress: '10.0.0.5' }), 403],
+        [request('POST', { body: '{}' }), 415],
+        [request('GET'), 405],
+      ]
+
+      for (const [req, expected] of rejected) {
+        const res = response()
+        await handler(req, res, ORIGIN, controller)
+        expect(res.statusCode).toBe(expected)
+      }
+      // Every rejected request left the registry untouched.
+      for (const operation of operations) expect(operation).not.toHaveBeenCalled()
+    })
+  }
+
+  it('accepts an empty JSON body and nothing else', async () => {
+    const publishCli = vi.fn(async () => ({ changed: true, registered: true }))
+    const controller = new DesktopSettingsController(bootstrap({ publishCli }))
+    const res = response()
+
+    await handleDesktopCliPublishRequest(jsonRequest({}), res, ORIGIN, controller)
+
+    expect(res.statusCode).toBe(200)
+    expect(publishCli).toHaveBeenCalledOnce()
+  })
+})
+
+describe('CLI publication failures', () => {
+  for (const [name, handler, operation, message] of [
+    ['publish', handleDesktopCliPublishRequest, 'publish CLI commands', 'CLI commands could not be published'],
+    ['revoke', handleDesktopCliRevokeRequest, 'revoke CLI commands', 'CLI registration could not be removed'],
+  ] as const) {
+    it(`reports a ${name} failure instead of a silent success`, async () => {
+      // The registry may be locked down or PowerShell unavailable. Answering
+      // 200 there would tell the user their commands are ready when they are
+      // not, so a thrown operation must surface as an error response.
+      const controller = new DesktopSettingsController(bootstrap(
+        name === 'publish'
+          ? { publishCli: async () => { throw new Error('registry is not writable') } }
+          : { revokeCli: async () => { throw new Error('registry is not writable') } },
+      ))
+      const reportError = vi.fn()
+      const res = response()
+
+      await handler(jsonRequest({}), res, ORIGIN, controller, reportError)
+
+      expect(res.statusCode).toBe(500)
+      expect(JSON.parse(res.body)).toEqual({ error: message })
+      expect(reportError).toHaveBeenCalledWith(operation, expect.any(Error))
+      // The raw cause never reaches the renderer.
+      expect(res.body).not.toContain('registry is not writable')
+    })
+  }
+
+  it('surfaces a missing capability as a failure, not as an empty change', async () => {
+    const controller = new DesktopSettingsController(bootstrap())
+    const res = response()
+
+    await handleDesktopCliPublishRequest(jsonRequest({}), res, ORIGIN, controller)
+
+    expect(res.statusCode).toBe(500)
+    expect(JSON.parse(res.body)).toEqual({ error: 'CLI commands could not be published' })
   })
 })
