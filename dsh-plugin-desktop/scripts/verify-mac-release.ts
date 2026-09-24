@@ -5,7 +5,7 @@ import { mkdtempSync, readdirSync, rmdirSync, statSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { MACOS_UNIVERSAL_NATIVE_ENTRIES } from './mac-universal.ts'
+import { MACOS_UNIVERSAL_BUNDLED_CLI_ENTRIES, MACOS_UNIVERSAL_NATIVE_ENTRIES } from './mac-universal.ts'
 import { verifyMacEntitlements } from './verify-mac-entitlements.ts'
 import { DESKTOP_PRODUCT_NAME } from '../src/product-identity.ts'
 
@@ -95,6 +95,16 @@ export function verifyMacRelease(
           options.run(join(unpackedRoot, entry.path), ['--version'])
         }
       }
+    }
+    // The bundled CLIs are `extraResources` relative to `Contents`, not to
+    // `Resources/app`. This is the artifact users actually install: a
+    // single-architecture payload would silently deny the other slice its
+    // `~/.dsh/bin` shims.
+    for (const entry of MACOS_UNIVERSAL_BUNDLED_CLI_ENTRIES) {
+      if (!entry.machO) continue
+      const cliPath = join(appPath, 'Contents', entry.path)
+      options.run('lipo', [cliPath, '-verify_arch', 'x86_64'])
+      options.run('lipo', [cliPath, '-verify_arch', 'arm64'])
     }
     options.run('codesign', ['--verify', '--deep', '--strict', '--verbose=2', appPath])
     options.verifyEntitlements?.(appPath, options.productName)
