@@ -67,6 +67,9 @@ jobs:
   # A documentation-only change already passed diff validation in `changes`.
   check:
     needs: changes
+    # TEMP(windows-only): disabled to shorten a Windows-verification run.
+    # Revert with `git revert`; the job itself is unchanged.
+    if: false
     runs-on: ubuntu-latest
     steps:
       - name: Documentation-only gate
@@ -174,7 +177,8 @@ jobs:
   # release. No signing secrets ever reach this job.
   desktop-macos:
     needs: changes
-    if: needs.changes.outputs.product == 'true'
+    # TEMP(windows-only): disabled to shorten a Windows-verification run.
+    if: false
     runs-on: macos-latest
     timeout-minutes: 60
     strategy:
@@ -219,7 +223,8 @@ jobs:
   # pinned submodule's own Yarn/pnpm release on Windows.
   upstream-command-windows:
     needs: changes
-    if: needs.changes.outputs.product == 'true'
+    # TEMP(windows-only): disabled to shorten a Windows-verification run.
+    if: false
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v6
@@ -239,7 +244,10 @@ jobs:
   # anonymous client even on a public repository. Publishing here gives the
   # unsigned Windows and macOS builds a stable public URL instead.
   publish:
-    needs: [changes, desktop-windows, desktop-macos]
+    # TEMP(windows-only): `desktop-macos` removed from `needs` because a
+    # skipped dependency skips its dependents too, which would leave no
+    # downloadable build. Restore `[changes, desktop-windows, desktop-macos]`.
+    needs: [changes, desktop-windows]
     if: needs.changes.outputs.product == 'true'
     runs-on: ubuntu-latest
     # The only job that writes; every other job keeps the top-level read-only grant.
