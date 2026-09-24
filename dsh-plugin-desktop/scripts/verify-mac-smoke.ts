@@ -5,7 +5,7 @@ import { existsSync, mkdtempSync, readdirSync, rmdirSync, statSync } from 'node:
 import { tmpdir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { MACOS_UNIVERSAL_NATIVE_ENTRIES } from './mac-universal.ts'
+import { MACOS_UNIVERSAL_BUNDLED_CLI_ENTRIES, MACOS_UNIVERSAL_NATIVE_ENTRIES } from './mac-universal.ts'
 import { DESKTOP_PRODUCT_NAME } from '../src/product-identity.ts'
 
 /** Injectable filesystem and command boundaries for smoke verification. */
@@ -143,6 +143,26 @@ export function verifyMacSmoke(
         throw new Error(`universal application has a non-executable node-pty helper: ${nativePath}`)
       }
       options.run('lipo', [nativePath, '-verify_arch', entry.arch])
+    }
+
+    // The bundled CLIs are `extraResources`, so a merged payload must hold both
+    // slices or the Intel slice silently loses `~/.dsh/bin`.
+    for (const entry of MACOS_UNIVERSAL_BUNDLED_CLI_ENTRIES) {
+      const cliPath = join(appPath, 'Contents', entry.path)
+      if (!options.exists(cliPath)) {
+        throw new Error(`universal application is missing bundled CLI: ${cliPath}`)
+      }
+      const cliStat = options.stat(cliPath)
+      if (!cliStat.isFile || cliStat.size === 0) {
+        throw new Error(`universal application has an invalid bundled CLI: ${cliPath}`)
+      }
+      if (entry.executable && (cliStat.mode & 0o111) === 0) {
+        throw new Error(`universal application has a non-executable bundled CLI: ${cliPath}`)
+      }
+      // Only Mach-O entries have architecture slices; `lipo` exits 1 on text.
+      if (!entry.machO) continue
+      options.run('lipo', [cliPath, '-verify_arch', 'x86_64'])
+      options.run('lipo', [cliPath, '-verify_arch', 'arm64'])
     }
   } catch (cause) {
     failure = cause

@@ -706,10 +706,19 @@ describe('desktopCodegraphBundleSupportsHost', () => {
     const bundleDir = bundleWith({ os: ['darwin'], cpu: ['arm64'] })
 
     expect(desktopCodegraphBundleSupportsHost(bundleDir, 'darwin', 'arm64')).toBe(true)
-    // A universal installer carries the arm64 bundle in the x64 slice too, where
-    // its bundled runtime cannot execute.
+    // Guards against a single-architecture payload inside a universal installer,
+    // where the other slice would read a runtime it cannot execute.
     expect(desktopCodegraphBundleSupportsHost(bundleDir, 'darwin', 'x64')).toBe(false)
     expect(desktopCodegraphBundleSupportsHost(bundleDir, 'win32', 'arm64')).toBe(false)
+  })
+
+  it('accepts a universal bundle on both macOS architectures', () => {
+    const bundleDir = bundleWith({ os: ['darwin'], cpu: ['arm64', 'x64'] })
+
+    expect(desktopCodegraphBundleSupportsHost(bundleDir, 'darwin', 'arm64')).toBe(true)
+    expect(desktopCodegraphBundleSupportsHost(bundleDir, 'darwin', 'x64')).toBe(true)
+    // Declaring both macOS architectures still says nothing about other platforms.
+    expect(desktopCodegraphBundleSupportsHost(bundleDir, 'win32', 'x64')).toBe(false)
   })
 
   it('accepts a bundle that declares no restriction', () => {
@@ -825,9 +834,18 @@ describe('desktopMnemonBundleSupportsHost', () => {
     const bundleDir = bundleWith({ os: ['darwin'], cpu: ['arm64'] })
 
     expect(desktopMnemonBundleSupportsHost(bundleDir, 'darwin', 'arm64')).toBe(true)
-    // A universal installer carries the arm64 bundle in the x64 slice too, where
-    // its bundled runtime cannot execute.
+    // Guards against a single-architecture payload inside a universal installer,
+    // where the other slice would read a runtime it cannot execute.
     expect(desktopMnemonBundleSupportsHost(bundleDir, 'darwin', 'x64')).toBe(false)
+    expect(desktopMnemonBundleSupportsHost(bundleDir, 'win32', 'x64')).toBe(false)
+  })
+
+  it('accepts a universal bundle on both macOS architectures', () => {
+    const bundleDir = bundleWith({ os: ['darwin'], cpu: ['arm64', 'x64'] })
+
+    expect(desktopMnemonBundleSupportsHost(bundleDir, 'darwin', 'arm64')).toBe(true)
+    expect(desktopMnemonBundleSupportsHost(bundleDir, 'darwin', 'x64')).toBe(true)
+    // Declaring both macOS architectures still says nothing about other platforms.
     expect(desktopMnemonBundleSupportsHost(bundleDir, 'win32', 'x64')).toBe(false)
   })
 

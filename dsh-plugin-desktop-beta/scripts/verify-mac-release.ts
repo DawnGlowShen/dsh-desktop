@@ -5,7 +5,7 @@ import { mkdtempSync, readdirSync, rmdirSync, statSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { MACOS_UNIVERSAL_NATIVE_ENTRIES } from './mac-universal.ts'
+import { MACOS_UNIVERSAL_BUNDLED_CLI_ENTRIES, MACOS_UNIVERSAL_NATIVE_ENTRIES } from './mac-universal.ts'
 import { DESKTOP_PRODUCT_NAME } from '../src/product-identity.ts'
 
 /** Injectable filesystem and command boundaries for release verification. */
@@ -83,6 +83,16 @@ export function verifyMacRelease(
     const unpackedRoot = join(appPath, 'Contents', 'Resources', 'app')
     for (const entry of MACOS_UNIVERSAL_NATIVE_ENTRIES) {
       options.run('lipo', [join(unpackedRoot, entry.path), '-verify_arch', entry.arch])
+    }
+    // The bundled CLIs are `extraResources` relative to `Contents`, not to
+    // `Resources/app`. This is the artifact users actually install: a
+    // single-architecture payload would silently deny the other slice its
+    // `~/.dsh/bin` shims.
+    for (const entry of MACOS_UNIVERSAL_BUNDLED_CLI_ENTRIES) {
+      if (!entry.machO) continue
+      const cliPath = join(appPath, 'Contents', entry.path)
+      options.run('lipo', [cliPath, '-verify_arch', 'x86_64'])
+      options.run('lipo', [cliPath, '-verify_arch', 'arm64'])
     }
     options.run('codesign', ['--verify', '--deep', '--strict', '--verbose=2', appPath])
     options.run('spctl', ['--assess', '--type', 'execute', '--verbose=4', appPath])

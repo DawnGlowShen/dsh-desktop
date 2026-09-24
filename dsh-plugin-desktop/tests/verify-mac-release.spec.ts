@@ -4,7 +4,7 @@ import {
   verifyMacRelease,
   type MacReleaseVerificationOptions,
 } from '../scripts/verify-mac-release.ts'
-import { MACOS_UNIVERSAL_NATIVE_ENTRIES } from '../scripts/mac-universal.ts'
+import { MACOS_UNIVERSAL_BUNDLED_CLI_ENTRIES, MACOS_UNIVERSAL_NATIVE_ENTRIES } from '../scripts/mac-universal.ts'
 
 function options(overrides: Partial<MacReleaseVerificationOptions> = {}) {
   const calls: Array<{ command: string; args: readonly string[] }> = []
@@ -54,6 +54,18 @@ describe('macOS release artifact verification', () => {
           '-verify_arch', entry.arch,
         ],
       })),
+      // The bundled CLIs are resolved from `Contents`, not `Resources/app`, and
+      // this is the artifact users actually install.
+      ...MACOS_UNIVERSAL_BUNDLED_CLI_ENTRIES.filter(entry => entry.machO).flatMap(entry => [
+        {
+          command: 'lipo',
+          args: [join(appPath, 'Contents', entry.path), '-verify_arch', 'x86_64'],
+        },
+        {
+          command: 'lipo',
+          args: [join(appPath, 'Contents', entry.path), '-verify_arch', 'arm64'],
+        },
+      ]),
       {
         command: 'codesign',
         args: ['--verify', '--deep', '--strict', '--verbose=2', appPath],
