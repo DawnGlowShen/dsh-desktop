@@ -324,21 +324,29 @@ $profile.dsh.profile.bundles                                    # 期望 10 个�
 
 ### 5.9 Windows 终端里用 codegraph
 
+两个平台**登记进 PATH 的目录是同一个相对位置**（相对各自的数据目录），只是写法不同：
+
 | 能力 | macOS | Windows |
 |------|-------|---------|
-| codegraph 打进安装包 | ✅ 已验证 | ✅ 已验证（`resources\codegraph\bin\codegraph.cmd`） |
+| CLI 打进安装包 | ✅ 已验证 | ✅ 已验证（`resources\codegraph\bin\codegraph.cmd`、`resources\mnemon\bin\mnemon.exe`） |
 | **应用内**可用（MCP + 插件调用） | ✅ 已验证 | ✅ 已验证 |
-| **终端里**可用（`codegraph init`） | ✅ 首次启动写 `~/.zshrc` | ✅ **安装时写用户 PATH** |
+| **终端里**可用（`codegraph --version`） | ✅ 首次启动写 `~/.zshrc` | ✅ **安装时写用户 PATH**，指向 `%USERPROFILE%\.dsh\bin` |
+| 登记的是哪个目录 | `~/.dsh/bin`（放 shim） | `%USERPROFILE%\.dsh\bin`（放 shim） |
+| 便携版怎么办 | 与 DMG 相同（首次启动写） | **首次启动弹一次提示**，也随时可以「设置 → 命令行工具 → 登记」（见下） |
 | 插件在 Windows 上解析 `.cmd` | — | ✅ 上游已自行处理（见下） |
 
-**两个平台的做法不同，原因在安装方式**：macOS 的 DMG 没有安装钩子，拖进 `/Applications` 就是全部流程，所以只能首次启动写 `~/.zshrc`；而 NSIS 安装器**有**钩子，所以 Windows 在**安装时**就把目录写进 `HKCU\Environment` 的 `Path`。
+**两个平台的做法不同，原因在安装方式**：macOS 的 DMG 没有安装钩子，拖进 `/Applications` 就是全部流程，所以只能首次启动写 `~/.zshrc`；而 NSIS 安装器**有**钩子，所以 Windows 在**安装时**就写好 PATH。
 
-实现放在 `build/installer.nsh`（两个变体各一份，内容相同）：
+**PATH 里放的是 `.dsh\bin`，不是安装目录。** 安装目录（尤其便携版解压目录）会变：换盘、改名、重新解压都会让写死进去的路径失效。`.dsh\bin` 属于用户数据目录，位置稳定；里面放的是**转发 shim**（`mnemon.cmd`、`codegraph.cmd`），每次启动都会重新写成指向当前安装位置的绝对路径，所以升级、搬目录之后 shim 自动跟随，不用改 PATH。
 
-| 宏 | 行为 |
-|----|------|
-| `customInstall` | 确认 CLI 确实随包分发后，把 `<安装目录>\resources\codegraph\bin` 追加到用户 PATH |
-| `customUnInstall` | 条目仍在末尾时移除 |
+实现分三处：
+
+| 位置 | 行为 |
+|------|------|
+| `build/installer.nsh` 的 `customInstall` | 确认 CLI 确实随包分发后，把 `$PROFILE\.dsh\bin` 追加到用户 PATH |
+| `build/installer.nsh` 的 `customUnInstall` | 条目仍在末尾时移除（shim 文件保留） |
+| 启动时的便携版提示 | 便携版首次启动弹一次，点「登记」即登记；结果记在应用数据目录 |
+| 应用的设置入口 | 生成/刷新 shim 并登记 PATH；可重复执行，也可撤销 |
 
 设计上的几个取舍：
 
@@ -347,18 +355,40 @@ $profile.dsh.profile.bundles                                    # 期望 10 个�
 - **保持 `REG_EXPAND_SZ`**（用 `WriteRegExpandStr` 而不是 `WriteRegStr`）。写成普通字符串会把用户 PATH 里原有的 `%USERPROFILE%` 之类固化成字面路径。
 - **写完广播 `WM_SETTINGCHANGE`**，让之后启动的进程看到新值。
 - **卸载只在条目仍是最后一个时才移除**。用户如果自己调整过顺序就不动——宁可留下一个指向已删目录的条目（Windows 查找时会直接跳过），也不冒改坏 PATH 的风险。
+- **卸载不移除 shim 文件**。`%USERPROFILE%\.dsh\bin` 属于用户数据，另一个变体可能也在用；运行时删掉它等于替用户丢数据。
 
 > **已经开着的终端需要重开。** Windows 在进程启动时读取环境变量，安装器改不了已经在跑的进程。
->
-> **便携版 ZIP 做不到。** electron-builder 对 portable 目标不注入自定义 include（源码里包着 `if (!this.isPortable)`），而且便携版本来就没有安装流程。便携版用户只能用应用内的 codegraph。
 
-装完后这样验证：
+#### 便携版的三步
+
+便携版 ZIP **没有安装器**——electron-builder 对 portable 目标不注入自定义 include（源码里包着 `if (!this.isPortable)`），所以 PATH 不会自动写好。用设置入口登记即可，录入的是同一个 `.dsh\bin`：
+
+1. **解压并首次运行。** 便携版启动时会先在 `%USERPROFILE%\.dsh\bin` 生成 `mnemon.cmd` / `codegraph.cmd` 两个转发 shim（内容指向当前解压目录），然后**弹一次**询问要不要把这个目录登记进 PATH。点「登记」就完成；点「暂不」或直接关掉也不会再问第二次。
+2. **之后随时可以走「设置 → 命令行工具 → 登记命令行工具」。** 无论第 1 步你选了什么，这个入口都在。它可以**重复执行**：搬了目录、换了盘、升级之后，再点一次就会把 shim 重写成新的路径。反馈会告诉你这次是「已更新」还是「已是最新」。
+3. **换解压目录后重跑第 2 步**，然后开一个**新终端**验证。
+
+只有便携版会弹这个提示：安装版在安装时就已经写好 PATH，再问一次是在陈述假事实。判定依据是注册表里有没有这个产品的安装记录（`HKCU\Software\<GUID>` 与卸载项），**不猜路径**。提示是否出现过记在应用数据目录下的 `cli-prompt\state.json`，不写注册表——便携版本就不该留注册表痕迹。
+
+> 如果注册表读不出来（PowerShell 被拦、权限异常），应用会**不提示**并记一条日志。读不到安装记录不等于「这是便携版」，对已登记的用户弹提示是在说假话。
+
+撤销用同一个区块的「撤销登记」按钮：它只移除 DSH 自己写进去的那一条 PATH 条目，保留 shim 文件。便携版没有卸载器，所以这个按钮是唯一的下车方式。
+
+安装版同样可以用这个入口——升级、手动挪过安装目录之后，它比重新跑一遍安装器更快。
+
+#### 验证
 
 ```powershell
 # 开一个「新的」终端
 codegraph --version                                   # 期望输出版本号
-$env:Path -split ';' | Select-String 'codegraph'      # 期望看到安装目录下的 bin
+mnemon --version                                      # 期望输出版本号
+$env:Path -split ';' | Select-String 'codegraph'      # 期望看到 .dsh\bin
 ```
+
+#### 从旧版本升级：清理残留条目
+
+旧版本的安装器登记的是**安装目录下的** `resources\codegraph\bin` 和 `resources\mnemon\bin`，这两个条目不会被新版本自动清掉。它们不是致命的（指向已删目录的条目 Windows 会直接跳过），但会让 PATH 越来越长。
+
+清理方式：安装时原值备份在 `HKCU\Software\<产品名>\PathBackup`，可以对照它手工恢复；或者直接在「系统属性 → 环境变量」里删掉那两条。**不要用 `setx` 改 PATH**——它会把 `%VAR%` 展开成字面路径，还可能在超过 1024 字符时静默截断。
 
 **Windows 不需要写 `codegraph.cmd` shim**：第二层已经把 `resources\codegraph\bin` 前置到 Host 的 PATH，而 `@hyzyn/dsh-codegraph` 源码里已经专门处理了 Windows 的 `.cmd`：
 
@@ -853,6 +883,7 @@ cat ~/.dsh/profiles/desktop-evo/package.json
 | 进安装包 | `build.extraResources` → `Contents/Resources/codegraph/` | — |
 | 应用内可用 | `installDesktopCodegraphRuntime()` 把 `.../codegraph/bin` **前置**到 Host 的 PATH | MCP 行、插件自身的 CLI 调用，**不改任何 YAML** |
 | 终端可用 | `~/.dsh/bin/codegraph` shim + `~/.zshrc` 里一行 PATH | 你自己开的终端 |
+| 终端可用（Windows） | `%USERPROFILE%\.dsh\bin` 里的 `.cmd` 转发 shim + 注册表 PATH | 你自己开的终端 |
 
 ### 8.3 为什么不用改配置文件
 
