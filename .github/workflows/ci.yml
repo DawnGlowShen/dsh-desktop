@@ -201,7 +201,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        workspace: [dsh-plugin-desktop, dsh-plugin-desktop-beta]
+        # Beta is exercised by the `check` job; packaging it too doubles the
+        # Linux runner cost for an edition this fork does not ship.
+        workspace: [dsh-plugin-desktop]
     steps:
       - uses: actions/checkout@v6
         with:
@@ -225,6 +227,18 @@ jobs:
         env:
           DSH_PACKAGE_CHECK_ALREADY_RAN: '1'
         run: yarn workspace ${{ matrix.workspace }} dist:linux
+      # Same reasoning as the Windows and macOS jobs: upstream stopped at
+      # packaging, so the AppImage and .deb were discarded with the runner.
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-${{ matrix.workspace }}
+          path: |
+            ${{ matrix.workspace }}/dist/*.AppImage
+            ${{ matrix.workspace }}/dist/*.deb
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
 
   desktop-macos:
     needs: changes
@@ -295,9 +309,9 @@ jobs:
   # Release assets are the only part of a run that is downloadable without an
   # authenticated session: `actions/upload-artifact` returns 401/403 to an
   # anonymous client even on a public repository. Publishing here gives the
-  # unsigned Windows and macOS builds a stable public URL instead.
+  # unsigned Windows, Linux and macOS builds a stable public URL instead.
   publish:
-    needs: [changes, desktop-windows, desktop-macos]
+    needs: [changes, desktop-windows, desktop-linux, desktop-macos]
     if: needs.changes.outputs.product == 'true'
     runs-on: ubuntu-latest
     # The only job that writes; every other job keeps the top-level read-only grant.
