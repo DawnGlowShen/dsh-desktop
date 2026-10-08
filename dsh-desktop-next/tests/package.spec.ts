@@ -20,7 +20,22 @@ it('keeps Next installer topology, native modules, fuses and Composer source ali
   expect(next.build.appId).toBe('ai.deepseek.dsh.desktop.next')
   expect(next.build.asar).toBe(false)
   expect(next.build.electronFuses).toEqual(beta.build.electronFuses)
-  expect(next.build.mac.x64ArchFiles).toBe(beta.build.mac.x64ArchFiles.replace('**}', '**,@trycua/cua-driver-darwin-*/**,@ubjs/node-darwin-*/**}'))
+  // The Evo custom edition restructures Beta's unpack pattern from
+  // `**/node_modules/{...}` into `**/{node_modules/{...},Resources/codegraph/**,Resources/mnemon/**}`
+  // so the bundled CodeGraph and Mnemon CLIs stay outside the archive. Next still
+  // mirrors Beta's native-module list, so compare the declared package lists as
+  // sets — the two editions order `@dataiku/uv-darwin-*` differently — and require
+  // the two darwin node bindings that only Next keeps
+  // (`@trycua/cua-driver-darwin-*`, `@ubjs/node-darwin-*`).
+  const unpackedNames = (pattern: string): Set<string> => {
+    const group = /node_modules\/\{([^}]*)\}/u.exec(pattern)?.[1]
+    expect(group).toBeDefined()
+    return new Set((group ?? '').split(','))
+  }
+  const betaUnpacked = unpackedNames(beta.build.mac.x64ArchFiles)
+  const nextUnpacked = unpackedNames(next.build.mac.x64ArchFiles)
+  expect([...betaUnpacked].filter(name => !nextUnpacked.has(name))).toEqual([])
+  expect([...nextUnpacked].filter(name => !betaUnpacked.has(name))).toEqual(['@trycua/cua-driver-darwin-*/**', '@ubjs/node-darwin-*/**'])
   expect(next.build.mac.icon).toBe('build/app-icon.icon')
   expect(existsSync(new URL('../build/app-icon.icon/icon.json', import.meta.url))).toBe(true)
   expect(next.build.nsis).toMatchObject({ oneClick: false, perMachine: false, allowElevation: true, allowToChangeInstallationDirectory: true })

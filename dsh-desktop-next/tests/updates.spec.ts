@@ -86,18 +86,25 @@ it('follows the ModelScope CDN redirect and drops release headers before contact
   await expect(artifactRequest(request)('https://www.dshdesktop.cn/api/downloads/mac', {})).rejects.toThrow()
   expect(request).toHaveBeenCalledOnce()
 })
-it('downloads a Next installer that settles on an external HTTPS CDN', async () => {
+it('downloads a Next installer that settles on the Evo CDN', async () => {
+  // The Evo custom edition repoints `DESKTOP_DOWNLOAD_URLS` at the reserved
+  // `.invalid` TLD so a download can never reach the upstream release service.
+  // Next hands that constant to `downloadDesktopUpdate` unchanged, so the first
+  // hop of every download is the severed endpoint; the CDN below stands for
+  // whatever host the Evo channel eventually resolves to.
   const cdn = 'https://cdn-lfs-cn-1.modelscope.cn/prod/lfs-objects/next.dmg'
   const artifact = Buffer.alloc(1024); artifact.write('koly', 512)
-  const request = vi.fn<UpdateRequest>(async url => url.includes('/version')
-    ? Response.json({ version: '2.0.17-next.1', channel: 'next' })
-    : url.includes('/api/downloads/')
-      ? new Response(null, { status: 302, headers: { location: cdn } })
-      : new Response(artifact))
+  const request = vi.fn<UpdateRequest>(async url => {
+    if (url.includes('/version')) return Response.json({ version: '2.0.17-next.1', channel: 'next' })
+    if (url.includes('/downloads/')) return new Response(null, { status: 302, headers: { location: cdn } })
+    return new Response(artifact)
+  })
   const { updates, options } = await fixture({ request })
   await updates.download()
   expect(updates.snapshot().phase).toBe('ready')
   expect(options.prepare).toHaveBeenCalledOnce()
+  expect(request.mock.calls[0]?.[0]).toBe('https://updates.invalid/dsh-desktop-evo/version')
+  expect(request.mock.calls[1]?.[0]).toBe('https://updates.invalid/dsh-desktop-evo/downloads/mac')
   expect(request.mock.calls.at(-1)?.[0]).toBe(cdn)
 })
 it('serves only the private archive to the native updater and closes its loopback listener', async () => {
