@@ -86,6 +86,11 @@ const TARGETS = {
     sha256: '10e2d8d9e5f93d185018495b5c4822715bd0ad16873202f6d3b1a7696d6f69ef',
     executables: ['bin/mnemon.exe'],
   },
+  'linux-x64': {
+    archive: /^mnemon-linux-x64-.*\.tgz$/u,
+    sha256: '78a0fa0976003627f10fb55448ea3917b8fc57cf1eed4f11e7ad03efac0fedce',
+    executables: ['bin/mnemon'],
+  },
 }
 
 /**
