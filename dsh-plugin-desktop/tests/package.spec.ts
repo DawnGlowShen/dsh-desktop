@@ -932,6 +932,7 @@ describe('published package surface', () => {
     expect(manifest.scripts?.['check:mac-package:platform']).toContain('yarn run verify:closure')
     expect(manifest.scripts?.['check:linux-package']).toBe('yarn run check:linux-package:platform && yarn run typecheck')
     expect(manifest.scripts?.['check:linux-package:platform']).not.toContain('typecheck')
+    expect(manifest.scripts?.['dist:linux']).toBe('node ../scripts/prepare-codegraph.mjs && node ../scripts/prepare-mnemon.mjs && node scripts/package-linux.ts')
     expect(manifest.scripts?.['verify:cli']).toBe('node scripts/verify-cli-runtime.mjs')
     expect(manifest.scripts?.check).toContain('yarn run verify:cli')
     expect(workspaceManifest.scripts?.['dist:mac'])

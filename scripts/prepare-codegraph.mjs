@@ -52,6 +52,9 @@ const EXPECTED_LICENSE = 'MIT'
 /** Platform package names always start with this, whichever architecture they carry. */
 const PACKAGE_NAME_PREFIX = '@colbymchenry/codegraph-'
 
+/** The main package identity, carried by the GitHub Releases bundle manifest. */
+const MAIN_PACKAGE_NAME = '@colbymchenry/codegraph'
+
 /**
  * Per-target package identity, archive prefix, pinned checksum, and required
  * entries.
@@ -90,6 +93,17 @@ const TARGETS = {
     packageName: '@colbymchenry/codegraph-win32-arm64',
     archive: /^colbymchenry-codegraph-win32-arm64-.*\.tgz$/u,
     executables: ['bin/codegraph.cmd', 'node.exe'],
+  },
+  // Linux is the one target with no registry platform package: it is repacked
+  // from the GitHub Releases bundle into `.tgz` so every target is vendored and
+  // validated the same way. `adoptPlatformManifest` supplies the platform
+  // manifest the bundle ships one level down.
+  'linux-x64': {
+    packageName: '@colbymchenry/codegraph-linux-x64',
+    archive: /^colbymchenry-codegraph-linux-x64-.*\.tgz$/u,
+    sha256: 'c38f9ca301991599764e4c3ecefbb8949a7473825f296d9b896fa6d8376418e2',
+    executables: ['bin/codegraph', 'node'],
+    adoptManifest: true,
   },
 }
 
@@ -246,6 +260,36 @@ function extract(archive, destination) {
   if (result.error !== undefined) fail(`tar failed to start: ${result.error.message}`)
   if (result.status !== 0) fail(`tar exited with ${String(result.status)}: ${result.stderr.trim()}`)
   assertContainedExtraction(destination)
+}
+
+/**
+ * Copy the GitHub Releases bundle manifest into the npm platform-package layout.
+ *
+ * `codegraph-linux-x64.tar.gz` is published on GitHub Releases only — the npm
+ * registry has no `@colbymchenry/codegraph-linux-x64` — and it ships its
+ * manifest at `lib/package.json` under the MAIN package identity
+ * (`@colbymchenry/codegraph`) rather than at the top level. Every other target
+ * arrives as a registry platform package whose top-level manifest already
+ * declares the platform name, and `verify` reads that top level.
+ *
+ * Lifting the nested manifest and renaming it to the platform package keeps the
+ * linux payload byte-identical to its siblings in every other respect: the
+ * directory tree (`bin`, `node`, `lib/{dist,kernel,node_modules}`) already
+ * matches, so no file is moved and nothing is rebuilt.
+ */
+function adoptPlatformManifest(destination, target) {
+  const manifestPath = join(destination, 'package.json')
+  if (existsSync(manifestPath)) return
+  const nestedPath = join(destination, 'lib', 'package.json')
+  if (!existsSync(nestedPath)) {
+    fail(`extracted archive has neither a top-level nor a lib/package.json`)
+  }
+  const manifest = JSON.parse(readFileSync(nestedPath, 'utf8'))
+  if (manifest.name !== MAIN_PACKAGE_NAME) {
+    fail(`archive lib/package.json declares ${String(manifest.name)}, expected the main package ${MAIN_PACKAGE_NAME}`)
+  }
+  manifest.name = target.packageName
+  writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`)
 }
 
 function readManifest(destination) {
@@ -454,6 +498,7 @@ function main() {
   }
 
   extract(sources[0].archive, outputRoot)
+  if (target.adoptManifest === true) adoptPlatformManifest(outputRoot, target)
   const prepared = verify(outputRoot, target, sources[0].archive, checksums[targetKey])
   writeFileSync(markerPath, `${JSON.stringify(prepared, null, 2)}\n`)
   process.stdout.write(`prepare-codegraph: prepared ${prepared.packageName}@${prepared.version} for ${targetKey}\n`)
