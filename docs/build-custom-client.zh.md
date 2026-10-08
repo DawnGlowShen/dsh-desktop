@@ -689,13 +689,37 @@ rmSync(root, { recursive: true, force: true })
 | 插件 | 版本 | 许可证 | 来源 |
 |------|------|--------|------|
 | `@edan/edan-spec` | 1.0.0 | MIT | **vendor tarball**（未发布到 npm，见 6.2.2） |
-| `@hyzyn/dsh-codegraph` | 0.2.2 | MIT | npm |
-| `@linxin666/dsh-client-ui-git-graph` | 0.3.22 | MIT | npm |
-| `@mars-sea/dsh-commandcode-provider` | 0.11.1 | MIT | npm |
-| `dsh-better-sidebar` | 0.19.1 | MIT | npm |
-| `dsh-cost-meter` | 1.7.25 | MIT | npm |
-| `dsh-dream-skin` | 9.16.0 | MIT | npm |
-| `dsh-session-manager` | 0.4.11 | MIT | npm（原清单写的是 `github:` 形式，已换成 npm 版本，构建期不再需要 git 网络） |
+| `@huanlin/dsh-plugin-better-sidebar-plugin-office` | 0.2.0 | **AGPL-3.0** | npm |
+| `@hyzyn/dsh-codegraph` | 0.6.6 | MIT | npm |
+| `@linxin666/dsh-client-ui-git-graph` | 0.4.5 | MIT | npm |
+| `billion-context` | 0.1.188 | MIT | npm |
+| `dsh-better-sidebar` | 0.24.1 | MIT | npm |
+| `dsh-dream-skin` | 10.8.1 | MIT | **vendor tarball**（含侧边栏填充交接补丁） |
+| `dsh-mnemon` | 0.5.24 | MIT | npm |
+| `dsh-rewind-plugin` | 0.15.1 | MIT | npm |
+| `dsh-session-manager` | 0.6.2 | MIT | npm（原清单写的是 `github:` 形式，已换成 npm 版本，构建期不再需要 git 网络） |
+
+以上即 `src/product-identity.ts` 的 `DEFAULT_PROFILE_PLUGIN_BUNDLES` 全量，共 10 个。
+
+**版本升级记录**
+
+10 个插件原先全部锁在 `0.1.5-rc.1` 时代的版本，运行时升到 `0.2.0-rc.2` 后 peer 区间
+不再覆盖，运行时逐一禁用它们，预装插件形同虚设。本次升级：`dsh-better-sidebar`
+`0.19.1`→`0.24.1`、`dsh-mnemon` `0.5.12`→`0.5.24`、`dsh-rewind-plugin` `0.12.2`→`0.15.1`、
+`@hyzyn/dsh-codegraph` `0.2.2`→`0.6.6`、`@linxin666/dsh-client-ui-git-graph` `0.3.22`→`0.4.5`、
+`billion-context` `0.1.131`→`0.1.188`、`dsh-session-manager` `0.4.11`→`0.6.2`。
+
+`dsh-dream-skin` 锁在 `9.16.0`，其 peer 为 `^0.1.0-rc.6`（不含 `0.2.x`）；自 `9.29.0` 起
+放宽为 `>=0.1.0-rc.6 <0.3.0-0`，故升到 `10.8.1`。该版本随包分发改为 vendor tarball，
+内含桌面侧边栏填充交接补丁——桌面壳在 `.dshDesktopSidebarSurface` 上直接声明
+`--dsw-specific-sidebar-fill`，优先级压过插件经 `overrideTokens` 推到 `<body>` 的行内值，
+导致「侧边栏透明度」滑块静默失效；补丁用 inline `!important` 赢回级联。
+
+`@edan/edan-spec@1.0.0` 未发布 npm、无新版可升，其 peer 仍锁 `^0.1.5-rc.2`。它只用到
+两处 API 且均未变更（`createUserMessage` 仍由 `dsh-llm` 导出；skill provider 经
+`ctx.plugin(skillFilesystem, ...)` 整体挂载，不绑定具名导出），故改用上游的
+**精确版本豁免**机制：新建 Profile 时把豁免播种到该 Profile 的 `compatibility.json`，
+使其正常加载而非被禁用。
 
 **唯一排除的**
 
