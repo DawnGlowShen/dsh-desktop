@@ -32,9 +32,9 @@ function fixture(version = '2.0.0'): {
   const dist = join(root, 'dist')
   const unpacked = join(dist, 'linux-unpacked')
   mkdirSync(unpacked, { recursive: true })
-  const appImagePath = join(dist, `DSH-Desktop-${version}-x86_64.AppImage`)
-  const debPath = join(dist, `DSH-Desktop-${version}-amd64.deb`)
-  const application = join(unpacked, 'dsh-desktop')
+  const appImagePath = join(dist, `DSH-Desktop-Evo-${version}-x86_64.AppImage`)
+  const debPath = join(dist, `DSH-Desktop-Evo-${version}-amd64.deb`)
+  const application = join(unpacked, 'dsh-desktop-evo')
   writeFileSync(appImagePath, appImage(), { mode: 0o755 })
   chmodSync(appImagePath, 0o755)
   writeFileSync(debPath, debArchive())
@@ -62,7 +62,7 @@ describe('Linux artifact verification', () => {
     const value = fixture('1.9.0')
 
     expect(() => verifyLinuxArtifacts({ desktopRoot: value.root, version: '2.0.0' }))
-      .toThrow('DSH-Desktop-2.0.0-x86_64.AppImage')
+      .toThrow('DSH-Desktop-Evo-2.0.0-x86_64.AppImage')
   })
 
   it('rejects an AppImage without the AppImage magic', () => {

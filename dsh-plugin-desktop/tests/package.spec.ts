@@ -890,7 +890,7 @@ describe('published package surface', () => {
     expect(manifest.desktopName).toBe('dsh-desktop.desktop')
     expect(manifest.build?.linux?.syncDesktopName).toBe(true)
     expect(manifest.build?.deb).toEqual({
-      packageName: 'dsh-desktop',
+      packageName: 'dsh-desktop-evo',
       packageCategory: 'devel',
       priority: 'optional',
     })

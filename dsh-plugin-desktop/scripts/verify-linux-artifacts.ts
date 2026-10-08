@@ -131,9 +131,9 @@ export function verifyLinuxArtifacts(
   options: LinuxArtifactVerificationOptions = defaultOptions(),
 ): LinuxArtifacts {
   const distDir = join(options.desktopRoot, 'dist')
-  const appImagePath = join(distDir, `DSH-Desktop-${options.version}-x86_64.AppImage`)
-  const debPath = join(distDir, `DSH-Desktop-${options.version}-amd64.deb`)
-  const applicationPath = join(distDir, 'linux-unpacked', 'dsh-desktop')
+  const appImagePath = join(distDir, `DSH-Desktop-Evo-${options.version}-x86_64.AppImage`)
+  const debPath = join(distDir, `DSH-Desktop-Evo-${options.version}-amd64.deb`)
+  const applicationPath = join(distDir, 'linux-unpacked', 'dsh-desktop-evo')
 
   assertAppImage(appImagePath, 'Linux AppImage')
   assertDebArchive(debPath, 'Linux Debian package')
