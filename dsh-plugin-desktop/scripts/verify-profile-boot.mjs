@@ -15,7 +15,7 @@ import {
 } from '@deepseek-ai/dsh-launch-environment'
 import { installDesktopPnpmRuntime } from '../lib/desktop-runtime-environment.js'
 import { installProfilePackageResolver } from '../lib/module-resolution.js'
-import { prepareDesktopProfile } from '../lib/profile.js'
+import { prepareDesktopProfile, DESKTOP_PROFILE_NAME } from '../lib/profile.js'
 import { DesktopProfileService } from '../lib/profile-service.js'
 import { createDesktopProfileBoot } from '../lib/profile-context.js'
 
@@ -201,7 +201,7 @@ try {
     prepareToQuit() {},
   }
   const pnpmBootstrap = {
-    activeProfileName: 'desktop',
+    activeProfileName: DESKTOP_PROFILE_NAME,
     activeProfileDir: prepared.profile.dir,
     homeDir: prepared.homeDir,
     appExecutable: process.execPath,
@@ -228,11 +228,11 @@ try {
       host.provide('desktopPnpmBootstrap', pnpmBootstrap)
       await host.plugin(DesktopProfileService, {
         current: {
-          name: 'desktop',
+          name: DESKTOP_PROFILE_NAME,
           dir: prepared.profile.dir,
         },
         list: () => [{
-          name: 'desktop',
+          name: DESKTOP_PROFILE_NAME,
           dir: prepared.profile.dir,
           exists: true,
           bundles: prepared.profile.layers.map(layer => layer.packageName),
@@ -254,7 +254,7 @@ try {
   if (ctx.get('desktopPnpm') === undefined) {
     throw new Error('assembled desktop profile is missing the desktop pnpm Host capability')
   }
-  if (ctx.desktopProfiles.current.name !== 'desktop'
+  if (ctx.desktopProfiles.current.name !== DESKTOP_PROFILE_NAME
     || ctx.desktopProfiles.current.dir !== prepared.profile.dir) {
     throw new Error('assembled desktop profile service has the wrong active identity')
   }
@@ -308,7 +308,7 @@ try {
   }
   await (await ctx.agentPresets.acquireScope('cordis'))[Symbol.asyncDispose]()
   const hostServiceProbe = ctx.get(HOST_SERVICE_PROBE_KEY)
-  if (hostServiceProbe?.current?.name !== 'desktop'
+  if (hostServiceProbe?.current?.name !== DESKTOP_PROFILE_NAME
     || hostServiceProbe.current.dir !== prepared.profile.dir
     || hostServiceProbe.pnpm?.serviceName !== 'desktopPnpm'
     || hostServiceProbe.pnpm.lookupRun !== 'function'
@@ -354,8 +354,8 @@ try {
     && !trayItems.some(item => item.label() === 'Open DSH Terminal')) {
     throw new Error('assembled desktop profile is missing the terminal tray command')
   }
-  const profileMenu = trayItems.find(item => item.label() === 'Profile: desktop')
-  if (profileMenu?.submenu?.()[0]?.label() !== 'desktop') {
+  const profileMenu = trayItems.find(item => item.label() === `Profile: ${DESKTOP_PROFILE_NAME}`)
+  if (profileMenu?.submenu?.()[0]?.label() !== DESKTOP_PROFILE_NAME) {
     throw new Error('assembled desktop profile is missing the active profile tray submenu')
   }
   const unauthenticated = await fetch(expectedUrl, {

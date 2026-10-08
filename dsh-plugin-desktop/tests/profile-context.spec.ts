@@ -5,6 +5,7 @@ import { pathToFileURL } from 'node:url'
 import { Context } from '@deepseek-ai/cordis'
 import { composeEntries, initProfile, PROFILE_TEMPLATES, prepareProfileEntries, readProfilePatches } from '@deepseek-ai/dsh-app-boot'
 import { afterEach, expect, it, vi } from 'vitest'
+import { DESKTOP_PROFILE_NAME } from '../src/product-identity.ts'
 import { createDesktopProfileBoot } from '../src/profile-context.ts'
 import { prepareDesktopProfile } from '../src/profile.ts'
 
@@ -15,10 +16,10 @@ afterEach(async () => {
   for (const home of homes.splice(0)) rmSync(home, { recursive: true, force: true })
 })
 
-function fixture(profileName = 'desktop') {
+function fixture(profileName: string = DESKTOP_PROFILE_NAME) {
   const home = mkdtempSync(join(tmpdir(), 'desktop-profile-context-'))
   homes.push(home)
-  if (profileName !== 'desktop') initProfile(join(home, 'profiles', profileName), PROFILE_TEMPLATES.web!.bundles)
+  if (profileName !== DESKTOP_PROFILE_NAME) initProfile(join(home, 'profiles', profileName), PROFILE_TEMPLATES.web!.bundles)
   const prepared = prepareDesktopProfile('1', home, 'win32', profileName)
   const pnpm = {
     activeProfileName: profileName, activeProfileDir: prepared.profile.dir, homeDir: home,

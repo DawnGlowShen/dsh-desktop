@@ -1609,7 +1609,7 @@ describe('bundled Agents Anywhere', () => {
 describe('desktop profile composition and the recovery deselection ledger', () => {
   function selectionBootstrap(home: string) {
     return {
-      profileName: 'desktop',
+      profileName: DESKTOP_PROFILE_NAME,
       homeDir: home,
       statePath: join(home, 'user-data', 'plugin-management', 'state.json'),
     }
@@ -1641,7 +1641,7 @@ describe('desktop profile composition and the recovery deselection ledger', () =
     writeFileSync(manifestPath, JSON.stringify(manifest, undefined, 2) + '\n')
 
     for (const provider of ['dsh-market', 'community-market'] as const) {
-      const prepared = prepareDesktopProfile(undefined, home, 'darwin', 'desktop', undefined, {
+      const prepared = prepareDesktopProfile(undefined, home, 'darwin', DESKTOP_PROFILE_NAME, undefined, {
         requested: provider,
         effective: provider,
         legacyDefaulted: false,
@@ -1671,13 +1671,13 @@ describe('desktop profile composition and the recovery deselection ledger', () =
       dependencies: Record<string, string>
     }
     expect(manifest.dependencies[packageName]).toBe('1.0.0')
-    expect(existsSync(join(home, 'profiles', 'desktop', 'node_modules', packageName, 'package.json'))).toBe(true)
+    expect(existsSync(join(home, 'profiles', DESKTOP_PROFILE_NAME, 'node_modules', packageName, 'package.json'))).toBe(true)
   })
 
   it('lets a deselected bundle whose package directory has no manifest stop breaking startup', async () => {
     const home = temporaryHome()
     const packageName = 'half-written-plugin'
-    mkdirSync(join(home, 'profiles', 'desktop', 'node_modules', packageName), { recursive: true })
+    mkdirSync(join(home, 'profiles', DESKTOP_PROFILE_NAME, 'node_modules', packageName), { recursive: true })
     declareBundle(home, packageName)
     expect(() => prepareDesktopProfile(undefined, home, 'darwin')).toThrow()
 
