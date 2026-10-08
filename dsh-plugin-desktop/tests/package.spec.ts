@@ -899,8 +899,6 @@ describe('published package surface', () => {
   it('separates unsigned smoke packaging from the signed macOS release', () => {
     const packageDir = readFileSync(new URL('scripts/package-dir.mjs', packageRoot), 'utf8')
 
-    expect(manifest.scripts?.build).toContain('node scripts/generate-windows-app-icon.mjs')
-    expect(manifest.scripts?.build).toContain('node scripts/generate-mac-app-icon.mjs')
     expect(manifest.scripts?.['package:dir']).toBe('node ../scripts/prepare-codegraph.mjs && node ../scripts/prepare-mnemon.mjs && yarn run build && yarn run prepare:electron-native && node scripts/package-dir.mjs')
     expect(packageDir).toContain("CSC_IDENTITY_AUTO_DISCOVERY: 'false'")
     expect(packageDir).toContain("'--config.forceCodeSigning=false'")

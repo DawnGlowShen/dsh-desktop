@@ -368,8 +368,8 @@
     "vitest": "4.1.8"
   },
   "build": {
-    "appId": "ai.deepseek.dsh.desktop",
-    "productName": "DSH Desktop",
+    "appId": "ai.deepseek.dsh.desktop.evo",
+    "productName": "DSH Desktop Evo",
     "asar": false,
     "extraResources": [
       {
@@ -436,7 +436,8 @@
         "\\.(?:pak|dat|wasm)$"
       ],
       "x64ArchFiles": "**/{node_modules/{@dataiku/uv-darwin-*/**,@deepseek-ai/node-addon-system-darwin-*/**,node-pty/prebuilds/darwin-*/**,fs-ext/prebuilds/darwin-*/**,node-addon-require-builtin-darwin-*/**,@vscode/ripgrep-darwin-*/**,@img/sharp-darwin-*/**,@img/sharp-libvips-darwin-*/**,@koromix/koffi-darwin-*/**,@deepseek-ai/libreoffice-kit-darwin-*/**,sherpa-onnx-darwin-*/**},Resources/codegraph/**,Resources/mnemon/**}",
-      "asar": false
+      "asar": false,
+      "artifactName": "DSH-Desktop-Evo-${version}-${arch}.${ext}"
     },
     "win": {
       "asar": false,
@@ -449,7 +450,7 @@
           ]
         }
       ],
-      "artifactName": "DSH-Desktop-${version}-${arch}-Portable.${ext}",
+      "artifactName": "DSH-Desktop-Evo-${version}-${arch}-Portable.${ext}",
       "icon": "build/app-icon.ico"
     },
     "nsis": {
@@ -463,10 +464,10 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "differentialPackage": false,
-      "shortcutName": "DSH Desktop",
+      "shortcutName": "DSH Desktop Evo",
       "uninstallerIcon": "build/app-icon.ico",
       "useZip": false,
-      "artifactName": "DSH-Desktop-${version}-${arch}-Setup.${ext}"
+      "artifactName": "DSH-Desktop-Evo-${version}-${arch}-Setup.${ext}"
     },
     "linux": {
       "target": [
