@@ -25,6 +25,25 @@
 - 改名不只是换个 `.app` 文件名：userData 目录由 `DESKTOP_PRODUCT_NAME` 算出（`src/bin.ts`），
   而单实例锁 `app.requestSingleInstanceLock()` 又基于 userData。三者都改才能真正与官方版并存。
 
+**Linux 产物命名与维护者**
+
+Linux 此前只跟着上游走，产物名与维护者信息都还是上游的值，与 Windows/macOS 的
+`DSH-Desktop-Evo-*` 不一致（beta 变体反而有 `DSH-Desktop-Beta-*`）。本次补齐：
+
+| 配置项 | 原值 | 新值 |
+|---|---|---|
+| `build.linux.artifactName` | `DSH-Desktop-${version}-${arch}.${ext}` | `DSH-Desktop-Evo-${version}-${arch}.${ext}` |
+| `build.linux.executableName` | `dsh-desktop` | `dsh-desktop-evo` |
+| `build.linux.maintainer` | `DeepSeek <dsh-desktop@deepseek.com>` | `jimmy <shenh1986@163.com>` |
+| `build.deb.packageName` | `dsh-desktop` | `dsh-desktop-evo` |
+
+`packageName` 必须改在**顶层 `build.deb`**：electron-builder 的 `FpmTarget` 用
+`deepAssign({}, platformSpecificBuildOptions, config[this.name])` 合并，`build.deb`
+（目标级）排在 `build.linux`（平台级）之后，写在 `build.linux.deb` 会被顶层覆盖而静默失效。
+
+Linux 是首次发布，不存在已装用户被拆成两个包的升级问题，故 `deb.packageName` 一并改名。
+联动同步 `scripts/verify-linux-artifacts.ts`、其 spec 与 `tests/package.spec.ts` 的期望名。
+
 **默认插件离线预装（10 个）**
 
 全新安装后新建的 Profile 直接启用以下插件，**首次启动零网络、零 pnpm install**：
@@ -37,7 +56,7 @@
 | `@linxin666/dsh-client-ui-git-graph` | 0.4.5 | MIT | npm |
 | `billion-context` | 0.1.188 | MIT | npm |
 | `dsh-better-sidebar` | 0.24.1 | MIT | npm |
-| `dsh-dream-skin` | 10.8.1 | MIT | vendor tarball（含侧边栏填充交接补丁） |
+| `dsh-dream-skin` | 10.8.1 | MIT | vendor tarball（官方原版，未打补丁） |
 | `dsh-mnemon` | 0.5.24 | MIT | npm |
 | `dsh-rewind-plugin` | 0.15.1 | MIT | npm |
 | `dsh-session-manager` | 0.6.2 | MIT | npm |
@@ -54,9 +73,21 @@
 
 `dsh-dream-skin` 锁在 `9.16.0`，其 peer 为 `^0.1.0-rc.6`（不含 `0.2.x`）；自 `9.29.0`
 起放宽为 `>=0.1.0-rc.6 <0.3.0-0`，故升到 `10.8.1`。该版本随包分发改为 vendor tarball，
-内含桌面侧边栏填充交接补丁——桌面壳在 `.dshDesktopSidebarSurface` 上直接声明
-`--dsw-specific-sidebar-fill`，优先级压过插件经 `overrideTokens` 推到 `<body>` 的行内值，
-导致「侧边栏透明度」滑块静默失效；补丁用 inline `!important` 赢回级联。
+**采用官方原版、未携带本地补丁**。
+
+原计划是把 9.16.0 上的 188 行「侧边栏填充交接」补丁移植到 10.8.1：桌面壳在
+`.dshDesktopSidebarSurface` 上直接声明 `--dsw-specific-sidebar-fill`，优先级压过插件经
+`overrideTokens` 推到 `<body>` 的行内值，导致「侧边栏透明度」滑块静默失效，补丁用 inline
+`!important` 赢回级联。移植在源码层面完全符合预期（3 处插入、+188/-0），但**实测破坏了
+客户端（渲染器）侧的插件加载**，报 `renderer boot failed (plugins: dsh-dream-skin):
+The client Loader did not provide an error message`。
+
+对照实验（唯一变量为 `lib/client.js`）确认是移植引入：官方未打补丁的 10.8.1 渲染器正常启动，
+移植版失败。故放弃补丁，回退到官方原版；**「侧边栏透明度」滑块失效的问题重新存在**。
+判定与证据见 `.agents/notes/implemented/architecture/2026-10-08-dream-skin-sidebar-fill-patch-abandoned.zh.md`。
+
+注意升级本身仍应保留：9.16.0 的 peer 不含 `0.2.x`，会被运行时整体禁用；而带补丁的 10.8.1
+连插件都加载不了，比不带补丁的 9.16.0 更糟。
 
 `@edan/edan-spec@1.0.0` 未发布 npm、无新版可升，其 peer 仍锁 `^0.1.5-rc.2`。
 它只用到两处 API 且均未变更（`createUserMessage` 仍由 `dsh-llm` 导出；skill provider

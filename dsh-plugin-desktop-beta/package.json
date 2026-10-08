@@ -317,7 +317,7 @@
     "billion-context": "0.1.188",
     "dsh-better-sidebar": "0.24.1",
     "dsh-community-market": "0.1.0-dev.0",
-    "dsh-dream-skin": "file:../vendor/dream-skin/dsh-dream-skin-10.8.1-patched.tgz",
+    "dsh-dream-skin": "file:../vendor/dream-skin/dsh-dream-skin-10.8.1.tgz",
     "dsh-mnemon": "0.5.24",
     "dsh-rewind-plugin": "0.15.1",
     "dsh-session-manager": "0.6.2",

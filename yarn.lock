@@ -19842,9 +19842,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"dsh-dream-skin@file:../vendor/dream-skin/dsh-dream-skin-10.8.1-patched.tgz::locator=dsh-plugin-desktop%40workspace%3Adsh-plugin-desktop":
+"dsh-dream-skin@file:../vendor/dream-skin/dsh-dream-skin-10.8.1.tgz::locator=dsh-plugin-desktop%40workspace%3Adsh-plugin-desktop":
   version: 10.8.1
-  resolution: "dsh-dream-skin@file:../vendor/dream-skin/dsh-dream-skin-10.8.1-patched.tgz#../vendor/dream-skin/dsh-dream-skin-10.8.1-patched.tgz::hash=fe0b68&locator=dsh-plugin-desktop%40workspace%3Adsh-plugin-desktop"
+  resolution: "dsh-dream-skin@file:../vendor/dream-skin/dsh-dream-skin-10.8.1.tgz#../vendor/dream-skin/dsh-dream-skin-10.8.1.tgz::hash=94e017&locator=dsh-plugin-desktop%40workspace%3Adsh-plugin-desktop"
   peerDependencies:
     "@deepseek-ai/cordis": ^4.0.1 || >=4.0.5-0 <5
     "@deepseek-ai/dsh-client-locale": ">=0.1.0-rc.6 <0.3.0-0"
@@ -19871,13 +19871,13 @@ __metadata:
       optional: true
     react:
       optional: true
-  checksum: 10c0/c97cfac9bbfe5e00263d4713be1e5f29d09b0687def90166471912cc7286aaf4a20d6fa71e8c508ca2d565d9f841d675c16a42bf73a3f9089cda059d38a6ac7c
+  checksum: 10c0/1226d83186a320646deddc1d4f3989ecd7d3309e97a767bfdcbc1dc17adb59d09d7dc24faa10aa0637d350221c9e0102c505a7dc04977c4f00cd25061bc10b24
   languageName: node
   linkType: hard
 
-"dsh-dream-skin@file:../vendor/dream-skin/dsh-dream-skin-10.8.1-patched.tgz::locator=dsh-plugin-desktop-beta%40workspace%3Adsh-plugin-desktop-beta":
+"dsh-dream-skin@file:../vendor/dream-skin/dsh-dream-skin-10.8.1.tgz::locator=dsh-plugin-desktop-beta%40workspace%3Adsh-plugin-desktop-beta":
   version: 10.8.1
-  resolution: "dsh-dream-skin@file:../vendor/dream-skin/dsh-dream-skin-10.8.1-patched.tgz#../vendor/dream-skin/dsh-dream-skin-10.8.1-patched.tgz::hash=fe0b68&locator=dsh-plugin-desktop-beta%40workspace%3Adsh-plugin-desktop-beta"
+  resolution: "dsh-dream-skin@file:../vendor/dream-skin/dsh-dream-skin-10.8.1.tgz#../vendor/dream-skin/dsh-dream-skin-10.8.1.tgz::hash=94e017&locator=dsh-plugin-desktop-beta%40workspace%3Adsh-plugin-desktop-beta"
   peerDependencies:
     "@deepseek-ai/cordis": ^4.0.1 || >=4.0.5-0 <5
     "@deepseek-ai/dsh-client-locale": ">=0.1.0-rc.6 <0.3.0-0"
@@ -19904,7 +19904,7 @@ __metadata:
       optional: true
     react:
       optional: true
-  checksum: 10c0/c97cfac9bbfe5e00263d4713be1e5f29d09b0687def90166471912cc7286aaf4a20d6fa71e8c508ca2d565d9f841d675c16a42bf73a3f9089cda059d38a6ac7c
+  checksum: 10c0/1226d83186a320646deddc1d4f3989ecd7d3309e97a767bfdcbc1dc17adb59d09d7dc24faa10aa0637d350221c9e0102c505a7dc04977c4f00cd25061bc10b24
   languageName: node
   linkType: hard
 
@@ -20328,7 +20328,7 @@ __metadata:
     clsx: "npm:^2.1.1"
     dsh-better-sidebar: "npm:0.24.1"
     dsh-community-market: "npm:0.1.0-dev.0"
-    dsh-dream-skin: "file:../vendor/dream-skin/dsh-dream-skin-10.8.1-patched.tgz"
+    dsh-dream-skin: "file:../vendor/dream-skin/dsh-dream-skin-10.8.1.tgz"
     dsh-mnemon: "npm:0.5.24"
     dsh-rewind-plugin: "npm:0.15.1"
     dsh-session-manager: "npm:0.6.2"
@@ -20554,7 +20554,7 @@ __metadata:
     clsx: "npm:^2.1.1"
     dsh-better-sidebar: "npm:0.24.1"
     dsh-community-market: "npm:0.1.0-dev.0"
-    dsh-dream-skin: "file:../vendor/dream-skin/dsh-dream-skin-10.8.1-patched.tgz"
+    dsh-dream-skin: "file:../vendor/dream-skin/dsh-dream-skin-10.8.1.tgz"
     dsh-mnemon: "npm:0.5.24"
     dsh-rewind-plugin: "npm:0.15.1"
     dsh-session-manager: "npm:0.6.2"
