@@ -19,6 +19,7 @@ import type { PatchOptions } from '@deepseek-ai/cordis-plugin-include'
 import {
   bundlePatchPaths,
   composeEntries,
+  getDshRuntimeVersion,
   initProfile,
   loadOptionalPatches,
   loadOverlayPatches,
@@ -718,6 +719,72 @@ function sameList(left: readonly string[], right: readonly string[]): boolean {
 }
 
 /**
+ * Bundled plugins pinned to a version whose declared dsh peers predate the
+ * runtime this fork ships, so the preflight at `plugin-compatibility.ts:77`
+ * disables them. Upstream offers the exact-version exemption as the sanctioned
+ * remedy; the desktop installation grants it for its own bundles so every newly
+ * created Profile loads them instead of silently losing them.
+ *
+ * Each entry names an exact plugin version; the exemption is recorded against
+ * the exact running DSH version, never a range, matching
+ * `validatePluginVersionExemption`.
+ */
+const BUNDLED_PLUGIN_VERSION_EXEMPTIONS: Readonly<Record<string, string>> = Object.freeze({
+  // `@edan/edan-spec@1.0.0` declares `@deepseek-ai/dsh-llm` and
+  // `@deepseek-ai/dsh-skill-filesystem` as `^0.1.5-rc.2`. Neither API it uses
+  // changed: `createUserMessage` is still exported by `dsh-llm`, and the skill
+  // provider is mounted wholesale via `ctx.plugin(skillFilesystem, ...)`, which
+  // binds no named export. The package is unpublished, so no updated release
+  // exists to move to.
+  '@edan/edan-spec@1.0.0': DESKTOP_PACKAGE_NAME,
+})
+
+/**
+ * Grant the bundled-plugin exemptions this Profile has not recorded yet.
+ *
+ * The file is Profile-local (`compatibility.json`), and upstream decides
+ * exemptions per exact plugin/runtime pair. Only absent or clean files are
+ * written: a file the reader rejected (`rewritable === false`) carries records
+ * the user must repair by hand, and replacing it would discard them silently.
+ * @param dir - Absolute Profile directory.
+ * @param runtimeVersion - Exact running DSH version the grants are keyed to.
+ */
+function seedBundledPluginExemptions(dir: string, runtimeVersion: string): void {
+  const path = join(dir, 'compatibility.json')
+  let existing: Record<string, unknown> = {}
+  if (existsSync(path)) {
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(readFileSync(path, 'utf8'))
+    } catch {
+      // Unparsable: the reader treats the Profile as having no exemptions and
+      // refuses to rewrite it. Leave the file for the user to repair.
+      return
+    }
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return
+    existing = parsed as Record<string, unknown>
+  }
+  let changed = false
+  for (const key of Object.keys(BUNDLED_PLUGIN_VERSION_EXEMPTIONS)) {
+    const recorded = existing[key]
+    if (recorded === undefined) {
+      existing[key] = [runtimeVersion]
+      changed = true
+      continue
+    }
+    // A malformed record is the reader's warning to raise, not ours to replace.
+    if (!Array.isArray(recorded) || !recorded.every(entry => typeof entry === 'string')) continue
+    if (!recorded.includes(runtimeVersion)) {
+      existing[key] = [...recorded, runtimeVersion]
+      changed = true
+    }
+  }
+  if (!changed) return
+  const sorted = Object.fromEntries(Object.keys(existing).sort().map(key => [key, existing[key]]))
+  writeFileSync(path, `${JSON.stringify(sorted, undefined, 2)}\n`, { mode: 0o600 })
+}
+
+/**
  * Initialize or repair the persistent desktop profile.
  * @param home - Harness home containing the profiles directory.
  * @returns the absolute profile directory.
@@ -727,6 +794,7 @@ export function ensureDesktopProfile(home: string = resolveDshHome()): string {
   if (!existsSync(join(dir, 'package.json'))) {
     initProfile(dir, [...REQUIRED_BUNDLES, ...DEFAULT_PROFILE_PLUGIN_BUNDLES])
   }
+  seedBundledPluginExemptions(dir, getDshRuntimeVersion())
   const manifest = readProfileManifest(BIN_NAME, dir)
   const rawBundles = (manifest.dsh?.profile as { bundles?: unknown } | undefined)?.bundles
   if (rawBundles !== undefined
