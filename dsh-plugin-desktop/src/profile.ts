@@ -730,13 +730,13 @@ function sameList(left: readonly string[], right: readonly string[]): boolean {
  * `validatePluginVersionExemption`.
  */
 const BUNDLED_PLUGIN_VERSION_EXEMPTIONS: Readonly<Record<string, string>> = Object.freeze({
-  // `@edan/edan-spec@1.0.0` declares `@deepseek-ai/dsh-llm` and
+  // `@edan/edan-spec@1.0.1` declares `@deepseek-ai/dsh-llm` and
   // `@deepseek-ai/dsh-skill-filesystem` as `^0.1.5-rc.2`. Neither API it uses
   // changed: `createUserMessage` is still exported by `dsh-llm`, and the skill
   // provider is mounted wholesale via `ctx.plugin(skillFilesystem, ...)`, which
   // binds no named export. The package is unpublished, so no updated release
   // exists to move to.
-  '@edan/edan-spec@1.0.0': DESKTOP_PACKAGE_NAME,
+  '@edan/edan-spec@1.0.1': DESKTOP_PACKAGE_NAME,
 })
 
 /**

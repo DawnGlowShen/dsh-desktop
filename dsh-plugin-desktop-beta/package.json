@@ -309,7 +309,7 @@
     "@deepseek-ai/dsh-workflow": "0.2.1-alpha.1",
     "@deepseek-ai/dsh-workspace": "0.2.1-alpha.1",
     "@deepseek-ai/schemastery": "^3.18.5-alpha.1",
-    "@edan/edan-spec": "file:../vendor/edan-spec/edan-edan-spec-1.0.0.tgz",
+    "@edan/edan-spec": "file:../vendor/edan-spec/edan-edan-spec-1.0.1.tgz",
     "@huanlin/dsh-plugin-better-sidebar-plugin-office": "0.2.0",
     "@hyzyn/dsh-codegraph": "0.6.6",
     "@linxin666/dsh-client-ui-git-graph": "0.4.5",

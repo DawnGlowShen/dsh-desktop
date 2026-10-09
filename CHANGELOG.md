@@ -50,7 +50,7 @@ Linux 是首次发布，不存在已装用户被拆成两个包的升级问题�
 
 | 插件 | 版本 | 许可证 | 来源 |
 |------|------|--------|------|
-| `@edan/edan-spec` | 1.0.0 | MIT | vendor tarball（未发布到 npm） |
+| `@edan/edan-spec` | 1.0.1 | MIT | vendor tarball（未发布到 npm） |
 | `@huanlin/dsh-plugin-better-sidebar-plugin-office` | 0.2.0 | **AGPL-3.0** | npm |
 | `@hyzyn/dsh-codegraph` | 0.6.6 | MIT | npm |
 | `@linxin666/dsh-client-ui-git-graph` | 0.4.5 | MIT | npm |
@@ -89,7 +89,7 @@ The client Loader did not provide an error message`。
 注意升级本身仍应保留：9.16.0 的 peer 不含 `0.2.x`，会被运行时整体禁用；而带补丁的 10.8.1
 连插件都加载不了，比不带补丁的 9.16.0 更糟。
 
-`@edan/edan-spec@1.0.0` 未发布 npm、无新版可升，其 peer 仍锁 `^0.1.5-rc.2`。
+`@edan/edan-spec@1.0.1` 未发布 npm、无新版可升，其 peer 仍锁 `^0.1.5-rc.2`。
 它只用到两处 API 且均未变更（`createUserMessage` 仍由 `dsh-llm` 导出；skill provider
 经 `ctx.plugin(skillFilesystem, ...)` 整体挂载，不绑定具名导出），故改用上游的
 **精确版本豁免**机制：新建 Profile 时把豁免播种到该 Profile 的 `compatibility.json`，

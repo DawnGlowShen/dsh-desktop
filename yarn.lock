@@ -11464,23 +11464,23 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@edan/edan-spec@file:../vendor/edan-spec/edan-edan-spec-1.0.0.tgz::locator=dsh-plugin-desktop%40workspace%3Adsh-plugin-desktop":
-  version: 1.0.0
-  resolution: "@edan/edan-spec@file:../vendor/edan-spec/edan-edan-spec-1.0.0.tgz#../vendor/edan-spec/edan-edan-spec-1.0.0.tgz::hash=4831c6&locator=dsh-plugin-desktop%40workspace%3Adsh-plugin-desktop"
+"@edan/edan-spec@file:../vendor/edan-spec/edan-edan-spec-1.0.1.tgz::locator=dsh-plugin-desktop%40workspace%3Adsh-plugin-desktop":
+  version: 1.0.1
+  resolution: "@edan/edan-spec@file:../vendor/edan-spec/edan-edan-spec-1.0.1.tgz#../vendor/edan-spec/edan-edan-spec-1.0.1.tgz::hash=49cc58&locator=dsh-plugin-desktop%40workspace%3Adsh-plugin-desktop"
   peerDependencies:
     "@deepseek-ai/dsh-llm": ^0.1.5-rc.2
     "@deepseek-ai/dsh-skill-filesystem": ^0.1.5-rc.2
-  checksum: 10c0/8ced8846bca879f378b29d4f3b71f456f9bd02175b92379ab988353e3f6504a397031464916b79b38ec3ff9eebf72f48a4ba3bf2459051978e5b7207d89ec41d
+  checksum: 10c0/0fc71904a42d5e256fb2eda149eb1b1549b8745bd1db0a14a1ec0adc17ec1d0a5cab1e3133ce97c4800e307683b9172feb4ba5308173c0acf6721691ade38ada
   languageName: node
   linkType: hard
 
-"@edan/edan-spec@file:../vendor/edan-spec/edan-edan-spec-1.0.0.tgz::locator=dsh-plugin-desktop-beta%40workspace%3Adsh-plugin-desktop-beta":
-  version: 1.0.0
-  resolution: "@edan/edan-spec@file:../vendor/edan-spec/edan-edan-spec-1.0.0.tgz#../vendor/edan-spec/edan-edan-spec-1.0.0.tgz::hash=4831c6&locator=dsh-plugin-desktop-beta%40workspace%3Adsh-plugin-desktop-beta"
+"@edan/edan-spec@file:../vendor/edan-spec/edan-edan-spec-1.0.1.tgz::locator=dsh-plugin-desktop-beta%40workspace%3Adsh-plugin-desktop-beta":
+  version: 1.0.1
+  resolution: "@edan/edan-spec@file:../vendor/edan-spec/edan-edan-spec-1.0.1.tgz#../vendor/edan-spec/edan-edan-spec-1.0.1.tgz::hash=49cc58&locator=dsh-plugin-desktop-beta%40workspace%3Adsh-plugin-desktop-beta"
   peerDependencies:
     "@deepseek-ai/dsh-llm": ^0.1.5-rc.2
     "@deepseek-ai/dsh-skill-filesystem": ^0.1.5-rc.2
-  checksum: 10c0/8ced8846bca879f378b29d4f3b71f456f9bd02175b92379ab988353e3f6504a397031464916b79b38ec3ff9eebf72f48a4ba3bf2459051978e5b7207d89ec41d
+  checksum: 10c0/0fc71904a42d5e256fb2eda149eb1b1549b8745bd1db0a14a1ec0adc17ec1d0a5cab1e3133ce97c4800e307683b9172feb4ba5308173c0acf6721691ade38ada
   languageName: node
   linkType: hard
 
@@ -20306,7 +20306,7 @@ __metadata:
     "@deepseek-ai/dsh-workflow": "npm:0.2.1-alpha.1"
     "@deepseek-ai/dsh-workspace": "npm:0.2.1-alpha.1"
     "@deepseek-ai/schemastery": "npm:^3.18.5-alpha.1"
-    "@edan/edan-spec": "file:../vendor/edan-spec/edan-edan-spec-1.0.0.tgz"
+    "@edan/edan-spec": "file:../vendor/edan-spec/edan-edan-spec-1.0.1.tgz"
     "@electron/asar": "npm:3.4.1"
     "@electron/fuses": "npm:1.8.0"
     "@fontsource-variable/inter": "npm:^5.3.0"
@@ -20532,7 +20532,7 @@ __metadata:
     "@deepseek-ai/dsh-workflow": "npm:0.2.0-rc.2"
     "@deepseek-ai/dsh-workspace": "npm:0.2.0-rc.2"
     "@deepseek-ai/schemastery": "npm:^3.18.4"
-    "@edan/edan-spec": "file:../vendor/edan-spec/edan-edan-spec-1.0.0.tgz"
+    "@edan/edan-spec": "file:../vendor/edan-spec/edan-edan-spec-1.0.1.tgz"
     "@electron/asar": "npm:3.4.1"
     "@electron/fuses": "npm:1.8.0"
     "@fontsource-variable/inter": "npm:^5.3.0"

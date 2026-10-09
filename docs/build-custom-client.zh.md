@@ -543,12 +543,12 @@ rmSync(root, { recursive: true, force: true })
 mkdir -p vendor/edan-spec
 cd /path/to/edan-spec-dsh-plugin
 npm pack --pack-destination /path/to/dsh-desktop/vendor/edan-spec
-#   → edan-edan-spec-1.0.0.tgz
-tar -tzf /path/to/dsh-desktop/vendor/edan-spec/edan-edan-spec-1.0.0.tgz | grep -E 'cordis.patch.yml|lib/'
+#   → edan-edan-spec-1.0.1.tgz
+tar -tzf /path/to/dsh-desktop/vendor/edan-spec/edan-edan-spec-1.0.1.tgz | grep -E 'cordis.patch.yml|lib/'
 #   必须看到 cordis.patch.yml 和 lib/，否则插件加载不起来
 
 # ② 两个变体的 package.json 都加依赖（注意是相对 vendor 的路径）
-#    "@edan/edan-spec": "file:../vendor/edan-spec/edan-edan-spec-1.0.0.tgz"
+#    "@edan/edan-spec": "file:../vendor/edan-spec/edan-edan-spec-1.0.1.tgz"
 
 # ③ 两个变体的 product-identity.ts 都加进 DEFAULT_PROFILE_PLUGIN_BUNDLES
 # ④ 更新锁文件并确认解包成实体目录（不能是符号链接，否则打不进安装包）
@@ -688,7 +688,7 @@ rmSync(root, { recursive: true, force: true })
 
 | 插件 | 版本 | 许可证 | 来源 |
 |------|------|--------|------|
-| `@edan/edan-spec` | 1.0.0 | MIT | **vendor tarball**（未发布到 npm，见 6.2.2） |
+| `@edan/edan-spec` | 1.0.1 | MIT | **vendor tarball**（未发布到 npm，见 6.2.2） |
 | `@huanlin/dsh-plugin-better-sidebar-plugin-office` | 0.2.0 | **AGPL-3.0** | npm |
 | `@hyzyn/dsh-codegraph` | 0.6.6 | MIT | npm |
 | `@linxin666/dsh-client-ui-git-graph` | 0.4.5 | MIT | npm |
@@ -715,7 +715,7 @@ rmSync(root, { recursive: true, force: true })
 `--dsw-specific-sidebar-fill`，优先级压过插件经 `overrideTokens` 推到 `<body>` 的行内值，
 导致「侧边栏透明度」滑块静默失效；补丁用 inline `!important` 赢回级联。
 
-`@edan/edan-spec@1.0.0` 未发布 npm、无新版可升，其 peer 仍锁 `^0.1.5-rc.2`。它只用到
+`@edan/edan-spec@1.0.1` 未发布 npm、无新版可升，其 peer 仍锁 `^0.1.5-rc.2`。它只用到
 两处 API 且均未变更（`createUserMessage` 仍由 `dsh-llm` 导出；skill provider 经
 `ctx.plugin(skillFilesystem, ...)` 整体挂载，不绑定具名导出），故改用上游的
 **精确版本豁免**机制：新建 Profile 时把豁免播种到该 Profile 的 `compatibility.json`，
