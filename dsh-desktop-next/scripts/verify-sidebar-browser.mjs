@@ -10,9 +10,23 @@ import { DesktopBrowserGuests } from '../lib/browser-guests.js'
 if (process.platform !== 'linux' || !process.env.DISPLAY) {
   console.error('Run this native Browser check on Linux under xvfb-run; portable checks do not start Electron.')
   app.exit(1)
-} else { void verify() }
+} else {
+  // Armed before the first await, so a hung `app.whenReady()` is still caught.
+  // Electron can wedge during startup under Xvfb — a stalled GPU or renderer
+  // process never reaches the body of `verify()`, so a watchdog installed there
+  // would never be created in the first place.
+  const deadline = setTimeout(() => {
+    console.error('Native Browser check timed out before completion')
+    // `app.exit` can be ignored while the main process is blocked, so make the
+    // exit unconditional: a verifier that hangs costs the whole CI job.
+    process.exit(1)
+  }, 90_000)
+  // An unref'd timer would let Node exit early if the event loop drained.
+  deadline.unref?.()
+  void verify(deadline)
+}
 
-async function verify() {
+async function verify(deadline) {
   const home = mkdtempSync(join(tmpdir(), 'dsh-native-browser-'))
   app.setPath('userData', home)
   const server = createServer((request, response) => {
@@ -27,7 +41,6 @@ async function verify() {
   })
   let window
   let code = 0
-  const deadline = setTimeout(() => { console.error('Native Browser check timed out'); app.exit(1) }, 45_000)
   try {
     await app.whenReady()
     await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
@@ -96,7 +109,9 @@ async function verify() {
     window?.destroy()
     await new Promise(resolve => server.close(resolve))
     rmSync(home, { recursive: true, force: true })
-    app.exit(code)
+    // The watchdog would otherwise fire during teardown and turn a passing run
+    // into a spurious timeout failure.
+    process.exit(code)
   }
 }
 

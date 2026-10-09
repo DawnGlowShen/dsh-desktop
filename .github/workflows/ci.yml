@@ -22,6 +22,7 @@ jobs:
   # path filters can leave required checks pending, so classify inside the run.
   changes:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     outputs:
       product: ${{ steps.scope.outputs.product }}
     steps:
@@ -68,6 +69,11 @@ jobs:
   check:
     needs: changes
     runs-on: ubuntu-latest
+    # Without an explicit bound a wedged Electron verifier under Xvfb leaves the
+    # job in_progress for GitHub's 360-minute default, which keeps the whole run
+    # (and any required check) red long after the artifacts have shipped. The
+    # verifiers have their own watchdogs; this is the backstop behind them.
+    timeout-minutes: 45
     steps:
       - name: Documentation-only gate
         if: needs.changes.outputs.product == 'false'
@@ -136,6 +142,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.product == 'true'
     runs-on: windows-latest
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -293,6 +300,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.product == 'true'
     runs-on: windows-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
         with:
@@ -314,6 +322,7 @@ jobs:
     needs: [changes, desktop-windows, desktop-linux, desktop-macos]
     if: needs.changes.outputs.product == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     # The only job that writes; every other job keeps the top-level read-only grant.
     permissions:
       contents: write
