@@ -36,8 +36,15 @@ function shellPath(home: string, name = 'codegraph'): string {
   return join(home, 'bin', name)
 }
 
-/** The bundled CLI set under test. */
-function cli(options: { home: string; userHome: string; launcher: string; mnemon: string }): Parameters<typeof installDesktopCliShell>[0] {
+/**
+ * The bundled CLI set under test.
+ *
+ * `platform` is always passed explicitly: the production default is
+ * `process.platform`, so a bare call would assert macOS behavior on a macOS
+ * laptop and Linux behavior on a Linux CI runner. Every expectation below is
+ * about one specific platform, so each one names it.
+ */
+function cli(options: { home: string; userHome: string; launcher: string; mnemon: string; platform?: NodeJS.Platform }): Parameters<typeof installDesktopCliShell>[0] {
   return {
     homeDir: options.home,
     userHomeDir: options.userHome,
@@ -45,6 +52,7 @@ function cli(options: { home: string; userHome: string; launcher: string; mnemon
       { name: 'codegraph', launcherPath: options.launcher },
       { name: 'mnemon', launcherPath: options.mnemon },
     ],
+    platform: options.platform ?? 'darwin',
   }
 }
 
@@ -54,11 +62,11 @@ afterEach(() => {
 
 describe('desktopCliProfileName', () => {
   it('selects the profile matching the login shell', () => {
-    expect(desktopCliProfileName('/bin/zsh')).toBe('.zshrc')
-    expect(desktopCliProfileName('/bin/bash')).toBe('.bash_profile')
+    expect(desktopCliProfileName('/bin/zsh', 'darwin')).toBe('.zshrc')
+    expect(desktopCliProfileName('/bin/bash', 'darwin')).toBe('.bash_profile')
     // macOS Terminal opens a login shell; zsh has been the default since Catalina.
-    expect(desktopCliProfileName(undefined)).toBe('.zshrc')
-    expect(desktopCliProfileName('')).toBe('.zshrc')
+    expect(desktopCliProfileName(undefined, 'darwin')).toBe('.zshrc')
+    expect(desktopCliProfileName('', 'darwin')).toBe('.zshrc')
   })
 
   it('prefers .bashrc on Linux, whose terminals are non-login shells', () => {
@@ -80,7 +88,7 @@ describe('desktopCliProfileName', () => {
 describe('installDesktopCliShell', () => {
   it('writes one executable shim per launcher forwarding to its packaged launcher', () => {
     const { home, userHome, launcher, mnemon } = makeRoot()
-    const installation = installDesktopCliShell(cli({ home, userHome, launcher, mnemon }))
+    const installation = installDesktopCliShell(cli({ home, userHome, launcher, mnemon, platform: 'darwin' }))
 
     expect(installation.changed).toBe(true)
     expect(installation.shimPaths).toEqual([shellPath(home), shellPath(home, 'mnemon')])
@@ -94,7 +102,7 @@ describe('installDesktopCliShell', () => {
 
   it('adds exactly one marked PATH block no matter how many launchers share it', () => {
     const { home, userHome, launcher, mnemon } = makeRoot()
-    installDesktopCliShell(cli({ home, userHome, launcher, mnemon }))
+    installDesktopCliShell(cli({ home, userHome, launcher, mnemon, platform: 'darwin' }))
 
     const profile = readFileSync(join(userHome, '.zshrc'), 'utf8')
     expect(profile.match(/# >>> dsh-desktop codegraph >>>/gu)).toHaveLength(1)
@@ -111,7 +119,7 @@ describe('installDesktopCliShell', () => {
     const profilePath = join(userHome, '.zshrc')
     writeFileSync(profilePath, 'export EDITOR=vim\n', 'utf8')
 
-    installDesktopCliShell(cli({ home, userHome, launcher, mnemon }))
+    installDesktopCliShell(cli({ home, userHome, launcher, mnemon, platform: 'darwin' }))
 
     const profile = readFileSync(profilePath, 'utf8')
     expect(profile.startsWith('export EDITOR=vim\n')).toBe(true)
@@ -123,7 +131,7 @@ describe('installDesktopCliShell', () => {
     const profilePath = join(userHome, '.zshrc')
     writeFileSync(profilePath, 'export EDITOR=vim', 'utf8')
 
-    installDesktopCliShell(cli({ home, userHome, launcher, mnemon }))
+    installDesktopCliShell(cli({ home, userHome, launcher, mnemon, platform: 'darwin' }))
 
     // The last hand-written line must stay its own line rather than swallow the marker.
     expect(readFileSync(profilePath, 'utf8').startsWith('export EDITOR=vim\n\n# >>> dsh-desktop codegraph >>>'))
@@ -135,7 +143,7 @@ describe('installDesktopCliShell', () => {
     const profilePath = join(userHome, '.zshrc')
     writeFileSync(profilePath, 'export EDITOR=vim\n', 'utf8')
 
-    const options = cli({ home, userHome, launcher, mnemon })
+    const options = cli({ home, userHome, launcher, mnemon, platform: 'darwin' })
     const first = installDesktopCliShell(options)
     const afterFirst = readFileSync(profilePath, 'utf8')
     const second = installDesktopCliShell(options)
@@ -151,10 +159,10 @@ describe('installDesktopCliShell', () => {
     writeFileSync(profilePath, 'export EDITOR=vim\n', 'utf8')
 
     installDesktopCliShell({
-      ...cli({ home, userHome, launcher, mnemon }),
+      ...cli({ home, userHome, launcher, mnemon, platform: 'darwin' }),
       now: () => new Date('2026-01-02T03:04:05.678Z'),
     })
-    installDesktopCliShell(cli({ home, userHome, launcher, mnemon }))
+    installDesktopCliShell(cli({ home, userHome, launcher, mnemon, platform: 'darwin' }))
 
     const backup = `${profilePath}.dsh-backup-2026-01-02T03-04-05-678Z`
     expect(existsSync(backup)).toBe(true)
@@ -175,7 +183,7 @@ describe('installDesktopCliShell', () => {
     const afterFirst = readFileSync(profilePath, 'utf8')
     expect(afterFirst.match(/# >>> dsh-desktop codegraph >>>/gu)).toHaveLength(1)
 
-    const merged = installDesktopCliShell(cli({ home, userHome, launcher, mnemon }))
+    const merged = installDesktopCliShell(cli({ home, userHome, launcher, mnemon, platform: 'darwin' }))
 
     expect(merged.changed).toBe(true)
     expect(readFileSync(profilePath, 'utf8')).toBe(afterFirst)
@@ -186,10 +194,10 @@ describe('installDesktopCliShell', () => {
   it('rewrites the block in place when the shim directory moves', () => {
     const { home, userHome, launcher, mnemon } = makeRoot()
     const profilePath = join(userHome, '.zshrc')
-    installDesktopCliShell(cli({ home, userHome, launcher, mnemon }))
+    installDesktopCliShell(cli({ home, userHome, launcher, mnemon, platform: 'darwin' }))
 
     const otherHome = `${home}-moved`
-    installDesktopCliShell(cli({ home: otherHome, userHome, launcher, mnemon }))
+    installDesktopCliShell(cli({ home: otherHome, userHome, launcher, mnemon, platform: 'darwin' }))
 
     const profile = readFileSync(profilePath, 'utf8')
     expect(profile.match(/# >>> dsh-desktop codegraph >>>/gu)).toHaveLength(1)
@@ -201,7 +209,7 @@ describe('installDesktopCliShell', () => {
     const outside = mkdtempSync(join(tmpdir(), 'dsh-cli-outside-'))
     roots.push(outside)
 
-    installDesktopCliShell(cli({ home: outside, userHome, launcher, mnemon }))
+    installDesktopCliShell(cli({ home: outside, userHome, launcher, mnemon, platform: 'darwin' }))
 
     expect(readFileSync(join(userHome, '.zshrc'), 'utf8')).toContain(`export PATH="${join(outside, 'bin')}:$PATH"`)
   })
@@ -219,6 +227,7 @@ describe('installDesktopCliShell', () => {
       userHomeDir: userHome,
       launchers: [{ name: 'codegraph', launcherPath: launcher }],
       shell: '/bin/bash',
+      platform: 'darwin',
     })
 
     expect(existsSync(join(userHome, '.zshrc'))).toBe(false)
@@ -410,7 +419,7 @@ describe('installDesktopCliShell on Windows', () => {
 
   it('leaves macOS artifacts untouched when the platform is darwin', () => {
     const { home, userHome, launcher, mnemon } = makeRoot()
-    installDesktopCliShell(cli({ home, userHome, launcher, mnemon }))
+    installDesktopCliShell(cli({ home, userHome, launcher, mnemon, platform: 'darwin' }))
 
     expect(existsSync(shellPath(home))).toBe(true)
     expect(existsSync(join(home, 'bin', 'codegraph.cmd'))).toBe(false)
@@ -420,7 +429,7 @@ describe('installDesktopCliShell on Windows', () => {
 
   it('publishes POSIX shims and a .bashrc block when the platform is linux', () => {
     const { home, userHome, launcher, mnemon } = makeRoot()
-    installDesktopCliShell({ ...cli({ home, userHome, launcher, mnemon }), platform: 'linux' })
+    installDesktopCliShell({ ...cli({ home, userHome, launcher, mnemon, platform: 'darwin' }), platform: 'linux' })
 
     // Same shim dialect as macOS: a POSIX script, never a .cmd forwarder.
     expect(existsSync(join(home, 'bin', 'codegraph'))).toBe(true)
@@ -442,7 +451,7 @@ describe('installDesktopCliShell on Windows', () => {
   it('keeps one marked block when Linux re-runs after an AppImage remount', () => {
     const { home, userHome, launcher, mnemon } = makeRoot()
     const first = installDesktopCliShell({
-      ...cli({ home, userHome, launcher, mnemon }),
+      ...cli({ home, userHome, launcher, mnemon, platform: 'darwin' }),
       platform: 'linux',
     })
     // A fresh AppImage mount point is a new absolute launcher path, so the shim
@@ -500,8 +509,8 @@ describe('uninstallDesktopCliShell', () => {
     const original = 'export EDITOR=vim\nexport PAGER=less\n'
     writeFileSync(profilePath, original, 'utf8')
 
-    installDesktopCliShell(cli({ home, userHome, launcher, mnemon }))
-    const result = uninstallDesktopCliShell(cli({ home, userHome, launcher, mnemon }))
+    installDesktopCliShell(cli({ home, userHome, launcher, mnemon, platform: 'darwin' }))
+    const result = uninstallDesktopCliShell(cli({ home, userHome, launcher, mnemon, platform: 'darwin' }))
 
     expect(result.changed).toBe(true)
     expect(existsSync(shellPath(home))).toBe(false)
@@ -514,7 +523,7 @@ describe('uninstallDesktopCliShell', () => {
     const profilePath = join(userHome, '.zshrc')
     writeFileSync(profilePath, 'export EDITOR=vim\n', 'utf8')
 
-    const result = uninstallDesktopCliShell(cli({ home, userHome, launcher, mnemon }))
+    const result = uninstallDesktopCliShell(cli({ home, userHome, launcher, mnemon, platform: 'darwin' }))
 
     expect(result.changed).toBe(false)
     expect(readFileSync(profilePath, 'utf8')).toBe('export EDITOR=vim\n')
@@ -522,7 +531,7 @@ describe('uninstallDesktopCliShell', () => {
 
   it('leaves a profile that never had the block untouched', () => {
     const { home, userHome, launcher, mnemon } = makeRoot()
-    const result = uninstallDesktopCliShell(cli({ home, userHome, launcher, mnemon }))
+    const result = uninstallDesktopCliShell(cli({ home, userHome, launcher, mnemon, platform: 'darwin' }))
 
     expect(result.changed).toBe(false)
     expect(existsSync(join(userHome, '.zshrc'))).toBe(false)
