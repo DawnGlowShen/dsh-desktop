@@ -131,12 +131,24 @@ describe('registry key layout', () => {
 
 describe('startup wiring in main.ts', () => {
   const main = readFileSync(join(process.cwd(), 'src', 'main.ts'), 'utf8')
+  /**
+   * The startup guard that encloses the best-effort shim work.
+   *
+   * Named once so the platform list only has to change in one place: three
+   * assertions anchor on it, and a stale copy would fail with a confusing
+   * `indexOf` of -1 rather than a readable platform mismatch.
+   */
+  const startupGuard = "if (process.platform === 'darwin' || process.platform === 'linux' || process.platform === 'win32') {"
 
-  it('runs shim generation on Windows as well as macOS', () => {
+  it('runs shim generation on every platform whose terminal needs a PATH entry', () => {
     // The installer publishes the shim directory, but a portable copy has no
     // installer, so the startup path is what covers both. The Host itself is
     // served by the runtime installers regardless, hence this is best-effort.
-    expect(main).toContain("if (process.platform === 'darwin' || process.platform === 'win32') {")
+    // Linux is included because an AppImage mounts at a path that changes
+    // between runs, leaving no installer hook to publish against either.
+    expect(main).toContain(
+      "if (process.platform === 'darwin' || process.platform === 'linux' || process.platform === 'win32') {",
+    )
   })
 
   it('points the CodeGraph forwarder at the entry script on Windows', () => {
@@ -155,7 +167,7 @@ describe('startup wiring in main.ts', () => {
   })
 
   it('keeps the failure contained in the existing try/catch', () => {
-    const guard = main.indexOf("if (process.platform === 'darwin' || process.platform === 'win32') {")
+    const guard = main.indexOf(startupGuard)
     const attempt = main.indexOf('installDesktopCliShell({', guard)
     const caught = main.indexOf('CLI shell integration failed', attempt)
 
@@ -170,7 +182,7 @@ describe('startup wiring in main.ts', () => {
     // `DSH_HOME` must be assigned before any downstream consumer reads it, so
     // the shim work is appended after rather than woven through.
     const dshHome = main.indexOf('process.env.DSH_HOME = homeDir')
-    const guard = main.indexOf("if (process.platform === 'darwin' || process.platform === 'win32') {")
+    const guard = main.indexOf(startupGuard)
 
     expect(dshHome).toBeGreaterThan(-1)
     expect(guard).toBeGreaterThan(dshHome)

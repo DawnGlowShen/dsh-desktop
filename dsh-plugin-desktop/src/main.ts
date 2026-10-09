@@ -859,17 +859,18 @@ async function start(): Promise<void> {
       homeDir = dataDirectoryLocation.homeDir
     }
     process.env.DSH_HOME = homeDir
-    // Expose the packaged CLIs to the user's own terminal. On macOS a `.dmg`
-    // has no install hook at all; on Windows the installer publishes the shim
-    // directory but cannot know where a portable copy was unpacked. In both
-    // cases a shim plus a PATH entry is what makes these commands resolve in a
-    // shell the user starts, so shim generation runs on every launch and is
-    // driven by the content already on disk rather than by a first-run flag:
-    // that is also what makes it follow an upgrade or a moved directory. Both
-    // CLIs share one shim directory and therefore one marked PATH block. A
-    // failure here must never block startup: the CLIs stay available to the
-    // Host through their runtime installers.
-    if (process.platform === 'darwin' || process.platform === 'win32') {
+    // Expose the packaged CLIs to the user's own terminal. A macOS `.dmg` has
+    // no install hook at all, a Linux AppImage mounts at a path that changes
+    // between runs, and neither the Windows installer nor the Debian package
+    // can know where a portable copy was unpacked. In every case a shim plus a
+    // PATH entry is what makes these commands resolve in a shell the user
+    // starts, so shim generation runs on every launch and is driven by the
+    // content already on disk rather than by a first-run flag: that is also
+    // what makes it follow an upgrade, a moved directory, or a fresh AppImage
+    // mount point. Both CLIs share one shim directory and therefore one marked
+    // PATH block. A failure here must never block startup: the CLIs stay
+    // available to the Host through their runtime installers.
+    if (process.platform === 'darwin' || process.platform === 'linux' || process.platform === 'win32') {
       const launchers = desktopCliLaunchers({
         platform: process.platform,
         codegraphPathDir: codegraphRuntime?.pathDir,

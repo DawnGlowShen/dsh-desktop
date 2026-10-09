@@ -13,6 +13,13 @@ const roots: string[] = []
 
 const MARKER_BEGIN = '# >>> dsh-desktop codegraph >>>'
 
+/** A standalone temporary directory, for fixtures outside {@link makeRoot}'s tree. */
+function root2(): string {
+  const root = mkdtempSync(join(tmpdir(), 'dsh-cli-shell-remount-'))
+  roots.push(root)
+  return root
+}
+
 function makeRoot(): { home: string; userHome: string; launcher: string; mnemon: string } {
   const root = mkdtempSync(join(tmpdir(), 'dsh-cli-shell-'))
   roots.push(root)
@@ -52,6 +59,21 @@ describe('desktopCliProfileName', () => {
     // macOS Terminal opens a login shell; zsh has been the default since Catalina.
     expect(desktopCliProfileName(undefined)).toBe('.zshrc')
     expect(desktopCliProfileName('')).toBe('.zshrc')
+  })
+
+  it('prefers .bashrc on Linux, whose terminals are non-login shells', () => {
+    // A bash login shell reads .bash_profile, but the terminal a Linux desktop
+    // user opens is an interactive non-login shell and reads only .bashrc.
+    expect(desktopCliProfileName('/bin/bash', 'linux')).toBe('.bashrc')
+    expect(desktopCliProfileName('/usr/bin/bash', 'linux')).toBe('.bashrc')
+    // An unset or unrecognized shell falls back to the platform's own default.
+    expect(desktopCliProfileName(undefined, 'linux')).toBe('.bashrc')
+    expect(desktopCliProfileName('', 'linux')).toBe('.bashrc')
+    // zsh still reads .zshrc wherever it is the login shell.
+    expect(desktopCliProfileName('/bin/zsh', 'linux')).toBe('.zshrc')
+    // The macOS default is unchanged by the added platform argument.
+    expect(desktopCliProfileName('/bin/bash', 'darwin')).toBe('.bash_profile')
+    expect(desktopCliProfileName(undefined, 'darwin')).toBe('.zshrc')
   })
 })
 
@@ -394,6 +416,52 @@ describe('installDesktopCliShell on Windows', () => {
     expect(existsSync(join(home, 'bin', 'codegraph.cmd'))).toBe(false)
     expect(readFileSync(shellPath(home), 'utf8').startsWith('#!/bin/sh\n')).toBe(true)
     expect(readFileSync(join(userHome, '.zshrc'), 'utf8')).toContain(MARKER_BEGIN)
+  })
+
+  it('publishes POSIX shims and a .bashrc block when the platform is linux', () => {
+    const { home, userHome, launcher, mnemon } = makeRoot()
+    installDesktopCliShell({ ...cli({ home, userHome, launcher, mnemon }), platform: 'linux' })
+
+    // Same shim dialect as macOS: a POSIX script, never a .cmd forwarder.
+    expect(existsSync(join(home, 'bin', 'codegraph'))).toBe(true)
+    expect(existsSync(join(home, 'bin', 'mnemon'))).toBe(true)
+    expect(existsSync(join(home, 'bin', 'codegraph.cmd'))).toBe(false)
+    const shim = readFileSync(shellPath(home), 'utf8')
+    expect(shim.startsWith('#!/bin/sh\n')).toBe(true)
+    expect(shim).toContain(launcher)
+
+    // The block lands in .bashrc, the file a Linux terminal actually sources.
+    const bashrc = readFileSync(join(userHome, '.bashrc'), 'utf8')
+    expect(bashrc).toContain(MARKER_BEGIN)
+    expect(bashrc).toContain('export PATH="$HOME/.dsh/bin:$PATH"')
+    // And not in the macOS default, which no Linux terminal reads.
+    expect(existsSync(join(userHome, '.zshrc'))).toBe(false)
+    expect(existsSync(join(userHome, '.bash_profile'))).toBe(false)
+  })
+
+  it('keeps one marked block when Linux re-runs after an AppImage remount', () => {
+    const { home, userHome, launcher, mnemon } = makeRoot()
+    const first = installDesktopCliShell({
+      ...cli({ home, userHome, launcher, mnemon }),
+      platform: 'linux',
+    })
+    // A fresh AppImage mount point is a new absolute launcher path, so the shim
+    // is rewritten while the profile block stays a single marked occurrence.
+    const remounted = join(root2(), 'app', 'Contents', 'Resources', 'codegraph', 'bin', 'codegraph')
+    const second = installDesktopCliShell({
+      homeDir: home,
+      userHomeDir: userHome,
+      launchers: [
+        { name: 'codegraph', launcherPath: remounted },
+        { name: 'mnemon', launcherPath: mnemon },
+      ],
+      platform: 'linux',
+    })
+
+    expect(first.pathDir).toBe(second.pathDir)
+    expect(readFileSync(shellPath(home), 'utf8')).toContain(remounted)
+    const bashrc = readFileSync(join(userHome, '.bashrc'), 'utf8')
+    expect(bashrc.split(MARKER_BEGIN)).toHaveLength(2)
   })
 })
 

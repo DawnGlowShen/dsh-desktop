@@ -95,7 +95,12 @@ export interface DesktopCliShellOptions {
    * injectable so the Windows dialect stays testable on any host.
    */
   platform?: NodeJS.Platform | undefined
-  /** Login shell from `$SHELL`; selects which profile file is updated. */
+  /**
+   * Login shell from `$SHELL`; selects which profile file is updated.
+   *
+   * Only refines the platform's default: Linux keeps `.bashrc` for bash too,
+   * because its terminals are non-login shells that never read `.bash_profile`.
+   */
   shell?: string | undefined
   /** Timestamp source for backup names; defaults to the wall clock. */
   now?: (() => Date) | undefined
@@ -161,12 +166,23 @@ function quoteSh(value: string): string {
 /**
  * Select the shell profile that receives the PATH entry.
  *
- * macOS opens interactive login shells from Terminal, and zsh has been the
- * default since Catalina. Bash login shells read `.bash_profile` instead. An
- * unknown or unset shell falls back to zsh rather than guessing further.
+ * The two POSIX hosts disagree about which bash file a terminal actually reads,
+ * so the platform chooses the default and the detected shell only refines it:
+ *
+ * - macOS opens interactive *login* shells from Terminal, and zsh has been the
+ *   default since Catalina. Bash login shells read `.bash_profile`.
+ * - Linux terminals are interactive *non-login* shells, which read `.bashrc`
+ *   and never `.bash_profile`. Writing the latter there would leave the PATH
+ *   entry invisible in the very terminal the user opens.
+ *
+ * A recognized zsh always gets `.zshrc` on either platform. An unknown or unset
+ * shell falls back to the platform's own default rather than guessing further.
  */
-export function desktopCliProfileName(shell?: string): string {
-  return (shell ?? '').endsWith('bash') ? '.bash_profile' : '.zshrc'
+export function desktopCliProfileName(shell?: string, platform?: NodeJS.Platform): string {
+  const name = shell ?? ''
+  if (name.endsWith('zsh')) return '.zshrc'
+  if (name.endsWith('bash')) return (platform ?? process.platform) === 'linux' ? '.bashrc' : '.bash_profile'
+  return (platform ?? process.platform) === 'linux' ? '.bashrc' : '.zshrc'
 }
 
 /** Escape a literal fragment so it stays literal inside a double-quoted shell word. */
@@ -322,6 +338,10 @@ function shimFileName(launcher: DesktopCliLauncher, windows: boolean): string {
  * On Windows only the `.cmd` forwarders are generated: there is no shell
  * profile to edit, and the directory reaches PATH through the registry entry the
  * installer writes and the settings action repairs.
+ *
+ * macOS and Linux both get the POSIX shim and the marked profile block. They
+ * differ only in which file receives the block, which
+ * {@link desktopCliProfileName} decides.
  */
 export function installDesktopCliShell(options: DesktopCliShellOptions): DesktopCliShellInstallation {
   assertValue('harness home directory', options.homeDir)
@@ -354,7 +374,10 @@ export function installDesktopCliShell(options: DesktopCliShellOptions): Desktop
   // nothing here may create or modify a dotfile in the user's home directory.
   if (windows) return { shimPaths, profilePath: '', pathDir, changed }
 
-  const profilePath = join(options.userHomeDir, desktopCliProfileName(options.shell))
+  const profilePath = join(
+    options.userHomeDir,
+    desktopCliProfileName(options.shell, options.platform),
+  )
   const existing = readTextIfPresent(profilePath)
   const updated = applyProfileBlock(existing ?? '', pathDir, options.userHomeDir)
   if (updated !== existing) {
@@ -399,7 +422,10 @@ export function uninstallDesktopCliShell(options: DesktopCliShellOptions): Deskt
 
   if (windows) return { shimPaths, profilePath: '', pathDir, changed }
 
-  const profilePath = join(options.userHomeDir, desktopCliProfileName(options.shell))
+  const profilePath = join(
+    options.userHomeDir,
+    desktopCliProfileName(options.shell, options.platform),
+  )
   const existing = readTextIfPresent(profilePath)
   if (existing !== undefined) {
     const lines = existing.split('\n')
