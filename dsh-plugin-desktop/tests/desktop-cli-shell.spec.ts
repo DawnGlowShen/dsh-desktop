@@ -179,6 +179,7 @@ describe('installDesktopCliShell', () => {
       homeDir: home,
       userHomeDir: userHome,
       launchers: [{ name: 'codegraph', launcherPath: launcher }],
+      platform: 'darwin',
     })
     const afterFirst = readFileSync(profilePath, 'utf8')
     expect(afterFirst.match(/# >>> dsh-desktop codegraph >>>/gu)).toHaveLength(1)
