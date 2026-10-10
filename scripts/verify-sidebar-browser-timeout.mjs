@@ -16,6 +16,12 @@
  * failed, so a macOS development box does not become un-runnable just because
  * CI's watchdog is absent there.
  *
+ * A `timeout` on PATH is not proof of GNU `timeout`: Windows ships its own,
+ * with entirely different syntax (`timeout /t` pauses an interactive shell).
+ * The one there would reject GNU arguments and could never supervise an
+ * Electron process, so a probe runs before anything is asserted — see
+ * `probeTimeout()`.
+ *
  * Usage: node scripts/verify-sidebar-browser-timeout.mjs
  */
 
@@ -40,6 +46,21 @@ function readSidebarBrowserStep() {
   return step.trim()
 }
 
+/**
+ * Asks the `timeout` on PATH to run a command that exits immediately. Only the
+ * GNU implementation reports the child's own exit status; Windows' built-in
+ * rejects `0` as a duration ("Invalid syntax. Default option is not allowed
+ * more than '1' time(s).") and returns non-zero. Anything that is not a
+ * working GNU `timeout` disables the runtime half of this check — CI on
+ * ubuntu-latest ships coreutils, so it always exercises it there.
+ */
+function probeTimeout() {
+  const outcome = spawnSync('timeout', ['1', 'true'], { encoding: 'utf8', timeout: 60_000, shell: false })
+  if (outcome.error) return { usable: false, detail: outcome.error.message }
+  if (outcome.status === 0) return { usable: true, detail: 'GNU timeout' }
+  return { usable: false, detail: (outcome.stderr ?? '').trim().split('\n')[0] || `exit ${outcome.status}` }
+}
+
 const step = readSidebarBrowserStep()
 const guarded = /(?:^|\s)(?:\S*\/)?timeout\s+\d+\s+xvfb-run\s/.test(step)
 assert.ok(
@@ -48,12 +69,13 @@ assert.ok(
     'Without it a wedged Electron runs until the job budget expires and the whole check job is lost.',
 )
 
-const timeoutBinary = spawnSync('sh', ['-c', 'command -v timeout'], { encoding: 'utf8' })
-if (timeoutBinary.status !== 0 || !timeoutBinary.stdout.trim()) {
+const probe = probeTimeout()
+if (!probe.usable) {
   console.log(
-    `SKIPPED: no \`timeout\` binary here, so the watchdog cannot be exercised locally.\n` +
-      `The step is wrapped correctly: ${step}\n` +
-      'CI runs on ubuntu-latest, which ships coreutils.',
+    `SKIPPED: the step is wrapped correctly, but the \`timeout\` on PATH is not GNU timeout ` +
+      `(${probe.detail}), so the watchdog cannot be exercised here.\n` +
+      `Checked: ${step}\n` +
+      'CI runs on ubuntu-latest, which ships coreutils, and exercises it on every run.',
   )
   process.exit(0)
 }
