@@ -133,7 +133,11 @@ jobs:
         run: xvfb-run --auto-servernum yarn workspace dsh-desktop-next verify:protocol --no-sandbox
       - name: Verify Next native sidebar Browser in Electron
         if: needs.changes.outputs.product == 'true'
-        run: xvfb-run --auto-servernum yarn workspace dsh-desktop-next verify:sidebar-browser --no-sandbox
+        # `timeout` is the only watchdog that survives a wedged Electron: when the
+        # main process deadlocks, its event loop stops too, so no in-process timer
+        # can ever fire. The step budget it protects is minutes, not hours (the
+        # job's own 45 minutes are shared with the other fourteen steps).
+        run: timeout 120 xvfb-run --auto-servernum yarn workspace dsh-desktop-next verify:sidebar-browser --no-sandbox
 
   # Windows-only logic and unsigned NSIS/portable builds on a real Windows runner:
   # updates, window options, pwsh sandbox, volume diagnostics, and packaging.
