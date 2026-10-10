@@ -9,7 +9,7 @@
 
 ---
 
-## [未发布] — 2026-09-18
+## [未发布] — 2026-10-09
 
 ### 新增
 
@@ -27,8 +27,8 @@
 
 **Linux 产物命名与维护者**
 
-Linux 此前只跟着上游走，产物名与维护者信息都还是上游的值，与 Windows/macOS 的
-`DSH-Desktop-Evo-*` 不一致（beta 变体反而有 `DSH-Desktop-Beta-*`）。本次补齐：
+Linux 的产物名与维护者信息此前沿用上游的值，与 Windows/macOS 的 `DSH-Desktop-Evo-*`
+不一致（beta 变体为 `DSH-Desktop-Beta-*`）。本次补齐：
 
 | 配置项 | 原值 | 新值 |
 |---|---|---|
@@ -61,19 +61,19 @@ Linux 是首次发布，不存在已装用户被拆成两个包的升级问题�
 | `dsh-rewind-plugin` | 0.15.1 | MIT | npm |
 | `dsh-session-manager` | 0.6.2 | MIT | npm |
 
-相对上一版清单的调整：**移除** `@mars-sea/dsh-commandcode-provider` 与 `dsh-cost-meter`，
+清单调整：**移除** `@mars-sea/dsh-commandcode-provider` 与 `dsh-cost-meter`，
 **新增** `@huanlin/dsh-plugin-better-sidebar-plugin-office`。
 
-版本升级：10 个预装插件原先全部锁在 `0.1.5-rc.1` 时代的版本，运行时升到 `0.2.0-rc.2`
-后 peer 区间不再覆盖，运行时逐一禁用它们（`dsh: disabling profile plugin row "<name>"`），
-预装插件形同虚设。本次升级 `dsh-better-sidebar` `0.19.1`→`0.24.1`、`dsh-mnemon`
-`0.5.12`→`0.5.24`、`dsh-rewind-plugin` `0.12.2`→`0.15.1`、`@hyzyn/dsh-codegraph`
-`0.2.2`→`0.6.6`、`@linxin666/dsh-client-ui-git-graph` `0.3.22`→`0.4.5`、
-`billion-context` `0.1.131`→`0.1.188`、`dsh-session-manager` `0.4.11`→`0.6.2`。
+版本更新：上一代清单把 10 个预装插件全部锁在 `0.1.5-rc.1` 时代的版本，运行时升到
+`0.2.0-rc.2` 后 peer 区间不再覆盖，运行时逐一禁用它们
+（`dsh: disabling profile plugin row "<name>"`），预装插件形同虚设。本次更新
+`dsh-better-sidebar` → `0.24.1`、`dsh-mnemon` → `0.5.24`、`dsh-rewind-plugin` →
+`0.15.1`、`@hyzyn/dsh-codegraph` → `0.6.6`、`@linxin666/dsh-client-ui-git-graph` →
+`0.4.5`、`billion-context` → `0.1.188`、`dsh-session-manager` → `0.6.2`。
 
-`dsh-dream-skin` 锁在 `9.16.0`，其 peer 为 `^0.1.0-rc.6`（不含 `0.2.x`）；自 `9.29.0`
-起放宽为 `>=0.1.0-rc.6 <0.3.0-0`，故升到 `10.8.1`。该版本随包分发改为 vendor tarball，
-**采用官方原版、未携带本地补丁**。
+`dsh-dream-skin` 的 peer 自 `9.29.0` 起放宽为 `>=0.1.0-rc.6 <0.3.0-0`，故取 `10.8.1`
+（`9.16.0` 的 peer 为 `^0.1.0-rc.6`，不含 `0.2.x`，会被运行时整体禁用）。该版本随包
+分发改为 vendor tarball，**采用官方原版、未携带本地补丁**。
 
 原计划是把 9.16.0 上的 188 行「侧边栏填充交接」补丁移植到 10.8.1：桌面壳在
 `.dshDesktopSidebarSurface` 上直接声明 `--dsw-specific-sidebar-fill`，优先级压过插件经
@@ -101,25 +101,24 @@ The client Loader did not provide an error message`。
 
 **构建产物的命名与发布**
 
-- Windows 产物名改为 `DSH-Desktop-Evo-*`。原先的 `artifactName` 是写死的
+- Windows 产物名改为 `DSH-Desktop-Evo-*`。此前的 `artifactName` 是写死的
   `DSH-Desktop-` 前缀，与产品名无关，和 beta 的 `DSH-Desktop-Beta-` 混在一起难以分辨
 
   这个前缀同时硬编码在 `verify-win-installer.ts`、`verify-win-portable.ts`、
   `build-windows-nsis-ab.ts` 三个脚本里——**改漏任何一处都会让 Windows 打包失败**
-  （校验器找不到文件，报 exit 1），和之前「改名漏改校验脚本」是同一类问题。
-  现统一由 `product-identity.ts` 的 `DESKTOP_ARTIFACT_STEM` 提供，
-  `tests/package.spec.ts` 断言它与 `package.json` 保持一致。
+  （校验器找不到文件，报 exit 1）。现统一由 `product-identity.ts` 的
+  `DESKTOP_ARTIFACT_STEM` 提供，`tests/package.spec.ts` 断言它与 `package.json` 保持一致。
 
 - CI 不再打包 **beta** 变体（`desktop-windows` / `desktop-macos` 的 matrix 只留 stable）。
   beta 的源码仍由 `check` job 完整测试，`verify-desktop-variants` 也仍然约束两个变体
   的 `src/` 逐字节一致——这里省掉的只是重复的打包开销。
 
 - macOS 的 DMG 现在也会**上传并发布**。此前 `desktop-macos` 没有上传步骤，
-  而 `publish` 只依赖 `desktop-windows`，所以 DMG 打完就随 runner 销毁了。
+  而 `publish` 只依赖 `desktop-windows`，DMG 打完就随 runner 销毁了。
 
-  同时给 stable 补上 `mac.artifactName`，让 DMG 由 electron-builder 的默认名
-  `DSH.Desktop.Evo-2.0.10-universal.dmg`（空格被替换成点号）变成与 Windows 一致的
-  `DSH-Desktop-Evo-2.0.10-universal.dmg`。
+  同时给 stable 补上 `mac.artifactName`，让 DMG 与 Windows 一致地命名为
+  `DSH-Desktop-Evo-<版本>-universal.dmg`（electron-builder 的默认名会写成
+  `DSH.Desktop.Evo-<版本>-universal.dmg`，空格被替换成点号）。
 
 - 发布的组织方式：**一个滚动入口 + 保留最近 2 个版本化 release**
 
@@ -141,9 +140,8 @@ The client Loader did not provide an error message`。
   | **稳定态合计** | **约 2 GB** |
 
   滚动入口每次会**移动 tag**（否则 GitHub 自动生成的 Source code 快照会停在首次创建
-  的提交上，此前实测指向了纯净的上游 `0a9433fafc`）、**删掉可能残留的旧资产**
-  （从「带资产」改成「不带资产」时清一次），并**刷新标题与说明**——标题原本只在首次
-  创建时写过一次，于是它长期写着「Windows 构建」，而资产里早就有 macOS 的 DMG。
+  的提交上，而不是这次构建的提交）、**删掉可能残留的旧资产**、并**刷新标题与说明**
+  ——标题只在首次创建时写过一次，不会自动更新。
 
   版本化 release 只保留最近 2 个，更早的连同 tag 一起删除——每个约 1 GB
   （Setup 211 MB + 便携版 382 MB + universal DMG 448 MB），不设上限仓库会持续膨胀。
@@ -153,13 +151,11 @@ The client Loader did not provide an error message`。
   > 能做的只是让它指向正确的提交（`gh release create --target`）。
 
   > **`cancel-in-progress: true` 意味着连续快推会互相取消。** 同一分支上新的推送会
-  > 取消正在跑的旧 run。此前四个提交在十分钟内连着推，前三个的 publish 因此从未执行
-  > ——发布逻辑看起来「失效」，实际是压根没跑，而当时已经准备好按错误结论去改一段
-  > 正确的代码。改发布流程要一次推一个、等 CI 跑完再推下一个。
+  > 取消正在跑的旧 run，publish 可能因此从未执行。改发布流程要一次推一个、等 CI 跑完
+  > 再推下一个。
 
 - 版本化 release 的名字带短 SHA，每次都是全新的，所以不存在 `--clobber` 只覆盖同名
-  文件的问题。产物改名（`DSH-Desktop-` → `DSH-Desktop-Evo-`）曾让旧名字的文件留在
-  滚动 release 上，看起来像当前版本；现在滚动入口不存资产，这个问题从根上消失。
+  文件的问题。滚动入口不存资产，避免旧名字的文件残留在上面被误认为当前版本。
   同时移除 `custom` 分支时代的遗留 release `custom-final`（幂等，删过一次即为无操作）。
 
 **内置 dream-skin 默认外观**
@@ -180,9 +176,8 @@ The client Loader did not provide an error message`。
   （`scripts/prepare-dream-skin-default.mjs`）。它读 `$DSH_HOME/dream-skin.json`、
   剔除历史记录、**一次写入 stable 与 beta 两处**，并回显各透明度值便于核对。
 
-  > 此前这一步是文档里的一段手工 python，而且只写 stable 一个变体。后果是
-  > **beta 的快照从未被提交**，而 electron-builder 对缺失的 `extraResources` 是
-  > **静默跳过**的（codegraph 上踩过同一个坑），beta 包会悄悄少一份默认外观。
+  > `electron-builder` 对缺失的 `extraResources` 是**静默跳过**的：只写 stable
+  > 一个变体时 beta 包会悄悄少一份默认外观，构建不会报错。两个变体必须都写到。
 
 - **浏览器侧有它自己的一套出厂透明度**（输入框 `0.85`、弹窗 `0.94`、壁纸 `0.8`）。
   桌面版每次启动换端口、localStorage 按 origin 隔离因而每次都是空的，插件据此认为
@@ -220,23 +215,23 @@ verify-licenses: 27 package(s) accepted without a license declaration (@univerjs
 ```
 
 顺带修正：`licenseExpression` 现在会剥掉 SPDX 表达式里的括号，因此 `pako` 的
-`(MIT AND Zlib)` 能与白名单里的 `MIT AND Zlib` 匹配（此前因括号导致误判）。
+`(MIT AND Zlib)` 能与白名单里的 `MIT AND Zlib` 匹配（带括号时会被判为不匹配）。
 
 **内置 codegraph CLI**
 
 
-`@hyzyn/dsh-codegraph` 依赖外部命令 `codegraph`，原本要用 `npm install -g @colbymchenry/codegraph`
-安装——离线机器做不到。现在随安装包分发：
+`@hyzyn/dsh-codegraph` 依赖外部命令 `codegraph`，单独安装需要
+`npm install -g @colbymchenry/codegraph`——离线机器做不到。现在随安装包分发：
 
 - 平台包**自带 Node 运行时**，所以离线机器**连 Node 都不用装**
 - 应用内：把包内 `codegraph/bin` 前置到 Host 的 PATH，**不改任何配置文件**
-- 用户终端（macOS）：写 `~/.dsh/bin/codegraph` shim 与 `~/.zshrc` 标记块
+- 用户终端（macOS / Linux）：写 `~/.dsh/bin/codegraph` shim 与 shell profile 标记块
 - 用户终端（Windows）：**NSIS 安装器**把 `<安装目录>\resources\codegraph\bin` 写进用户 PATH
 
-两个平台的终端集成走不同路径，原因在安装方式：DMG 拖进 `/Applications` 就是全部流程，
-没有钩子可用，只能首次启动写 shell profile；NSIS 安装器有钩子，所以 Windows 在安装时就写
-`HKCU\Environment` 的 `Path`。此前 Windows 侧完全没有这一步——应用自己能用 codegraph，
-用户自己开的终端不行。
+三平台的终端集成走不同路径，原因在安装方式：DMG 拖进 `/Applications`、AppImage 双击挂载
+都只是运行一个文件，没有钩子可用，只能首次启动写 shell profile；NSIS 安装器有钩子，
+所以 Windows 在安装时就写 `HKCU\Environment` 的 `Path`。Linux 的终端集成见下文
+「Linux 终端里的 CLI 命令」。
 
 `build/installer.nsh` 里新增的两个宏：
 
@@ -255,24 +250,80 @@ verify-licenses: 27 package(s) accepted without a license declaration (@univerjs
 > 便携版 ZIP 做不到：electron-builder 对 portable 目标不注入自定义 include（`if (!this.isPortable)`），
 > 而且便携版没有安装流程。
 
+**Linux 终端里的 CLI 命令**
+
+
+`codegraph` / `mnemon` 的终端集成此前只在 macOS 与 Windows 生效：`main.ts` 的准入条件是
+`process.platform === 'darwin' || process.platform === 'win32'`，`'linux'` 不在其中，所以
+Linux 上既不生成 shim、也不写 shell profile。**应用内一切正常**——宿主进程及其派生的每个
+工具都能解析到这两个命令，因为 `publishDesktopCodegraphRuntime()` 不判断平台，它把包内
+`bin` 目录前置进 Electron 进程自己的 PATH，`@deepseek-ai/dsh-mcp-client` 与
+`@hyzyn/dsh-codegraph` 依赖的正是这一点。缺的只是**用户自己开的终端**：那边读不到
+Electron 进程的 PATH，于是命令"装了却找不到"。
+
+本次把 `'linux'` 加进准入条件，与 macOS 共用同一条 shim + profile 路径：
+
+- **shim 目录与标记块沿用既有机制**：`~/.dsh/bin` 下的 POSIX shim，加上 shell profile 里
+  一对 `# >>> dsh-desktop codegraph >>>` / `# <<< dsh-desktop codegraph <<<` 标记块
+- **profile 文件按平台选**：Linux 桌面终端是**交互式非登录** shell，只读 `.bashrc`；
+  写 `.bash_profile` 会让 PATH 条目在用户真正打开的那个终端里**根本不生效**。
+  故 `desktopCliProfileName()` 增加 `platform` 形参：zsh 一律 `.zshrc`，bash 及
+  未知/未设 shell 在 Linux 上落到 `.bashrc`，在 macOS 上仍按原样落 `.bash_profile` / `.zshrc`
+
+  > 生产调用点显式传入真实平台；缺省回退到 `process.platform` 只对生产有意义。
+  > 测试里省略它会让断言跟着**宿主**走，在 macOS 上绿、在 Linux CI 上红——见「修复」一节。
+
+- **AppImage 的挂载点每次都变**，shim 里写的是绝对路径，因此应用退出后 shim 即失效。
+  但每次启动都会重写（仅当内容与目标不一致时才写），所以对用户始终有效。
+  `.deb` 与 Windows 安装器不同，无法预知用户把 AppImage 放在哪里，不做安装期写入。
+
+**`@edan/edan-spec` 升到 1.0.1（修复 v4 拒绝裸 `kind:'plugin'`）**
+
+
+插件用 `const SOURCE = { kind: 'plugin', plugin: name }` 作为注入 AGENTS.md baseline 的
+消息来源，而 **Session format v4 明确拒绝该值**：`dsh-session-format-v3-to-v4/src/message-sources.ts:9`
+的 `source()` 把 `value['kind'] === 'plugin'` 与「无 kind / 空 kind」**并列判为非法**，抛
+`format v4 message requires a producer-owned source kind`；同文件 `assertV4SourceRowAdmission()`
+对已落盘的畸形行**再次拒绝**，因此旧会话同样受影响。
+
+v4 的模型是「**kind 答"谁生产"，form 答"什么形态"**」——上游没有共享的 catch-all `plugin`
+（`llm/src/message.ts:106` 注释），既有生产者一律以自有名作 kind（`time-context`、
+`runtime-context`、`compact-checkpoint` 等）。`@edan/edan-spec` 不是官方插件，
+`plugin` 对它没有意义，改用包名作 kind。
+
+上游 `edan-spec-dsh-plugin` 已发 1.0.1。本仓库同步 vendor 快照与分发链路：
+
+| 位置 | 改动 |
+|---|---|
+| `vendor/edan-spec/` | 快照更新为 `edan-edan-spec-1.0.1.tgz` |
+| 两个变体的 `package.json` | 依赖指向 1.0.1 |
+| 两个变体的 `profile.ts` | `BUNDLED_PLUGIN_VERSION_EXEMPTIONS` 键改为 `'@edan/edan-spec@1.0.1'` |
+| `yarn.lock` | checksum 随 tarball 更新 |
+
+豁免键**按精确插件版本记录**（`插件名@版本` → 目标 DSH 包名），所以改版本号时必须同步，
+否则新建 Profile 不会再播种这条豁免，插件会因 peer 不符被运行时禁用。
+
+**无需数据迁移**：全量扫描 `~/.dsh/sessions` 下 143 个会话，**0 个含畸形 `kind:'plugin'` 行**
+——该 bundle 从未真正落盘成功，且现存会话全部仍是 `session.v3.jsonl.zstd`，v3→v4 迁移路径
+在本机从未走过。判定与证据见 `.agents/notes/implemented/architecture/2026-10-09-edan-spec-v4-source-kind.zh.md`。
+
 **开发工具**
 
 - `scripts/preinstall-plugins.mjs` — `list` / `verify` / `add` / `remove`，一条命令同步两个变体的 4 个文件
 - `scripts/prepare-codegraph.mjs` — 按主机解压 vendor 的平台包
+- `scripts/prepare-mnemon.mjs` — 同上，用于 mnemon；新增 `linux-x64` 物化支持
 - `scripts/build-env.ps1` — Windows 侧构建环境
 
 ### 变更
 
-- `dsh-session-manager` 的声明从 `github:hkkz9522/dsh-session-manager` 换成 npm `0.4.11`，
-  构建期不再需要 git 网络
-- `@edan/edan-spec` 的声明从本机绝对路径 `file:/Users/...` 换成仓库内相对路径，
-  否则安装包在别人机器上无法解析
+- `dsh-session-manager` 的声明改用 npm `0.4.11`，构建期不再需要 git 网络
+- `@edan/edan-spec` 的声明改用仓库内相对路径，否则安装包在别人机器上无法解析
 - `dsh-plugin-desktop/package.json` 的 `build.appId` / `productName` / `nsis.shortcutName` 同步改名
 - 测试里的硬编码 `'desktop'` / `'DSH Desktop'` 改为引用 `product-identity.ts` 的常量
 
 ### 修复
 
-- **`profile-manager.ts` 的 `DEFAULT_PROFILE_NAME` 漏改** — 代码里有两条 Profile 创建路径，
+- **`profile-manager.ts` 的 `DEFAULT_PROFILE_NAME` 未同步** — 代码里有两条 Profile 创建路径，
   全新安装走的是 `profile-manager.ts` 那条。只改 `profile.ts` 会导致
   「用临时目录直测通过、真机全新安装一个插件都不预装」。两条路径现在都注入默认清单
 - **`verify-licenses.mjs` 的 SPDX 双许可误判** — `dompurify` 的
@@ -280,20 +331,66 @@ verify-licenses: 27 package(s) accepted without a license declaration (@univerjs
   已加入析取（OR）求值：任一分支在白名单即通过；`AND` 表达式仍严格匹配
 - **`x64ArchFiles` 未声明导致 universal 打包失败** — `extraResources` 让两个切片
   拿到相同内容，`@electron/universal` 对「两切片相同但未声明的原生文件」会报错
-- **Windows 校验脚本写死了应用名** — 改名时更新了 macOS 的 `verify-mac-smoke.ts`，
-  却漏了 `verify-win-installer.ts` 与 `verify-win-portable.ts`。它们仍写死
-  `'DSH Desktop.exe'`，而改名后产物名已经不同；校验器在
-  electron-builder 之后运行，找不到文件就报错，`dist:win` 的
-  「Build Windows installer」因此失败。beta 没暴露这个问题，只是因为它的字面量
-  恰好和自己的产品名一致。四处与测试夹具现在都引用 `DESKTOP_PRODUCT_NAME`
+- **Windows 校验脚本写死了应用名** — `verify-win-installer.ts` 与 `verify-win-portable.ts`
+  写死 `'DSH Desktop.exe'`，与改名后的产物不符；校验器在 electron-builder 之后运行，
+  找不到文件就报错，`dist:win` 的「Build Windows installer」因此失败。
+  `verify-mac-smoke.ts` 同步引用产品名。四处与测试夹具现在都引用 `DESKTOP_PRODUCT_NAME`
 - **`prepare-codegraph.mjs` 写死了工作区** — 路径硬编码为 `dsh-plugin-desktop`，
   而两个变体都从各自工作区调用它、`extraResources` 也各自相对于自己的目录。
-  结果是 beta 的安装包**静默地没有 codegraph CLI**（源目录从未生成，
-  electron-builder 不报错直接跳过）。改为按调用方目录解析并校验
+  文件名与调用方目录不一致时，源目录不会被生成，electron-builder 对缺失的
+  `extraResources` **静默跳过**，安装包会少一份 codegraph CLI 而不报错。改为按调用方目录解析并校验
 - **`verify-licenses.mjs` 的 LICENSE 查找依赖文件系统大小写** — 用 `existsSync`
   精确探测 `LICENSE`，等于把答案交给文件系统：`khroma@2.1.0` 附带的许可证文件是
   小写 `license`，于是同一个 gate 在 macOS（APFS 不区分大小写）通过、在 Linux CI 失败。
   改为列出目录后自行按名字匹配
+- **`verify-sidebar-browser.mjs` 的看门狗拦不住僵死** — 该脚本把 45 秒超时装在
+  `verify()` 内部、`await app.whenReady()` **之后**：Electron 在 Xvfb 下启动阶段僵死时
+  这行从未执行，**看门狗根本不存在**。
+
+  超时提到顶层（第一个 await 之前）后仍然拦不住：命令链是
+  `xvfb-run → yarn → electron → Node`，`process.exit` 只能终止最后一跳；主进程僵死时
+  **JS 事件循环一并停止，定时器回调永远不会执行**，看门狗跟着僵死。
+  现改为由 **CI 层**兜底——这一步的 `run` 用 `timeout` 包住：
+
+  ```yaml
+  run: timeout 120 xvfb-run --auto-servernum yarn workspace dsh-desktop-next verify:sidebar-browser --no-sandbox
+  ```
+
+  `timeout` 是独立进程，不受被测进程僵死影响。120 秒的依据：`verify()` 函数体内所有
+  等待最坏合计约 15 秒，健康运行只需几秒（同一次 run 中同样跑 Electron 的
+  `verify:protocol` 只用 4 秒），8 倍余量足够，又不挤占 job 的 45 分钟预算。
+  脚本内 90 秒看门狗保留，作为第一道优雅退出。
+
+  新增 `scripts/verify-sidebar-browser-timeout.mjs`（`yarn check:sidebar-browser-timeout`，
+  已接入 `check:layout`）：断言该步骤确实被包住，并实际验证 `timeout` 能结束一个僵死命令
+  （退出码 124）、放行快命令。无需网络、Electron 或显示器；本机无 `timeout` 时跳过而非失败。
+  去掉包裹时该门禁报错（实测 exit 1）
+- **CI 的 job 级超时缺失** — `.github/workflows/ci.yml` 只有 `desktop-linux` 与
+  `desktop-macos` 两处 `timeout-minutes: 60`，其余 5 个 job 落到 GitHub 的 **360 分钟**
+  默认值。现为全部 7 个 job 设定上限：`changes` 15、`check` 45、`desktop-windows` /
+  `desktop-linux` / `desktop-macos` 各 60、`upstream-command-windows` 30、`publish` 30
+- **`desktop-cli-shell.spec.ts` 的断言跟着宿主平台走** — `desktopCliProfileName`
+  的 `platform` 形参缺省经 `?? process.platform` 落到宿主平台，省略该参数的测试因此
+  在 macOS 笔记本上断言 macOS 行为（绿）、在 `ubuntu-latest` 上断言 Linux 行为（红）。
+  CI 上稳定复现：
+
+  ```
+  AssertionError: expected '.bashrc' to be '.bash_profile' // Object.is equality
+   ❯ tests/desktop-cli-shell.spec.ts:58:48
+  Error: ENOENT: no such file or directory, open '/tmp/dsh-cli-shell-*/user/.zshrc'
+   ❯ tests/desktop-cli-shell.spec.ts:99:21
+  Tests  10 failed | 1895 passed | 13 skipped (1918)
+  ```
+
+  修法是让**每个断言显式声明平台**：`cli()` 辅助函数固定注入 `platform: 'darwin'`，
+  内联选项块同样补齐（含最后一个漏网的），使测试结果与宿主平台无关。
+
+  > **教训：本地绿灯不能证明 CI 会绿。** 该缺陷在 macOS 上完全不可见。
+  > 复现手法：临时 vitest 配置注入 `setupFiles` 把 `process.platform` 钉成 `linux`，
+  > 即可在 macOS 上跑出 CI 的行为——**先验证伪装确实生效**（探针断言
+  > `process.platform === 'linux'`），否则"绿"什么都证明不了。
+  > 注意 `NODE_OPTIONS="--import=..."` 不行，会打断 vitest/rolldown 的原生绑定解析
+  > （`Cannot find module './rolldown-binding.wasi.cjs'`）。
 
 ### 未完成 / 已知限制
 
@@ -304,25 +401,40 @@ verify-licenses: 27 package(s) accepted without a license declaration (@univerjs
 | 上游同步 | **尚未同步。** 本地落后上游 39 个提交（2.0.10 → 2.0.13），详见文末 |
 | 代码签名 | 未签名。包内 `node` 是 115 MB 的 Mach-O，若日后走签名路线需额外 entitlements（JIT 相关） |
 | 排除的插件 | `@huanlin/dsh-plugin-better-sidebar-plugin-office` 为 **AGPL-3.0**，不在可再分发白名单内，未预装 |
+| Linux 产物 | **AppImage 挂载点每次变化**，shim 指向的绝对路径在应用退出后失效（下次启动会重写）。`.deb` 安装路径固定，不受影响 |
+| `check` job | 第 15 步 `verify:sidebar-browser` 在 Xvfb 下可能僵死。脚本内看门狗对僵死无效（见「修复」），现由 CI 层 `timeout 120` 兜底 |
 
 ### 验证
 
-macOS 侧已在真机完成端到端验证：
+macOS 真机端到端验证：
 
 ```
-DMG 体积          338 MB → 392 MB（+54 MB）
 包内 CLI 独立运行  空 PATH ✓ / 真离线沙箱 ✓
 终端可用          zsh -i -c 'codegraph --version' → 1.6.0
 ~/.zshrc          备份与原文件逐字节一致；重启幂等（标记数、备份数、文件哈希均不变）
 新 Profile        10 个 bundle（base + web-app + 8 插件），全部从安装包解析
-单测              stable 1379 passed / beta 1365 passed
-门禁              typecheck / verify-desktop-variants（183 文件）/ licenses / closure / layout 全通过
 ```
 
-Windows 侧通过 GitHub Actions 构建（`desktop-windows` job，两个变体各产出
-`Setup.exe` 与便携版 ZIP），**尚未在真实 Windows 上验证**。
+本地门禁与测试：
 
-CI 全绿：`changes` / `check`（ubuntu）/ `upstream` / `desktop-windows` ×2。
+```
+单测              stable 1906 passed / 12 skipped（1918）
+                  beta   1877 passed / 10 skipped（1887）
+门禁              typecheck（两变体）/ verify-desktop-variants（210 文件）/
+                  plugins:verify（10 个预装插件）/ licenses / closure / layout 全通过
+edan-spec v4      v4 校验谓语复现：{kind:'plugin'} 被拒 / {kind:'@edan/edan-spec'} 通过
+                  三处 lib/index.js（vendor tarball / 源目录打包 / 两变体 node_modules）逐字节一致
+旧会话扫描        ~/.dsh/sessions 下 143 个会话，0 个含 "kind":"plugin"
+Linux 测试        以 linux 伪装宿主跑 desktop-cli-shell.spec.ts：29 passed
+超时门禁          僵死命令以 124 结束（实测 2.7 秒）；去掉 CI 层包裹时该门禁 exit 1
+```
+
+CI（run `37923686283`，SHA `ac850bf5`）：`changes` / `desktop-windows` / `desktop-linux` /
+`desktop-macos` / `upstream-command-windows` / `publish` 全部成功，Release
+`evo-2.0.17-evo.3-ac850bf5` 已发布（Latest），5 个产物：universal DMG、x64 Setup.exe、
+x64 Portable.zip、x86_64 AppImage、amd64 .deb。**`check` 为 `cancelled`** —— 第 10 步
+`yarn check`（含上述全部单测）**通过**，随后第 15 步 `verify:sidebar-browser` 僵死，
+被 job 级 45 分钟超时终止。该步骤现由 CI 层 `timeout 120` 兜底，尚未经 CI 实测。
 
 ---
 
