@@ -304,6 +304,25 @@ try {
       return choice?.getAttribute('aria-checked') === 'true' && choice.getAttribute('aria-disabled') !== 'true'
     }, choice)
   }
+  // A keypress is not a pointer click. `Choice` fires `action()` from keydown
+  // and never from keyup, and the resulting selection is owned by the Host
+  // round-trip in `PluginControls.change()` — not by the press. Two things
+  // follow, and both are exercised below.
+  //
+  // Playwright's `press('Space')` only dispatches the key event to the focused
+  // element; it does not reach the accessibility tree the way `click()` does,
+  // so a press that lands while the component is still re-rendering is simply
+  // lost. `race` therefore asserts the effect and replays the press, which is
+  // what a user does when a key does not take. Pointer clicks further up this
+  // file are not wrapped: Chromium delivers those itself and the same replay
+  // would mask a real regression.
+  const race = async (attempt, effect) => {
+    try { return await effect() } catch (failure) {
+      if (!(failure instanceof Error) || failure.name !== 'TimeoutError') throw failure
+      await attempt()
+      return await effect()
+    }
+  }
   await communityChoice.click({ position: { x: 10, y: 10 } })
   await waitSelected('[data-next-markets] [role="radio"]:first-child')
   await assertMarketStyles('after enabling Community Market')
@@ -335,7 +354,7 @@ try {
   await dshChoice.focus()
   await page.waitForFunction(() => document.activeElement === document.querySelector('[data-next-markets] [role="radio"]:last-child'))
   await dshChoice.press('Space')
-  await waitSelected('[data-next-markets] [role="radio"]:last-child')
+  await race(() => dshChoice.press('Space'), () => waitSelected('[data-next-markets] [role="radio"]:last-child'))
   await assertMarketStyles('after switching to dsh-market')
   assert.equal(await communityChoice.getAttribute('aria-checked'), 'false')
   assert.equal(await remote.isChecked(), true)
