@@ -834,7 +834,9 @@ export function seedShippedPluginDependencies(dir: string): void {
  * A link is relative, so the Profile stays relocatable: the walk from
  * `<profile>/node_modules/<name>` back to the Profile directory is computed
  * against `dir`, and the remaining segments name the plugin inside the
- * installation.
+ * installation. Windows cannot keep that property, because the directory link
+ * a standard user may create there is a junction, which stores an absolute
+ * target.
  *
  * `dir` is where the links are written and `published` is where the Profile
  * will live. They differ while a Profile is being staged and renamed into
@@ -847,6 +849,7 @@ export function seedShippedPluginDependencies(dir: string): void {
  * @param dir - Absolute directory to write the links into.
  * @param published - Absolute Profile directory the links must be correct at.
  * @param installations - the shipped plugins and their installed directories.
+ * @param platform - the platform the links are created for.
  */
 export function seedShippedPluginLinks(
   dir: string,
@@ -855,18 +858,28 @@ export function seedShippedPluginLinks(
     desktopPluginDependencies(),
     packageDirInInstallation,
   ),
+  platform: NodeJS.Platform = process.platform,
 ): void {
   const modulesDir = join(dir, 'node_modules')
   mkdirSync(modulesDir, { recursive: true })
   for (const { name, dir: target } of installations) {
     const linkPath = join(modulesDir, ...name.split('/'))
-    const link = relative(join(published, 'node_modules', ...name.split('/')), target)
+    // Windows directory symlinks need SeCreateSymbolicLinkPrivilege, which a
+    // standard user lacks, so Profile creation failed outright with EPERM.
+    // Junctions are the directory link a standard user may create, and
+    // `windows-volume-diagnostics.ts` already requires NTFS for exactly that
+    // junction behavior. A junction stores an absolute target, so Windows takes
+    // `target` directly instead of the relocatable relative link used elsewhere.
+    const windows = platform === 'win32'
+    const link = windows
+      ? target
+      : relative(join(published, 'node_modules', ...name.split('/')), target)
     // A broken link still occupies the name, and `existsSync` reports it as
     // absent. Replacing it would discard whatever the user pointed there, so
     // the entry is left exactly as found.
     if (lstatSync(linkPath, { throwIfNoEntry: false }) !== undefined) continue
     mkdirSync(dirname(linkPath), { recursive: true })
-    symlinkSync(link, linkPath, 'dir')
+    symlinkSync(link, linkPath, windows ? 'junction' : 'dir')
   }
 }
 

@@ -1,10 +1,10 @@
-import { existsSync, lstatSync, mkdtempSync, readFileSync, readlinkSync, readdirSync, rmSync } from 'node:fs'
+import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readlinkSync, readdirSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { dirname, join, resolve } from 'node:path'
+import { dirname, isAbsolute, join, resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { createDesktopWebProfile } from '../src/profile-manager.ts'
 import { DEFAULT_PROFILE_PLUGIN_BUNDLES, desktopPluginDependencies, shippedPluginDependencySpecs } from '../src/product-identity.ts'
-import { prepareDesktopProfile, ensureDesktopProfile } from '../src/profile.ts'
+import { prepareDesktopProfile, ensureDesktopProfile, seedShippedPluginLinks } from '../src/profile.ts'
 
 /**
  * End-to-end check of the offline seed. A Profile must be created the way the
@@ -119,5 +119,29 @@ describe('offline profile seed', () => {
       expect(prepareDesktopProfile(undefined, home, 'darwin').requiresDependencyMigration).toBe(false)
       rmSync(home, { recursive: true, force: true })
     })
+  })
+
+  /**
+   * A standard Windows user may not create a directory symlink, so Profile
+   * creation failed with EPERM before the seed ever ran. Windows therefore
+   * links with junctions, which store an absolute target: the relative layout
+   * the other platforms rely on is deliberately not asserted here.
+   */
+  it('links Windows profiles through junctions with absolute targets', () => {
+    const home = mkdtempSync(join(tmpdir(), 'dsh-offline-seed-win-'))
+    const published = join(home, 'profiles', 'web')
+    const staging = join(home, 'profiles', '.web.creating')
+    mkdirSync(staging, { recursive: true })
+    seedShippedPluginLinks(staging, published, undefined, 'win32')
+    const modulesDir = join(staging, 'node_modules')
+    for (const name of DEFAULT_PROFILE_PLUGIN_BUNDLES) {
+      const linkPath = join(modulesDir, ...name.split('/'))
+      expect(lstatSync(linkPath).isSymbolicLink(), `${name} is not a link`).toBe(true)
+      // A junction must carry the installation path itself; a relative target
+      // would resolve against the staging directory and dangle.
+      expect(isAbsolute(readlinkSync(linkPath)), `${name} link is not absolute`).toBe(true)
+      expect(existsSync(join(readlinkSync(linkPath), 'package.json')), `${name} resolves to nothing`).toBe(true)
+    }
+    rmSync(home, { recursive: true, force: true })
   })
 })
