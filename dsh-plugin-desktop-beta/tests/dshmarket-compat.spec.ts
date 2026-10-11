@@ -39,12 +39,25 @@ interface MarketCommandRuntime {
 
 type MarketRoute = (request: object, response: object) => void | Promise<void>
 
-const { registryFetch } = vi.hoisted(() => ({ registryFetch: vi.fn<typeof fetch>() }))
-// Market uses undici's fetch with its own dispatcher, bypassing global fetch.
-// Mock that transport so version lookups cannot escape to the live registry.
-vi.mock('undici', async importOriginal => ({
-  ...await importOriginal<Record<string, unknown>>(),
-  fetch: registryFetch,
+const { registryFetch, netPath } = vi.hoisted(() => {
+  const { createRequire: hoistedRequire } = require('node:module') as typeof import('node:module')
+  const { dirname: hoistedDirname, join: hoistedJoin } = require('node:path') as typeof import('node:path')
+  const manifest = hoistedRequire(__filename).resolve('dshmarket/package.json')
+  return {
+    registryFetch: vi.fn<typeof fetch>(),
+    netPath: hoistedJoin(hoistedDirname(manifest), 'lib', 'net.js'),
+  }
+})
+// Market reaches the registry through `lib/net.js`, which imports undici by
+// name and hands it a private dispatcher. This suite loads the market by
+// absolute file URL, so its dependencies resolve through Node's own loader
+// and neither a `vi.mock('undici')` nor an inline entry can reach them.
+// Mock the market's own network module by absolute path instead: the mock is
+// keyed on the resolved file, so it intercepts the file-URL import chain and
+// no version lookup can escape to the live registry.
+vi.mock(netPath, () => ({
+  configuredProxy: () => null,
+  marketFetch: registryFetch,
 }))
 const temporaryProfiles: string[] = []
 
