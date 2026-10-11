@@ -899,16 +899,16 @@ describe('published package surface', () => {
   it('separates unsigned smoke packaging from the signed macOS release', () => {
     const packageDir = readFileSync(new URL('scripts/package-dir.mjs', packageRoot), 'utf8')
 
-    expect(manifest.scripts?.['package:dir']).toBe('node ../scripts/prepare-codegraph.mjs && node ../scripts/prepare-mnemon.mjs && yarn run build && yarn run prepare:electron-native && node scripts/package-dir.mjs')
+    expect(manifest.scripts?.['package:dir']).toBe('node ../scripts/prepare-codegraph.mjs && node ../scripts/prepare-mnemon.mjs && node ../scripts/prepare-git-ai.mjs && yarn run build && yarn run prepare:electron-native && node scripts/package-dir.mjs')
     expect(packageDir).toContain("CSC_IDENTITY_AUTO_DISCOVERY: 'false'")
     expect(packageDir).toContain("'--config.forceCodeSigning=false'")
     expect(packageDir).toContain("'--config.mac.identity=null'")
     expect(packageDir).toContain("'--config.mac.notarize=false'")
     expect(packageDir).toContain("'--config.win.signExecutable=false'")
-    expect(manifest.scripts?.['dist:mac']).toBe('node ../scripts/prepare-codegraph.mjs && node ../scripts/prepare-mnemon.mjs && node scripts/release-mac.ts')
-    expect(manifest.scripts?.['dist:mac-smoke']).toBe('node ../scripts/prepare-codegraph.mjs && node ../scripts/prepare-mnemon.mjs && node scripts/package-mac.ts')
-    expect(manifest.scripts?.['dist:win']).toBe('node ../scripts/prepare-codegraph.mjs && node ../scripts/prepare-mnemon.mjs && node scripts/package-win.ts')
-    expect(manifest.scripts?.['dist:win-portable']).toBe('node ../scripts/prepare-codegraph.mjs && node ../scripts/prepare-mnemon.mjs && node scripts/package-win-portable.ts')
+    expect(manifest.scripts?.['dist:mac']).toBe('node ../scripts/prepare-codegraph.mjs && node ../scripts/prepare-mnemon.mjs && node ../scripts/prepare-git-ai.mjs && node scripts/release-mac.ts')
+    expect(manifest.scripts?.['dist:mac-smoke']).toBe('node ../scripts/prepare-codegraph.mjs && node ../scripts/prepare-mnemon.mjs && node ../scripts/prepare-git-ai.mjs && node scripts/package-mac.ts')
+    expect(manifest.scripts?.['dist:win']).toBe('node ../scripts/prepare-codegraph.mjs && node ../scripts/prepare-mnemon.mjs && node ../scripts/prepare-git-ai.mjs && node scripts/package-win.ts')
+    expect(manifest.scripts?.['dist:win-portable']).toBe('node ../scripts/prepare-codegraph.mjs && node ../scripts/prepare-mnemon.mjs && node ../scripts/prepare-git-ai.mjs && node scripts/package-win-portable.ts')
     expect(manifest.scripts?.['check:win-package:platform']).toContain('yarn workspace dsh-community-market build')
     expect(manifest.scripts?.['check:win-package:platform']).toContain('yarn run build')
     expect(manifest.scripts?.['check:win-package']).toBe('yarn run check:win-package:platform && yarn run typecheck')
@@ -932,7 +932,7 @@ describe('published package surface', () => {
     expect(manifest.scripts?.['check:mac-package:platform']).toContain('yarn run verify:closure')
     expect(manifest.scripts?.['check:linux-package']).toBe('yarn run check:linux-package:platform && yarn run typecheck')
     expect(manifest.scripts?.['check:linux-package:platform']).not.toContain('typecheck')
-    expect(manifest.scripts?.['dist:linux']).toBe('node ../scripts/prepare-codegraph.mjs && node ../scripts/prepare-mnemon.mjs && node scripts/package-linux.ts')
+    expect(manifest.scripts?.['dist:linux']).toBe('node ../scripts/prepare-codegraph.mjs && node ../scripts/prepare-mnemon.mjs && node ../scripts/prepare-git-ai.mjs && node scripts/package-linux.ts')
     expect(manifest.scripts?.['verify:cli']).toBe('node scripts/verify-cli-runtime.mjs')
     expect(manifest.scripts?.check).toContain('yarn run verify:cli')
     expect(workspaceManifest.scripts?.['dist:mac'])
@@ -946,10 +946,11 @@ describe('published package surface', () => {
     // The vendored CodeGraph CLI must reach the installer as extraResources, not as a
     // Yarn dependency: a platform package carrying "cpu": ["arm64"] can be dropped from
     // the x64 slice of the universal build and break @electron/universal. The vendored
-    // Mnemon CLI ships the same way and for the same reason.
+    // Mnemon and git-ai CLIs ship the same way and for the same reason.
     expect(manifest.build?.extraResources).toEqual([
       { from: 'build/codegraph/host', to: 'codegraph' },
       { from: 'build/mnemon/host', to: 'mnemon' },
+      { from: 'build/git-ai/host', to: 'git-ai' },
       { from: 'build/dream-skin-default.json', to: 'dream-skin-default.json' },
     ])
     expect(manifest.build?.afterPack).toBe('./scripts/verify-packaged-runtime.ts')

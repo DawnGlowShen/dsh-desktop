@@ -151,6 +151,7 @@ export const MACOS_UNIVERSAL_BUNDLED_CLI_ENTRIES = [
   { path: 'Resources/codegraph/node', executable: true, machO: true },
   { path: 'Resources/codegraph/lib/kernel/codegraph-kernel.node', executable: false, machO: true },
   { path: 'Resources/mnemon/bin/mnemon', executable: true, machO: true },
+  { path: 'Resources/git-ai/bin/git-ai', executable: true, machO: true },
 ] as const satisfies readonly {
   readonly path: string
   readonly executable: boolean

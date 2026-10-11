@@ -64,11 +64,12 @@ describe('universal macOS native runtime preparation', () => {
   // list, dropping an entry would remove its file and its expectation together
   // and the main smoke case would stay green — the silent regression this whole
   // change exists to catch.
-  it('verifies exactly the three bundled CLI payloads', () => {
+  it('verifies exactly the four bundled CLI payloads', () => {
     expect(MACOS_UNIVERSAL_BUNDLED_CLI_ENTRIES).toEqual([
       { path: 'Resources/codegraph/node', executable: true, machO: true },
       { path: 'Resources/codegraph/lib/kernel/codegraph-kernel.node', executable: false, machO: true },
       { path: 'Resources/mnemon/bin/mnemon', executable: true, machO: true },
+      { path: 'Resources/git-ai/bin/git-ai', executable: true, machO: true },
     ])
   })
 })

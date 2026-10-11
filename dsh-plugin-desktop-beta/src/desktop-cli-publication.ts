@@ -41,6 +41,8 @@ export interface DesktopCliLauncherSources {
   codegraphPathDir?: string | undefined
   /** Published Mnemon `bin` directory, or `undefined` when it was skipped. */
   mnemonPathDir?: string | undefined
+  /** Published git-ai `bin` directory, or `undefined` when it was skipped. */
+  gitAiPathDir?: string | undefined
 }
 
 /**
@@ -73,6 +75,15 @@ export function desktopCliLaunchers(sources: DesktopCliLauncherSources): Desktop
       name: 'mnemon',
       // Mnemon ships a real executable, not a batch shim.
       launcherPath: join(sources.mnemonPathDir, windows ? 'mnemon.exe' : 'mnemon'),
+    })
+  }
+  if (sources.gitAiPathDir !== undefined) {
+    launchers.push({
+      name: 'git-ai',
+      // git-ai ships a real executable, and its name is load-bearing: under any
+      // other name it degrades to a `git` proxy that reports the system Git
+      // version instead of its own, so the shim must keep `git-ai`.
+      launcherPath: join(sources.gitAiPathDir, windows ? 'git-ai.exe' : 'git-ai'),
     })
   }
   return launchers

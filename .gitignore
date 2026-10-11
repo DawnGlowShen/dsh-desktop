@@ -26,3 +26,7 @@ dsh-plugin-desktop-beta/build/codegraph/
 # Vendored Mnemon CLI materialized by scripts/prepare-mnemon.mjs
 dsh-plugin-desktop/build/mnemon/
 dsh-plugin-desktop-beta/build/mnemon/
+
+# Vendored git-ai CLI materialized by scripts/prepare-git-ai.mjs
+dsh-plugin-desktop/build/git-ai/
+dsh-plugin-desktop-beta/build/git-ai/

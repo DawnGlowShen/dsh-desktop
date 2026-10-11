@@ -46,9 +46,15 @@ import { detectDesktopWindowsInstallKind } from './desktop-windows-install-kind.
 import { createPowerShellWindowsKeyProbe } from './desktop-windows-path.ts'
 import { seedDesktopDreamSkin } from './desktop-dream-skin-default.ts'
 import {
+  desktopGitAiLogger,
+  ensureDesktopGitAiTrace2Config,
+  startDesktopGitAiDaemon,
+} from './desktop-git-ai-config.ts'
+import {
   installDesktopDshRuntime,
   installDesktopPnpmRuntime,
   publishDesktopCodegraphRuntime,
+  publishDesktopGitAiRuntime,
   publishDesktopMnemonRuntime,
 } from './desktop-runtime-environment.ts'
 import { desktopProductVersion, ElectronDesktopRuntime } from './electron-runtime.ts'
@@ -842,6 +848,53 @@ async function start(): Promise<void> {
     }
     const mnemonRuntime = mnemonPublication.installation
     const releaseMnemonRuntime = generation.own(() => { mnemonRuntime?.dispose() })
+    // Publish the packaged git-ai CLI the same way, and point the user's global
+    // Git at its Trace2 daemon. `dsh-git-ai` resolves `git-ai` from PATH, but
+    // attribution only works once `trace2.eventTarget` reaches the daemon
+    // socket, so a preinstalled git-ai has to configure that itself rather than
+    // asking the user to hand-edit `~/.gitconfig`.
+    const gitAiPublication = publishDesktopGitAiRuntime(
+      join(process.resourcesPath, 'git-ai'),
+      process.platform,
+      process.arch,
+      process.env,
+    )
+    if (gitAiPublication.failure !== undefined) {
+      electronLogger.error(`${BIN_NAME}: ${gitAiPublication.failure}`)
+    }
+    const gitAiRuntime = gitAiPublication.installation
+    const releaseGitAiRuntime = generation.own(() => { gitAiRuntime?.dispose() })
+    // Start the daemon before configuring Git, so the socket the config points
+    // at is already listening when the user's first commit emits Trace2 events.
+    // `git-ai bg start` returns once the daemon is up rather than staying in the
+    // foreground, so awaiting it does not hold up startup.
+    const gitAiDaemon = await startDesktopGitAiDaemon({
+      gitAiPathDir: gitAiRuntime?.pathDir,
+      logger: desktopGitAiLogger(app.getPath('home')),
+    })
+    if (gitAiDaemon.failure !== undefined) {
+      electronLogger.error(`${BIN_NAME}: ${gitAiDaemon.failure}`)
+    }
+    // Point the user's global Git at that daemon. Skipped when the CLI could not
+    // be published at all, because the config is useless without it and there is
+    // no reason to edit the user's gitconfig for a runtime that is missing.
+    if (gitAiRuntime !== undefined) {
+      try {
+        ensureDesktopGitAiTrace2Config({
+          homeDir: app.getPath('home'),
+          gitConfigPath: join(app.getPath('home'), '.gitconfig'),
+          logger: desktopGitAiLogger(
+            app.getPath('home'),
+            message => { electronLogger.info(`${BIN_NAME}: ${message}`) },
+          ),
+        })
+      } catch (cause) {
+        electronLogger.error(
+          `${BIN_NAME}: git-ai Trace2 configuration failed: `
+            + `${cause instanceof Error ? cause.message : String(cause)}`,
+        )
+      }
+    }
     const channelHomeResolution = resolveDesktopChannelHome()
     const fallbackHome = channelHomeResolution.homeDir
     const defaultHome = channelHomeResolution.channelHome
@@ -875,6 +928,7 @@ async function start(): Promise<void> {
         platform: process.platform,
         codegraphPathDir: codegraphRuntime?.pathDir,
         mnemonPathDir: mnemonRuntime?.pathDir,
+        gitAiPathDir: gitAiRuntime?.pathDir,
       })
       if (launchers.length > 0) {
         try {
@@ -907,6 +961,7 @@ async function start(): Promise<void> {
             platform: process.platform,
             codegraphPathDir: codegraphRuntime?.pathDir,
             mnemonPathDir: mnemonRuntime?.pathDir,
+            gitAiPathDir: gitAiRuntime?.pathDir,
           }),
           shell: process.env.SHELL,
         })
@@ -1809,6 +1864,12 @@ async function start(): Promise<void> {
             hostCtx.effect(
               () => releaseMnemonRuntime,
               'dsh-plugin-desktop: packaged mnemon runtime PATH',
+            )
+          }
+          if (gitAiRuntime !== undefined) {
+            hostCtx.effect(
+              () => releaseGitAiRuntime,
+              'dsh-plugin-desktop: packaged git-ai runtime PATH',
             )
           }
           if (dshRuntime !== undefined) {

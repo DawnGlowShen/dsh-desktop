@@ -110,6 +110,17 @@ export interface DesktopMnemonRuntimeInstallation {
   dispose(): void
 }
 
+/**
+ * Inputs used to expose the packaged git-ai CLI to the Host process.
+ *
+ * The same type already describes the CodeGraph and Mnemon bundles, and git-ai
+ * follows their layout exactly: a `bin` directory holding one launcher.
+ */
+export type DesktopGitAiRuntimeOptions = DesktopMnemonRuntimeOptions
+
+/** Reversible Host PATH update publishing the packaged git-ai CLI. */
+export type DesktopGitAiRuntimeInstallation = DesktopMnemonRuntimeInstallation
+
 /** Reject a value that cannot be represented in a generated command file. */
 function assertScriptValue(label: string, value: string): void {
   if (value.length === 0) {
@@ -820,6 +831,45 @@ export function installDesktopMnemonRuntime(
 ): DesktopMnemonRuntimeInstallation {
   // The vendored Windows archive carries a real `bin/mnemon.exe`, not a `.cmd` shim.
   return installBundledCliRuntime('mnemon', 'mnemon.exe', options)
+}
+
+/**
+ * Publish the packaged git-ai CLI, or report why it stayed unavailable.
+ *
+ * @param bundleDir - packaged bundle; its `bin` directory holds the launcher.
+ * @param platform - Host platform; any other platform skips the bundle.
+ * @param arch - Host architecture; a mismatched bundle is skipped, not published broken.
+ * @param environment - parent environment receiving the PATH prepend.
+ * @returns the installation, or a `failure` reason ready to log.
+ */
+export function publishDesktopGitAiRuntime(
+  bundleDir: string,
+  platform: NodeJS.Platform,
+  arch: NodeJS.Architecture,
+  environment: NodeJS.ProcessEnv,
+): DesktopBundledCliPublication<DesktopGitAiRuntimeInstallation> {
+  return publishBundledCliRuntime({
+    label: 'git-ai',
+    supportsHost: () => bundleSupportsHost(bundleDir, platform, arch),
+    install: () => installDesktopGitAiRuntime({ platform, bundleDir, environment }),
+  })
+}
+
+/**
+ * Install the packaged git-ai CLI into this Electron process's PATH.
+ *
+ * `dsh-git-ai` runs `git-ai` by name (`config.gitAiPath` defaults to `git-ai`),
+ * so prepending the bundle's `bin` directory is what makes attribution work
+ * without any plugin configuration.
+ *
+ * @param options - packaged bundle directory, platform, and parent environment.
+ * @returns the published directory and an idempotent PATH disposer.
+ */
+export function installDesktopGitAiRuntime(
+  options: DesktopGitAiRuntimeOptions,
+): DesktopGitAiRuntimeInstallation {
+  // git-ai ships a real executable on every platform, including Windows.
+  return installBundledCliRuntime('git-ai', 'git-ai.exe', options)
 }
 
 /**
