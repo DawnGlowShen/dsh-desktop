@@ -5,14 +5,16 @@ import { createRequire } from 'node:module'
 import {
   existsSync,
   lstatSync,
+  mkdirSync,
   readdirSync,
   readFileSync,
   renameSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from 'node:fs'
 import { isIP } from 'node:net'
-import { dirname, extname, join, resolve } from 'node:path'
+import { dirname, extname, join, relative, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { evaluate, isJsExpr, type EntryOptions } from '@deepseek-ai/cordis-plugin-loader'
 import type { PatchOptions } from '@deepseek-ai/cordis-plugin-include'
@@ -47,11 +49,15 @@ import {
   type DesktopNetworkExposure,
 } from './desktop-network.ts'
 import type { DesktopShellMode } from './runtime.ts'
+import { packagedDependencyPath } from './packaged-runtime-path.ts'
 import {
   DEFAULT_PROFILE_PLUGIN_BUNDLES,
   DESKTOP_PACKAGE_NAME,
   DESKTOP_PACKAGE_NAMES,
+  desktopPluginDependencies,
   DESKTOP_PROFILE_NAME,
+  shippedPluginInstallations,
+  type ShippedPluginInstallation,
 } from './product-identity.ts'
 import {
   DEFAULT_MACOS_WINDOW_MATERIAL,
@@ -785,6 +791,101 @@ function seedBundledPluginExemptions(dir: string, runtimeVersion: string): void 
 }
 
 /**
+ * Record this installation's shipped plugins in a freshly created Profile's
+ * `dependencies`, and link each one into the Profile's own `node_modules`.
+ *
+ * The Plugins page lists a bundle only when the Profile names it in
+ * `dependencies` (the Host reads the keys alone), so seeding the names into
+ * `dsh.profile.bundles` without this leaves every shipped plugin off the page
+ * and its configuration unreachable. Registering the name is the accurate
+ * record too: the Profile genuinely loads and uses them.
+ *
+ * The links keep the Profile self-sufficient without a package manager. Every
+ * link points at the installation's copy, so the Profile stores no second copy,
+ * and Node resolves a linked plugin's own dependencies from that copy's
+ * realpath inside the installation, where they are already installed. An
+ * offline installation therefore resolves every shipped plugin without reaching
+ * a registry, and the Profile never has to materialize the tree itself.
+ *
+ * Only absent entries and links are added, so a Profile created over a
+ * hand-edited manifest keeps whatever it already declares.
+ * @param dir - Absolute Profile directory of a Profile this call just created.
+ */
+export function seedShippedPluginDependencies(dir: string): void {
+  const manifest = readProfileManifest(BIN_NAME, dir)
+  const recorded = manifest.dependencies ?? {}
+  const installations = shippedPluginInstallations(desktopPluginDependencies(), packageDirInInstallation)
+  const added = installations.filter(({ name }) => !Object.hasOwn(recorded, name))
+  if (added.length > 0) {
+    writeProfileManifest(dir, {
+      ...manifest,
+      dependencies: {
+        ...recorded,
+        ...Object.fromEntries(added.map(({ name, spec }) => [name, spec])),
+      },
+    })
+  }
+  seedShippedPluginLinks(dir, dir, installations)
+}
+
+/**
+ * Link every shipped plugin into a Profile's `node_modules`.
+ *
+ * A link is relative, so the Profile stays relocatable: the walk from
+ * `<profile>/node_modules/<name>` back to the Profile directory is computed
+ * against `dir`, and the remaining segments name the plugin inside the
+ * installation.
+ *
+ * `dir` is where the links are written and `published` is where the Profile
+ * will live. They differ while a Profile is being staged and renamed into
+ * place: the link must be correct at `published`, because `renameSync` moves a
+ * relative link to the destination it was computed for.
+ *
+ * A link the user already created or replaced is never overwritten: only a
+ * missing entry is added. Unexpected filesystem failures surface, because a
+ * Profile that silently lacks a plugin directory fails later while loading it.
+ * @param dir - Absolute directory to write the links into.
+ * @param published - Absolute Profile directory the links must be correct at.
+ * @param installations - the shipped plugins and their installed directories.
+ */
+export function seedShippedPluginLinks(
+  dir: string,
+  published: string,
+  installations: readonly ShippedPluginInstallation[] = shippedPluginInstallations(
+    desktopPluginDependencies(),
+    packageDirInInstallation,
+  ),
+): void {
+  const modulesDir = join(dir, 'node_modules')
+  mkdirSync(modulesDir, { recursive: true })
+  for (const { name, dir: target } of installations) {
+    const linkPath = join(modulesDir, ...name.split('/'))
+    const link = relative(join(published, 'node_modules', ...name.split('/')), target)
+    // A broken link still occupies the name, and `existsSync` reports it as
+    // absent. Replacing it would discard whatever the user pointed there, so
+    // the entry is left exactly as found.
+    if (lstatSync(linkPath, { throwIfNoEntry: false }) !== undefined) continue
+    mkdirSync(dirname(linkPath), { recursive: true })
+    symlinkSync(link, linkPath, 'dir')
+  }
+}
+
+/**
+ * Resolve one package to the directory this installation holds it in.
+ *
+ * The installation anchor is this module's own package, so the lookup walks the
+ * same `node_modules` tree the Loader resolves bundles from. A package that is
+ * absent answers `undefined` rather than throwing, because a shipped plugin
+ * this installation does not hold cannot be linked.
+ * @param packageName - exact npm package name.
+ * @returns the absolute package directory, or `undefined` when absent.
+ */
+function packageDirInInstallation(packageName: string): string | undefined {
+  const manifestPath = packagedDependencyPath(import.meta.url, `${packageName}/package.json`)
+  return existsSync(manifestPath) ? dirname(manifestPath) : undefined
+}
+
+/**
  * Initialize or repair the persistent desktop profile.
  * @param home - Harness home containing the profiles directory.
  * @returns the absolute profile directory.
@@ -793,6 +894,7 @@ export function ensureDesktopProfile(home: string = resolveDshHome()): string {
   const dir = resolveProfileDir(DESKTOP_PROFILE_NAME, home)
   if (!existsSync(join(dir, 'package.json'))) {
     initProfile(dir, [...REQUIRED_BUNDLES, ...DEFAULT_PROFILE_PLUGIN_BUNDLES])
+    seedShippedPluginDependencies(dir)
   }
   seedBundledPluginExemptions(dir, getDshRuntimeVersion())
   const manifest = readProfileManifest(BIN_NAME, dir)
@@ -878,6 +980,60 @@ function compatiblePnpmPackageManager(value: unknown): boolean {
   return match !== null && Number(match[1]) >= 10
 }
 
+/**
+ * Whether a Profile's `node_modules` is the launcher's own link projection.
+ *
+ * A Profile created by `seedShippedPluginLinks` resolves every shipped plugin
+ * through a relative symlink into the installation and records the matching
+ * names in `dependencies`. It is a complete, self-sufficient layout -- but it
+ * is not one pnpm produced: there is no `.modules.yaml` and no lockfile, so
+ * `profileDependencyMigrationRequired` would otherwise read it as a legacy
+ * tree on every launch and hand it to `pnpm install`, which needs the registry
+ * and therefore fails on the offline installations this layout exists for.
+ *
+ * The test is deliberately strict: every entry must be a link (including
+ * inside scope directories) and pnpm's own module metadata must be absent.
+ * A tree that holds any real directory, or any pnpm state, is never claimed
+ * here, so a genuine pnpm layout is left to the migration decision.
+ * @param modulesDir - the Profile's `node_modules` directory.
+ * @returns whether the directory is exactly a launcher-written link set.
+ */
+function isLauncherLinkProjection(modulesDir: string): boolean {
+  if (existsSync(join(modulesDir, '.modules.yaml'))) return false
+  let entries
+  try {
+    entries = readdirSync(modulesDir, { withFileTypes: true })
+  } catch (cause) {
+    if ((cause as NodeJS.ErrnoException).code === 'ENOENT') return false
+    throw cause
+  }
+  if (entries.length === 0) return false
+  let links = 0
+  for (const entry of entries) {
+    // pnpm's own private bookkeeping is never part of a seeded link set.
+    if (entry.name.startsWith('.')) return false
+    if (entry.isSymbolicLink()) { links += 1; continue }
+    if (entry.isDirectory() && entry.name.startsWith('@')) {
+      const scope = join(modulesDir, entry.name)
+      let children
+      try {
+        children = readdirSync(scope, { withFileTypes: true })
+      } catch (cause) {
+        if ((cause as NodeJS.ErrnoException).code === 'ENOENT') return false
+        throw cause
+      }
+      if (children.length === 0) return false
+      for (const child of children) {
+        if (!child.isSymbolicLink()) return false
+        links += 1
+      }
+      continue
+    }
+    return false
+  }
+  return links > 0
+}
+
 /** Detect pnpm state that cannot satisfy the current hoisted Profile contract. */
 function profileDependencyMigrationRequired(
   profileDir: string,
@@ -889,6 +1045,11 @@ function profileDependencyMigrationRequired(
   const modulesDir = join(profileDir, 'node_modules')
   const hasModules = existsSync(modulesDir)
   if (!hasDependencies && !hasModules) return false
+
+  // The launcher's own links satisfy the Profile contract: every dependency
+  // resolves through the installation beside this Profile, so no package
+  // manager has to run and no registry has to be reachable.
+  if (hasModules && isLauncherLinkProjection(modulesDir)) return false
 
   let modulesCompatible = false
   const modulesStatePath = join(modulesDir, '.modules.yaml')

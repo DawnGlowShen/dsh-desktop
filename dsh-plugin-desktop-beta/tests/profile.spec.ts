@@ -3,6 +3,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
   realpathSync,
   rmSync,
   writeFileSync,
@@ -35,6 +36,10 @@ import {
 import { setDesktopProfileBundleSelected } from '../src/desktop-plugins.ts'
 import { migrateLegacyAgentPresetSettings } from '../src/setup-wizard-settings.ts'
 import { DESKTOP_MARKET_IDENTITIES } from '../src/desktop-market.ts'
+import {
+  desktopPluginDependencies,
+  shippedPluginDependencySpecs,
+} from '../src/product-identity.ts'
 
 const homes: string[] = []
 
@@ -180,9 +185,13 @@ describe('desktop profile composition', {
       '@deepseek-ai/dsh-web-app',
       ...DEFAULT_PROFILE_PLUGIN_BUNDLES,
     ])
-    // The installation owns these packages, so the Profile declares no
-    // dependency for them and never runs a package manager to obtain them.
-    expect(manifest.dependencies).toEqual({})
+    // The Plugins page lists a bundle only when the Profile names it in
+    // `dependencies`, so seeding the bundles alone would leave every shipped
+    // plugin off the page and its configuration unreachable. The specs match
+    // the installation's own, and nothing is installed from them: the overlay
+    // keeps the installation's copy unless the Profile holds a strictly newer
+    // package of its own.
+    expect(manifest.dependencies).toEqual(shippedPluginDependencySpecs(desktopPluginDependencies()))
   })
 
   it('declares every preinstalled default plugin as a direct installation dependency', () => {
@@ -324,6 +333,12 @@ nodeLinker: hoisted
 packageManager: pnpm@11.7.0
 virtualStoreDirMaxLength: 120
 `)
+    // A pnpm tree that installed the Profile's dependencies also left the
+    // lockfile beside them; without it the Profile is half-materialized.
+    writeFileSync(join(dir, 'pnpm-lock.yaml'), `lockfileVersion: '9.0'
+settings:
+  autoInstallPeers: false
+`)
 
     const prepared = prepareDesktopProfile(undefined, home, 'darwin')
 
@@ -372,10 +387,44 @@ nodeLinker: hoisted
 packageManager: pnpm@11.7.0
 virtualStoreDirMaxLength: 60
 `)
+    writeFileSync(join(dir, 'pnpm-lock.yaml'), `lockfileVersion: '9.0'
+settings:
+  autoInstallPeers: false
+`)
 
     const prepared = prepareDesktopProfile(undefined, home, 'win32')
 
     expect(prepared.requiresDependencyMigration).toBe(false)
+  })
+
+  it('leaves a launcher-seeded link Profile out of dependency migration', () => {
+    // `ensureDesktopProfile` seeds a shipped plugin's name into `dependencies`
+    // and links it into the Profile, so the tree holds dependencies and a
+    // `node_modules` without any pnpm state. Reading that as a legacy tree
+    // sends every launch to `pnpm install`, which needs the registry the
+    // offline installation this layout exists for cannot reach.
+    const home = temporaryHome()
+    const dir = ensureDesktopProfile(home)
+
+    const prepared = prepareDesktopProfile(undefined, home, 'darwin')
+
+    expect(prepared.requiresDependencyMigration).toBe(false)
+    expect(readdirSync(join(dir, 'node_modules')).length).toBeGreaterThan(0)
+    expect(existsSync(join(dir, 'node_modules', '.modules.yaml'))).toBe(false)
+  })
+
+  it('still migrates a Profile whose node_modules holds a real package', () => {
+    // The link-projection exception must not swallow a genuine pnpm tree: a
+    // real directory in `node_modules` is not something the launcher writes.
+    const home = temporaryHome()
+    const dir = ensureDesktopProfile(home)
+    const installed = join(dir, 'node_modules', 'pnpm-installed-plugin')
+    mkdirSync(installed, { recursive: true })
+    writeFileSync(join(installed, 'package.json'), '{}\n')
+
+    const prepared = prepareDesktopProfile(undefined, home, 'darwin')
+
+    expect(prepared.requiresDependencyMigration).toBe(true)
   })
 
   it('rejects malformed persistent bundle metadata', () => {

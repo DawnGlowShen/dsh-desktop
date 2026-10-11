@@ -1,3 +1,5 @@
+import { createRequire } from 'node:module'
+
 /** Stable and Beta identities used to locate each edition's private app data. */
 export const DESKTOP_RELEASE_IDENTITIES = Object.freeze({
   stable: Object.freeze({
@@ -68,3 +70,93 @@ export const DEFAULT_PROFILE_PLUGIN_BUNDLES: readonly string[] = Object.freeze([
   'dsh-rewind-plugin',
   'dsh-session-manager',
 ])
+
+/**
+ * This package's own `dependencies`, read from its published manifest.
+ *
+ * The values are the specs Electron Builder installed into the installation's
+ * `node_modules`, so a Profile seeded from them records a version that exists
+ * beside it. Reading the manifest keeps the seed honest across releases instead
+ * of duplicating versions in source.
+ *
+ * Node-only, and deliberately lazy: `createRequire` is a Node builtin, so a
+ * module-level read would pull `node:module` into every consumer. The Desktop
+ * client bundle imports `DESKTOP_PACKAGE_NAME` from this module for the browser,
+ * where Vite rewrites the builtin to an empty stub and the call throws at load
+ * time. Reading on first use keeps the manifest read on the Host face that
+ * actually seeds a Profile.
+ * @returns this package's `dependencies` field, or an empty record when absent.
+ */
+export function desktopPluginDependencies(): Readonly<Record<string, string>> {
+  return Object.freeze(
+    (createRequire(import.meta.url)('../package.json') as { dependencies?: Record<string, string> }).dependencies ?? {},
+  )
+}
+
+/**
+ * Resolve every shipped plugin to the directory this installation holds it in.
+ *
+ * A newly created Profile seeds a shipped plugin into `dsh.profile.bundles`
+ * alone, and the Plugin Manager lists a bundle only when the Profile's own
+ * `dependencies` name it: the Host reads `Object.keys(manifest.dependencies)`
+ * and derives `installed` from the name alone. Seeded-but-unrecorded, a shipped
+ * plugin satisfies neither `installed` nor `optional`, so the Plugins page drops
+ * it from every group and its configuration page becomes unreachable.
+ *
+ * The same seed links each name into the Profile's own `node_modules`, so the
+ * Profile can resolve a shipped plugin without a package manager and without
+ * reaching the registry, which an offline installation cannot do. Each link
+ * points at the installation's copy, so the Profile stores no second copy and
+ * the module resolution of that copy's own dependencies — which Node performs
+ * from the link's realpath, inside the installation — keeps working unchanged.
+ *
+ * A name this installation does not hold is skipped rather than linked to a
+ * missing target; `tests/bundled-plugin-dependencies.spec.ts` asserts every
+ * shipped name is one this package declares.
+ * @param dependencies - this package's `dependencies` field.
+ * @param resolveDir - maps one package name to its installed directory.
+ * @returns the shipped plugin names with their specs and installed directories.
+ */
+export function shippedPluginInstallations(
+  dependencies: Readonly<Record<string, string>>,
+  resolveDir: (packageName: string) => string | undefined,
+): readonly ShippedPluginInstallation[] {
+  const installations: ShippedPluginInstallation[] = []
+  for (const name of DEFAULT_PROFILE_PLUGIN_BUNDLES) {
+    const spec = dependencies[name]
+    /* v8 ignore next -- tests/bundled-plugin-dependencies.spec.ts asserts this package declares every shipped name */
+    if (spec === undefined) continue
+    const dir = resolveDir(name)
+    /* v8 ignore next -- a shipped plugin this installation does not hold cannot be linked */
+    if (dir === undefined) continue
+    installations.push({ name, spec, dir })
+  }
+  return installations
+}
+
+/** One shipped plugin, the spec this installation declares, and where it is installed. */
+export interface ShippedPluginInstallation {
+  /** Exact npm package name, as `dsh.profile.bundles` and `dependencies` record it. */
+  readonly name: string
+  /** The version spec this installation's manifest declares for the name. */
+  readonly spec: string
+  /** Absolute directory the installation holds the plugin in. */
+  readonly dir: string
+}
+
+/** Map the shipped default plugins to the specs this package declares for them.
+ * @param dependencies - this package's `dependencies` field.
+ * @returns one name-to-spec entry per shipped plugin, in seed order.
+ */
+export function shippedPluginDependencySpecs(
+  dependencies: Readonly<Record<string, string>>,
+): Record<string, string> {
+  const declared: Record<string, string> = {}
+  for (const name of DEFAULT_PROFILE_PLUGIN_BUNDLES) {
+    const spec = dependencies[name]
+    /* v8 ignore next -- tests/bundled-plugin-dependencies.spec.ts asserts this package declares every shipped name */
+    if (spec === undefined) continue
+    declared[name] = spec
+  }
+  return declared
+}

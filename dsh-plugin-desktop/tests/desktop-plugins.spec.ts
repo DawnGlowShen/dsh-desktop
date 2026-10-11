@@ -567,7 +567,10 @@ describe('pre-Host Profile bundle selection', () => {
 
     const after = profileManifest(options.homeDir)
     expect(after.value.dsh.profile.bundles).not.toContain('third-party-plugin')
-    expect(after.value.dependencies).toEqual({ 'third-party-plugin': '1.2.3' })
+    // Deselecting drops the selection, not the dependency record. A Profile also
+    // carries one dependency per shipped plugin, so assert the entry this call
+    // governs instead of the whole map.
+    expect((after.value.dependencies as Record<string, string>)['third-party-plugin']).toBe('1.2.3')
     expect(after.value.packageManager).toBe('pnpm@10.0.0')
     expect((after.value.dsh as Record<string, unknown>).unrelatedDesktopKey).toEqual({ kept: true })
     expect(Object.keys(after.value)).toEqual(rootKeysBefore)

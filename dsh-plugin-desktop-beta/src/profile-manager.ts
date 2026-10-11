@@ -28,8 +28,11 @@ import {
   DEFAULT_PROFILE_PLUGIN_BUNDLES,
   DESKTOP_PACKAGE_NAME,
   DESKTOP_PACKAGE_NAMES,
+  desktopPluginDependencies,
   DESKTOP_PROFILE_NAME,
+  shippedPluginDependencySpecs,
 } from './product-identity.ts'
+import { seedShippedPluginLinks } from './profile.ts'
 
 const BIN_NAME = DESKTOP_PACKAGE_NAME
 const DEFAULT_PROFILE_NAME = DESKTOP_PROFILE_NAME
@@ -185,7 +188,18 @@ export function createDesktopWebProfile(home: string, name: string): DesktopProf
   try {
     initProfile(staging, [...template.bundles, ...DEFAULT_PROFILE_PLUGIN_BUNDLES])
     const manifest = readProfileManifest(BIN_NAME, staging)
-    writeProfileManifest(staging, { ...manifest, name: `dsh-profile-${name}` })
+    // Seeded plugins are recorded as dependencies as well as selections: the
+    // Plugin Manager lists a bundle only when the Profile names it there, and
+    // each name is linked into the Profile so it resolves without a package
+    // manager. The links are written for the published Profile directory, not
+    // for the staging path, because `renameSync` below moves a relative link
+    // to the destination it was computed for.
+    writeProfileManifest(staging, {
+      ...manifest,
+      name: `dsh-profile-${name}`,
+      dependencies: { ...manifest.dependencies, ...shippedPluginDependencySpecs(desktopPluginDependencies()) },
+    })
+    seedShippedPluginLinks(staging, target)
     // The target is checked again immediately before publication. `renameSync`
     // is atomic on the same filesystem; an existing target is never replaced.
     try {
