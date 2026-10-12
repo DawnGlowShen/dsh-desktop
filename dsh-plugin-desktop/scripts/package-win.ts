@@ -20,9 +20,10 @@ const WINDOWS_COMPRESSION_LEVELS = new Set(['store', 'normal', 'maximum'])
 
 /**
  * Read an optional electron-builder compression override for unsigned CI
- * artifacts. Compression dominates the Windows job while the smoke artifacts
- * are never published, so CI may select `store`; release builds leave the
- * variable unset and keep `build.win.compression`.
+ * artifacts. Compression dominates the Windows job, so this escape hatch stays
+ * available, but `store` is unsafe at the current payload size: the 32-bit NSIS
+ * stub cannot mmap an uncompressed archive and fails with `creating mmap`.
+ * Release builds leave the variable unset and keep `build.win.compression`.
  * @param environment - Environment of the packaging process.
  * @returns The override, or `undefined` to keep the package configuration.
  */

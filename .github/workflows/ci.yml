@@ -176,13 +176,14 @@ jobs:
       - name: Build Windows installer
         env:
           DSH_PACKAGE_CHECK_ALREADY_RAN: '1'
-          # CI artifacts are never published; skipping compression saves minutes.
-          DSH_WINDOWS_PACKAGE_COMPRESSION: store
+          # `store` skips compression but hands makensis an uncompressed ~1.4 GB
+          # payload, which the 32-bit NSIS stub cannot mmap. Keep `normal`.
+          DSH_WINDOWS_PACKAGE_COMPRESSION: normal
         run: yarn workspace ${{ matrix.workspace }} dist:win
       - name: Build Windows portable archive
         env:
           DSH_PACKAGE_CHECK_ALREADY_RAN: '1'
-          DSH_WINDOWS_PACKAGE_COMPRESSION: store
+          DSH_WINDOWS_PACKAGE_COMPRESSION: normal
         run: yarn workspace ${{ matrix.workspace }} dist:win-portable
       # The upstream job stopped at packaging, so its artifacts were discarded
       # when the runner was torn down. Uploading them is what makes an unsigned
