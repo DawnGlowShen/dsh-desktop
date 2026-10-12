@@ -1,0 +1,32 @@
+dsh-plugin-desktop/scripts/verify-cli-runtime.mjs
+  s_edb677fdb0f835::t_7a783b856319b1 182
+  s_edb677fdb0f835::t_cdb34cd1dd7b32 183-184
+  s_edb677fdb0f835::t_e0eef0b4bf0ca8 20-23,25-26
+  s_edb677fdb0f835::t_99e5a3d400575d 186
+  s_edb677fdb0f835::t_ae40d188259dcb 28
+  s_edb677fdb0f835::t_e6bb047175ebd0 197
+  s_edb677fdb0f835::t_e10f812ff00588 198-199
+  s_edb677fdb0f835::t_98b214bd04d162 27
+  s_edb677fdb0f835::t_1301c179e92fd6 185
+  s_edb677fdb0f835::t_392407f66e68f5 201
+  s_edb677fdb0f835::t_723248cf0e00bb 19,24
+  s_edb677fdb0f835::t_981a26e30d7c49 200
+dsh-plugin-desktop-beta/scripts/verify-cli-runtime.mjs
+  s_edb677fdb0f835::t_5280787d6ee9a6 19-28,182-186,197-201
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b4409c4a369125b4f128ac755df35d02070b1515",
+  "prompts": {},
+  "sessions": {
+    "s_edb677fdb0f835": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-22070bd3-4b9b-433a-964d-a8c021fa5a84",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
