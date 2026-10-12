@@ -1,0 +1,21 @@
+dsh-plugin-desktop/src/client/styles.ts
+  s_b9cb9fcacb5b8b::t_1709350fd77f2a 28-30
+dsh-plugin-desktop-beta/src/client/styles.ts
+  s_b9cb9fcacb5b8b::t_1709350fd77f2a 28-30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9c2b3090156c265c44c7a6630bcc356332d7f7bc",
+  "prompts": {},
+  "sessions": {
+    "s_b9cb9fcacb5b8b": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "9ba8e947-7564-48d5-b423-9541aca4c0b9",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
