@@ -49,25 +49,38 @@ async function verify(deadline) {
     const guests = new DesktopBrowserGuests(() => [`http://127.0.0.1:${server.address().port + 1}`])
     window = new BrowserWindow({ show: false,
       webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, webviewTag: true } })
-    guests.bind(window)
+    // This check does not exercise the native key bindings, but `bind` still calls
+    // `attachInput` for every approved guest, so it must receive the documented
+    // `(guest, name) => disposer` contract rather than `undefined`.
+    trace('bound guests')
+    guests.bind(window, () => () => {})
     await window.webContents.session.cookies.set({ url: origin, name: 'app-secret', value: 'app-only' })
+    trace('loading /embed')
     await window.loadURL(`${origin}/embed`)
+    trace('loaded /embed')
     assert.equal(await window.webContents.executeJavaScript("document.querySelector('iframe').contentDocument?.querySelector('#native-proof')?.textContent ?? null"), null,
       'The fixture must actually refuse iframe embedding')
+    trace('anti-framing refusal confirmed')
 
     const first = guests.acquire(window.webContents, '/workspace/one')
-    const attached = new Promise(resolve => { window.webContents.once('did-attach-webview', (_event, guest) => resolve(guest)) })
+    const attached = settled(window.webContents, 'did-attach-webview', 'guest attachment')
+    trace('mounting guest')
     await mountGuest(window, first)
+    trace('guest element appended')
     const contents = await attached
+    trace('guest attached')
     await wait(() => contents.getURL().startsWith('about:blank#'))
+    trace('guest on its inert document')
     assert.equal(contents.getLastWebPreferences().webSecurity, true)
     assert.equal(contents.getLastWebPreferences().sandbox, true)
     assert.equal(contents.getLastWebPreferences().nodeIntegration, false)
     assert.equal(contents.getLastWebPreferences().webviewTag, false)
     await window.webContents.executeJavaScript(`document.querySelector('webview').loadURL(${JSON.stringify(`${origin}/first`)})`)
+    trace('asked the guest to load /first')
     await wait(() => contents.getURL() === `${origin}/first` && !contents.isLoading())
     assert.equal(await contents.executeJavaScript("document.querySelector('#native-proof').textContent"), 'Loaded native page',
       'A guest loads a top-level page that refuses iframe embedding')
+    trace('guest loaded the anti-framing page')
     assert.deepEqual(await contents.executeJavaScript('[typeof window.desktopNext, typeof window.dshDesktop, typeof require, typeof process]'),
       ['undefined', 'undefined', 'undefined', 'undefined'])
     assert.equal((await contents.session.cookies.get({ url: origin })).some(cookie => cookie.name === 'app-secret'), false,
@@ -134,4 +147,20 @@ async function wait(condition) {
     if (Date.now() >= end) throw new Error('Native Browser state did not settle')
     await new Promise(resolve => setTimeout(resolve, 20))
   }
+}
+
+/**
+ * Await one Electron event under the same budget as `wait`, so a notification that
+ * never arrives fails loudly instead of stalling the whole CI job.
+ */
+function settled(emitter, event, label) {
+  return new Promise((resolve, reject) => {
+    const end = setTimeout(() => reject(new Error(`Native Browser check: ${label} did not arrive`)), 10_000)
+    emitter.once(event, (...args) => { clearTimeout(end); resolve(args[1]) })
+  })
+}
+
+/** Record progress so a step that stalls shows exactly where it stopped. */
+function trace(message) {
+  console.log(`[sidebar-browser] ${message}`)
 }
