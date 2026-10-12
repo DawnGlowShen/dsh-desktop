@@ -1,0 +1,22 @@
+dsh-plugin-desktop-beta/scripts/package-win.ts
+  s_edb677fdb0f835::t_dde0e27c2a78a0 9,174
+dsh-plugin-desktop/scripts/package-win.ts
+  s_edb677fdb0f835::t_1d79521e51c4d7 9
+  s_edb677fdb0f835::t_913bf111ab772a 174
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "91027cd4caacfe5df0cf3c936ff46a6e63079c63",
+  "prompts": {},
+  "sessions": {
+    "s_edb677fdb0f835": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-22070bd3-4b9b-433a-964d-a8c021fa5a84",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
