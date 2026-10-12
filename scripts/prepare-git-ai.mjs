@@ -124,6 +124,14 @@ const TARGETS = {
     os: 'win32',
     cpu: ['x64'],
   },
+  'linux-x64': {
+    asset: `git-ai-linux-x64-${VERSION}`,
+    // sha256 from the upstream SHA256SUMS published with v1.7.5.
+    sha256: '6cf68a83cc948fbd4675e46bc5e3c50973c04257bb43a954a6712a2107206695',
+    publishedName: EXECUTABLE,
+    os: 'linux',
+    cpu: ['x64'],
+  },
 }
 
 /**
