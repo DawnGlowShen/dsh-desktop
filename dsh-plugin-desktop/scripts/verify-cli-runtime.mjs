@@ -16,6 +16,16 @@ const cordisPluginLoaderPackage = fileURLToPath(new URL('node_modules/@deepseek-
 const dshHomePathsPackage = fileURLToPath(new URL('node_modules/@deepseek-ai/dsh-home-paths/', packageRoot))
 const dshPackage = fileURLToPath(new URL('node_modules/@deepseek-ai/dsh/', packageRoot))
 const semverPackage = fileURLToPath(new URL('node_modules/semver/', packageRoot))
+// `profile.ts` statically imports `settings-bridge.ts`, which imports
+// `@deepseek-ai/schemastery` and the two client packages below. Whether that
+// module lands in the `desktop-cli` import chain depends on tsdown's
+// content-driven chunk splitting, so the flat profile must provide them
+// regardless of the current split.
+const schemasteryPackage = fileURLToPath(new URL('node_modules/@deepseek-ai/schemastery/', packageRoot))
+const dshClientLocalePackage = fileURLToPath(new URL('node_modules/@deepseek-ai/dsh-client-locale/', packageRoot))
+const dshClientUiThemePackage = fileURLToPath(new URL('node_modules/@deepseek-ai/dsh-client-ui-theme/', packageRoot))
+const yamlPackage = fileURLToPath(new URL('node_modules/yaml/', packageRoot))
+const cordisPackage = fileURLToPath(new URL('node_modules/@deepseek-ai/cordis/', packageRoot))
 const pnpmCli = fileURLToPath(new URL('node_modules/pnpm/bin/pnpm.mjs', packageRoot))
 const dshVersion = JSON.parse(readFileSync(new URL('node_modules/@deepseek-ai/dsh/package.json', packageRoot), 'utf8')).version
 const pnpmVersion = JSON.parse(readFileSync(new URL('node_modules/pnpm/package.json', packageRoot), 'utf8')).version
@@ -169,6 +179,11 @@ function runFlatProfileDshEntry() {
   const linkedDshHomePathsPackage = join(root, 'node_modules', '@deepseek-ai', 'dsh-home-paths')
   const linkedDshPackage = join(root, 'node_modules', '@deepseek-ai', 'dsh')
   const linkedSemverPackage = join(root, 'node_modules', 'semver')
+  const linkedSchemasteryPackage = join(root, 'node_modules', '@deepseek-ai', 'schemastery')
+  const linkedDshClientLocalePackage = join(root, 'node_modules', '@deepseek-ai', 'dsh-client-locale')
+  const linkedDshClientUiThemePackage = join(root, 'node_modules', '@deepseek-ai', 'dsh-client-ui-theme')
+  const linkedYamlPackage = join(root, 'node_modules', 'yaml')
+  const linkedCordisPackage = join(root, 'node_modules', '@deepseek-ai', 'cordis')
   try {
     mkdirSync(join(root, 'node_modules', '@deepseek-ai'), { recursive: true })
     cpSync(fileURLToPath(new URL('lib/', packageRoot)), join(desktopPackage, 'lib'), { recursive: true })
@@ -179,6 +194,11 @@ function runFlatProfileDshEntry() {
     symlinkSync(dshHomePathsPackage, linkedDshHomePathsPackage, process.platform === 'win32' ? 'junction' : 'dir')
     symlinkSync(dshPackage, linkedDshPackage, process.platform === 'win32' ? 'junction' : 'dir')
     symlinkSync(semverPackage, linkedSemverPackage, process.platform === 'win32' ? 'junction' : 'dir')
+    symlinkSync(schemasteryPackage, linkedSchemasteryPackage, process.platform === 'win32' ? 'junction' : 'dir')
+    symlinkSync(dshClientLocalePackage, linkedDshClientLocalePackage, process.platform === 'win32' ? 'junction' : 'dir')
+    symlinkSync(dshClientUiThemePackage, linkedDshClientUiThemePackage, process.platform === 'win32' ? 'junction' : 'dir')
+    symlinkSync(yamlPackage, linkedYamlPackage, process.platform === 'win32' ? 'junction' : 'dir')
+    symlinkSync(cordisPackage, linkedCordisPackage, process.platform === 'win32' ? 'junction' : 'dir')
     // dsh 0.2.0-rc.2 only manages the reserved Desktop Profile after Desktop
     // has initialized it, so give the smoke a private, initialized home.
     const home = join(root, 'home')
