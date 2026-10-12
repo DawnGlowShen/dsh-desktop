@@ -1,0 +1,19 @@
+scripts/prepare-git-ai.mjs
+  s_edb677fdb0f835::t_faa53117ffde95 127-134
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "51caa77c2c96213713013042c1575842f949ab2b",
+  "prompts": {},
+  "sessions": {
+    "s_edb677fdb0f835": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-22070bd3-4b9b-433a-964d-a8c021fa5a84",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
