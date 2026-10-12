@@ -19908,6 +19908,34 @@ __metadata:
   languageName: node
   linkType: hard
 
+"dsh-git-ai@file:../vendor/git-ai-plugin/dsh-git-ai-0.1.2-evo.tgz::locator=dsh-plugin-desktop%40workspace%3Adsh-plugin-desktop":
+  version: 0.1.2-evo
+  resolution: "dsh-git-ai@file:../vendor/git-ai-plugin/dsh-git-ai-0.1.2-evo.tgz#../vendor/git-ai-plugin/dsh-git-ai-0.1.2-evo.tgz::hash=b1bfce&locator=dsh-plugin-desktop%40workspace%3Adsh-plugin-desktop"
+  dependencies:
+    "@deepseek-ai/schemastery": "npm:^3.18.4"
+  peerDependencies:
+    "@deepseek-ai/cordis": ^4.0.1
+    "@deepseek-ai/dsh-agent": ^0.2.0-rc.2
+    "@deepseek-ai/dsh-invariants": ^0.2.0-rc.2
+    "@deepseek-ai/dsh-tools": ^0.2.0-rc.2
+  checksum: 10c0/9babc0530abc7faed2e707a5035baf620022b9861c3525fa3ead173e79ea2d1c07a5f526389946160e94559f44589ab3776aa9f5f1c6af362fbada976f753456
+  languageName: node
+  linkType: hard
+
+"dsh-git-ai@file:../vendor/git-ai-plugin/dsh-git-ai-0.1.2-evo.tgz::locator=dsh-plugin-desktop-beta%40workspace%3Adsh-plugin-desktop-beta":
+  version: 0.1.2-evo
+  resolution: "dsh-git-ai@file:../vendor/git-ai-plugin/dsh-git-ai-0.1.2-evo.tgz#../vendor/git-ai-plugin/dsh-git-ai-0.1.2-evo.tgz::hash=b1bfce&locator=dsh-plugin-desktop-beta%40workspace%3Adsh-plugin-desktop-beta"
+  dependencies:
+    "@deepseek-ai/schemastery": "npm:^3.18.4"
+  peerDependencies:
+    "@deepseek-ai/cordis": ^4.0.1
+    "@deepseek-ai/dsh-agent": ^0.2.0-rc.2
+    "@deepseek-ai/dsh-invariants": ^0.2.0-rc.2
+    "@deepseek-ai/dsh-tools": ^0.2.0-rc.2
+  checksum: 10c0/9babc0530abc7faed2e707a5035baf620022b9861c3525fa3ead173e79ea2d1c07a5f526389946160e94559f44589ab3776aa9f5f1c6af362fbada976f753456
+  languageName: node
+  linkType: hard
+
 "dsh-mnemon-provider-byterover@npm:0.5.5":
   version: 0.5.5
   resolution: "dsh-mnemon-provider-byterover@npm:0.5.5"
@@ -20329,6 +20357,7 @@ __metadata:
     dsh-better-sidebar: "npm:0.24.1"
     dsh-community-market: "npm:0.1.0-dev.0"
     dsh-dream-skin: "file:../vendor/dream-skin/dsh-dream-skin-10.8.1.tgz"
+    dsh-git-ai: "file:../vendor/git-ai-plugin/dsh-git-ai-0.1.2-evo.tgz"
     dsh-mnemon: "npm:0.5.24"
     dsh-rewind-plugin: "npm:0.15.1"
     dsh-session-manager: "npm:0.6.2"
@@ -20555,6 +20584,7 @@ __metadata:
     dsh-better-sidebar: "npm:0.24.1"
     dsh-community-market: "npm:0.1.0-dev.0"
     dsh-dream-skin: "file:../vendor/dream-skin/dsh-dream-skin-10.8.1.tgz"
+    dsh-git-ai: "file:../vendor/git-ai-plugin/dsh-git-ai-0.1.2-evo.tgz"
     dsh-mnemon: "npm:0.5.24"
     dsh-rewind-plugin: "npm:0.15.1"
     dsh-session-manager: "npm:0.6.2"
