@@ -6,6 +6,7 @@ import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { prepareFsExtForElectron } from './prepare-fs-ext.ts'
 import { electronBuilderEnvironment } from './electron-builder-environment.ts'
+import { DESKTOP_PACKAGE_NAME } from '../src/product-identity.ts'
 
 const WINDOWS_SIGNING_KEYS = [
   'CSC_IDENTITY_AUTO_DISCOVERY',
@@ -170,7 +171,7 @@ export function packageWindowsArtifact(
         '/d',
         '/s',
         '/c',
-        'corepack yarn workspace dsh-plugin-desktop check:win-package',
+        `corepack yarn workspace ${DESKTOP_PACKAGE_NAME} check:win-package`,
       ],
       options.workspaceRoot,
       cleanEnvironment,
