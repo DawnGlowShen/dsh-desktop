@@ -1,4 +1,5 @@
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { createHash } from 'node:crypto'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -34,6 +35,36 @@ describe('gitAiTrace2EventTarget', () => {
   it('points at the daemon socket inside the given home directory', () => {
     expect(gitAiTrace2EventTarget('/Users/example'))
       .toBe('af_unix:stream:/Users/example/.git-ai/internal/daemon/trace2.sock')
+  })
+
+  it('names the daemon socket explicitly for a unix platform', () => {
+    expect(gitAiTrace2EventTarget('/Users/example', 'linux'))
+      .toBe('af_unix:stream:/Users/example/.git-ai/internal/daemon/trace2.sock')
+  })
+
+  // Windows has no AF_UNIX support on this path: git-ai listens on a named pipe
+  // derived from a SHA-256 of its internal directory, and returns the bare path
+  // with NO scheme. Writing the unix form there loses every Trace2 event while
+  // still exiting 0, so the spelling is asserted byte for byte.
+  it('names a scheme-less named pipe on win32', () => {
+    const target = gitAiTrace2EventTarget('C:\\Users\\example', 'win32')
+
+    expect(target.startsWith('\\\\.\\pipe\\git-ai-')).toBe(true)
+    expect(target.endsWith('-trace2')).toBe(true)
+    expect(target).not.toContain('af_unix')
+  })
+
+  it('derives the win32 pipe name from the sha256 of the internal directory', () => {
+    const internalDir = 'C:\\Users\\example\\.git-ai\\internal'
+    const digest = createHash('sha256').update(internalDir).digest('hex')
+
+    expect(gitAiTrace2EventTarget('C:\\Users\\example', 'win32'))
+      .toBe(`\\\\.\\pipe\\git-ai-${digest.slice(0, 16)}-trace2`)
+  })
+
+  it('gives different users different win32 pipe names', () => {
+    expect(gitAiTrace2EventTarget('C:\\Users\\a', 'win32'))
+      .not.toBe(gitAiTrace2EventTarget('C:\\Users\\b', 'win32'))
   })
 })
 
@@ -190,6 +221,59 @@ describe('ensureDesktopGitAiTrace2Config', () => {
       `af_unix:stream:${join(root, '.git-ai', 'internal', 'daemon', 'trace2.sock')}`,
     )
     expect(info).toHaveLength(1)
+  })
+
+  it('writes the windows named pipe instead of a unix socket on win32', () => {
+    const root = makeRoot()
+    const gitConfigPath = join(root, '.gitconfig')
+    const { logger } = makeLogger()
+
+    const result = ensureDesktopGitAiTrace2Config({
+      homeDir: 'C:\\Users\\example',
+      gitConfigPath,
+      logger,
+      platform: 'win32',
+    })
+
+    expect(result.eventTarget.startsWith('\\\\.\\pipe\\git-ai-')).toBe(true)
+    expect(result.eventTarget).not.toContain('af_unix')
+    const written = readFileSync(gitConfigPath, 'utf8')
+    expect(written).toContain(`\teventTarget = ${result.eventTarget}`)
+    // The unix spelling must never appear in a Windows user's config: Git would
+    // silently route every Trace2 event to stderr and attribution would die.
+    expect(written).not.toContain('af_unix')
+  })
+
+  it('converges on the pipe without rewriting when run twice on win32', () => {
+    const root = makeRoot()
+    const gitConfigPath = join(root, '.gitconfig')
+    const { logger } = makeLogger()
+    const options = { homeDir: 'C:\\Users\\example', gitConfigPath, logger, platform: 'win32' as const }
+
+    ensureDesktopGitAiTrace2Config(options)
+    const second = ensureDesktopGitAiTrace2Config(options)
+
+    expect(second.changed).toBe(false)
+  })
+
+  it('replaces a previously written unix target with the pipe on win32', () => {
+    const root = makeRoot()
+    const gitConfigPath = join(root, '.gitconfig')
+    const { logger } = makeLogger()
+    // Simulates the broken config an earlier build wrote on Windows.
+    ensureDesktopGitAiTrace2Config({ homeDir: root, gitConfigPath, logger })
+
+    const migrated = ensureDesktopGitAiTrace2Config({
+      homeDir: 'C:\\Users\\example',
+      gitConfigPath,
+      logger,
+      platform: 'win32',
+    })
+
+    expect(migrated.changed).toBe(true)
+    const written = readFileSync(gitConfigPath, 'utf8')
+    expect(written).toContain(`\teventTarget = ${migrated.eventTarget}`)
+    expect(written).not.toContain('af_unix')
   })
 
   it('names the disabled user values in the log summary', () => {

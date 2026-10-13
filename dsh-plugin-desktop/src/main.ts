@@ -883,6 +883,9 @@ async function start(): Promise<void> {
         ensureDesktopGitAiTrace2Config({
           homeDir: app.getPath('home'),
           gitConfigPath: join(app.getPath('home'), '.gitconfig'),
+          // The Trace2 transport is platform-specific: a named pipe on Windows,
+          // an AF_UNIX socket elsewhere.
+          platform: process.platform,
           logger: desktopGitAiLogger(
             app.getPath('home'),
             message => { electronLogger.info(`${BIN_NAME}: ${message}`) },

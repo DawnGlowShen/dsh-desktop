@@ -31,9 +31,27 @@
  * carrying the prefix is never commented again. A duplicate key later in the
  * file wins in Git's precedence order, so the managed block is always appended
  * last.
+ *
+ * ## Windows uses a named pipe, not an AF_UNIX socket
+ *
+ * Git's `trace2.eventTarget` names a transport, and the correct value is
+ * platform-specific. On Unix git-ai listens on a filesystem socket and the
+ * value carries the `af_unix:stream:` scheme. Windows has no AF_UNIX support
+ * in this code path, so git-ai listens on a named pipe and
+ * `DaemonConfig::trace2_event_target_for_path` returns the **bare path with no
+ * scheme at all**:
+ *
+ *   Unix:    af_unix:stream:<home>/.git-ai/internal/daemon/trace2.sock
+ *   Windows: \\.\pipe\git-ai-<sha256(internal_dir)[:16]>-trace2
+ *
+ * Writing the Unix form on Windows is not a crash — Git degrades to emitting
+ * Trace2 events on stderr when the target cannot be opened, so every command
+ * still exits 0 — but no event ever reaches the daemon and attribution is lost
+ * silently, which is exactly the failure this module exists to prevent.
  */
 
 import { spawnSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 
@@ -73,6 +91,24 @@ const DAEMON_START_TIMEOUT_MS = 5_000
 /** Socket path, relative to the home directory, that the git-ai daemon listens on. */
 const SOCKET_RELATIVE_PATH = join('.git-ai', 'internal', 'daemon', 'trace2.sock')
 
+/**
+ * Windows named-pipe name prefix, matching git-ai's `DaemonConfig`.
+ *
+ * The daemon derives both pipe names from its internal directory, so the hash
+ * below must be fed the byte-for-byte same string git-ai hashes or the two
+ * sides will never meet.
+ */
+const WINDOWS_PIPE_PREFIX = '\\\\.\\pipe\\git-ai-'
+/** Bytes of the SHA-256 hex digest git-ai keeps when naming the pipe. */
+const WINDOWS_PIPE_HASH_LENGTH = 16
+/**
+ * The internal directory git-ai hashes, spelled with Windows separators.
+ *
+ * Held as a literal rather than built via `join` so the bytes hashed are the
+ * same on every host that computes them.
+ */
+const WINDOWS_INTERNAL_DIRECTORY = '.git-ai\\internal'
+
 /** Inputs required to configure Trace2 attribution. */
 export interface DesktopGitAiConfigOptions {
   /** User home directory; owns both the gitconfig and the daemon socket path. */
@@ -86,6 +122,13 @@ export interface DesktopGitAiConfigOptions {
    * without touching a real home directory.
    */
   fileSystem?: DesktopGitAiConfigFileSystem
+  /**
+   * Host platform selecting the Trace2 transport.
+   *
+   * Defaults to the running platform; a test pins `'win32'` to assert the
+   * named-pipe spelling from a Unix host.
+   */
+  platform?: NodeJS.Platform
 }
 
 /** Minimal logging surface, satisfied by the Electron logger used at startup. */
@@ -134,8 +177,44 @@ const nodeFileSystem: DesktopGitAiConfigFileSystem = {
   mkdir: path => { mkdirSync(path, { recursive: true }) },
 }
 
-/** The socket target for one home directory. */
-export function gitAiTrace2EventTarget(homeDir: string): string {
+/**
+ * Name of the Windows named pipe git-ai's daemon traces into.
+ *
+ * Mirrors `DaemonConfig::from_internal_dir` in git-ai: the daemon SHA-256s its
+ * internal directory path and keeps the first 16 hex digits, so the pipe name
+ * is a pure function of the home directory. The hash is computed over the
+ * daemon's own path string, which on Windows comes from `USERPROFILE`; DSH
+ * passes Electron's `app.getPath('home')`, and the two agree whenever
+ * `USERPROFILE` is set, which is the normal case.
+ *
+ * The path is assembled with Windows separators by hand rather than with
+ * `node:path.join`, which would use the **host's** separator: building this
+ * string on macOS or Linux would otherwise hash `C:\Users\me/.git-ai/internal`
+ * and compute a pipe name the daemon never listens on.
+ *
+ * @param homeDir - user home directory, spelled the way git-ai will spell it.
+ * @returns the full `\\.\pipe\...` path for this user's Trace2 pipe.
+ */
+function windowsTrace2PipePath(homeDir: string): string {
+  const internalDir = `${homeDir.replace(/[\\/]+$/u, '')}\\${WINDOWS_INTERNAL_DIRECTORY}`
+  const digest = createHash('sha256').update(internalDir).digest('hex')
+  return `${WINDOWS_PIPE_PREFIX}${digest.slice(0, WINDOWS_PIPE_HASH_LENGTH)}-trace2`
+}
+
+/**
+ * The Trace2 event target for one home directory.
+ *
+ * The transport is platform-specific, and Git expects the exact string git-ai
+ * itself would write: a scheme-qualified AF_UNIX socket on Unix, and a bare
+ * named-pipe path — no scheme — on Windows.
+ *
+ * @param homeDir - user home directory owning the daemon socket.
+ * @param platform - Host platform; defaults to the running one so callers that
+ * already know the platform can assert the Windows spelling from any host.
+ * @returns the `trace2.eventTarget` value to write into the user's gitconfig.
+ */
+export function gitAiTrace2EventTarget(homeDir: string, platform: NodeJS.Platform = process.platform): string {
+  if (platform === 'win32') return windowsTrace2PipePath(homeDir)
   return `af_unix:stream:${join(homeDir, SOCKET_RELATIVE_PATH)}`
 }
 
@@ -298,7 +377,7 @@ export function ensureDesktopGitAiTrace2Config(
   options: DesktopGitAiConfigOptions,
 ): DesktopGitAiConfigResult {
   const fileSystem = options.fileSystem ?? nodeFileSystem
-  const eventTarget = gitAiTrace2EventTarget(options.homeDir)
+  const eventTarget = gitAiTrace2EventTarget(options.homeDir, options.platform ?? process.platform)
   const existing = fileSystem.exists(options.gitConfigPath) ? fileSystem.read(options.gitConfigPath) : ''
   const applied = applyGitAiTrace2Config(existing, eventTarget)
 
