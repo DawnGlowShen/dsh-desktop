@@ -48,6 +48,16 @@
  * Trace2 events on stderr when the target cannot be opened, so every command
  * still exits 0 — but no event ever reaches the daemon and attribution is lost
  * silently, which is exactly the failure this module exists to prevent.
+ *
+ * ## The Windows path must be escaped, not written raw
+ *
+ * A named-pipe path is only half the problem on Windows: the value also has to
+ * survive Git's own gitconfig parser. A backslash is an escape character there,
+ * so writing the bare path produces `\\.\pipe\...`, whose leading `\.` is an
+ * unknown escape — Git rejects the entire file with `fatal: bad config line N`,
+ * taking every unrelated setting down with it. Every value is therefore passed
+ * through {@link escapeGitConfigValue} before it reaches the file, and Git
+ * decodes it back to the exact path the daemon listens on.
  */
 
 import { spawnSync } from 'node:child_process'
@@ -99,6 +109,25 @@ const SOCKET_RELATIVE_PATH = join('.git-ai', 'internal', 'daemon', 'trace2.sock'
  * sides will never meet.
  */
 const WINDOWS_PIPE_PREFIX = '\\\\.\\pipe\\git-ai-'
+/**
+ * Escape a value for the gitconfig file format.
+ *
+ * A gitconfig is not a raw text channel: Git parses it with its own escape
+ * rules, so a backslash must be doubled and any embedded double quote escaped
+ * before it can appear in a value. This matters only on Windows, where the
+ * Trace2 target is a named-pipe path like `\\.\pipe\git-ai-…`: written raw,
+ * Git reads the first `\.` as an unknown escape and rejects the whole file with
+ * `fatal: bad config line N`, which takes every other setting down with it.
+ *
+ * Git parses the escape sequences itself, so the decoded value Git ends up
+ * using is the original unescaped path — exactly what the daemon listens on.
+ *
+ * @param value - raw value to write after `key = `.
+ * @returns the spelling Git will decode back to `value`.
+ */
+function escapeGitConfigValue(value: string): string {
+  return value.replace(/\\/gu, '\\\\').replace(/"/gu, '\\"')
+}
 /** Bytes of the SHA-256 hex digest git-ai keeps when naming the pipe. */
 const WINDOWS_PIPE_HASH_LENGTH = 16
 /**
@@ -326,15 +355,20 @@ export function applyGitAiTrace2Config(
   while (output.length > 0 && output.at(-1)?.trim() === '') output.pop()
 
   const block = [
-    '',
     GIT_AI_CONFIG_MARKER_BEGIN,
     `[${TRACE2_SECTION}]`,
     `\t${EVENT_NESTING_KEY} = ${EVENT_NESTING_VALUE}`,
-    `\t${EVENT_TARGET_KEY} = ${eventTarget}`,
+    `\t${EVENT_TARGET_KEY} = ${escapeGitConfigValue(eventTarget)}`,
     GIT_AI_CONFIG_MARKER_END,
   ]
 
-  const next = [...output, ...block].join('\n') + '\n'
+  // A blank separator is only meaningful when the block is appended below user
+  // content. Leading with it in an empty file would make a stray blank line the
+  // file's very first byte, which is legal to Git but is noise in a file this
+  // module writes on the user's behalf — and it made a corrupted config harder
+  // to read, reporting line 5 where line 4 held the real fault.
+  const separator = output.length > 0 ? [''] : []
+  const next = [...output, ...separator, ...block].join('\n') + '\n'
   return {
     contents: next,
     changed: next !== contents,

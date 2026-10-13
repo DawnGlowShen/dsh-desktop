@@ -32,12 +32,16 @@ afterEach(() => {
 })
 
 describe('gitAiTrace2EventTarget', () => {
-  it('points at the daemon socket inside the given home directory', () => {
-    expect(gitAiTrace2EventTarget('/Users/example'))
+  // The unix spelling is asserted only on a unix host: the target is built with
+  // `node:path.join`, which uses the *host's* separator, so on Windows a unix
+  // home would be joined with backslashes and re-escaped for the gitconfig. The
+  // win32 branch below covers the Windows spelling on every host.
+  it.runIf(process.platform !== 'win32')('points at the daemon socket inside the given home directory', () => {
+    expect(gitAiTrace2EventTarget('/Users/example', 'linux'))
       .toBe('af_unix:stream:/Users/example/.git-ai/internal/daemon/trace2.sock')
   })
 
-  it('names the daemon socket explicitly for a unix platform', () => {
+  it.runIf(process.platform !== 'win32')('names the daemon socket explicitly for a unix platform', () => {
     expect(gitAiTrace2EventTarget('/Users/example', 'linux'))
       .toBe('af_unix:stream:/Users/example/.git-ai/internal/daemon/trace2.sock')
   })
@@ -78,7 +82,6 @@ describe('applyGitAiTrace2Config', () => {
     expect(result.commentedUserValues).toEqual([])
     expect(result.replacedExistingBlock).toBe(false)
     expect(result.contents).toBe([
-      '',
       GIT_AI_CONFIG_MARKER_BEGIN,
       '[trace2]',
       '\teventNesting = 0',
@@ -86,6 +89,39 @@ describe('applyGitAiTrace2Config', () => {
       GIT_AI_CONFIG_MARKER_END,
       '',
     ].join('\n'))
+  })
+
+  // A stray blank line as the file's first byte is legal to Git but turns a
+  // later corruption into a misleading line number, so the block must start at
+  // byte 0 of an empty file.
+  it('does not lead an empty file with a blank line', () => {
+    expect(applyGitAiTrace2Config('', target).contents.startsWith('\n')).toBe(false)
+    expect(applyGitAiTrace2Config('', target).contents.startsWith(GIT_AI_CONFIG_MARKER_BEGIN)).toBe(true)
+  })
+
+  it('keeps a blank separator between user content and the block', () => {
+    const result = applyGitAiTrace2Config('[user]\n\tname = jimmy\n', target)
+
+    expect(result.contents).toContain(`\n\tname = jimmy\n\n${GIT_AI_CONFIG_MARKER_BEGIN}`)
+  })
+
+  // Git parses a gitconfig with its own escape rules, so a Windows named-pipe
+  // value must reach the file escaped. Written raw it is not a cosmetic bug:
+  // Git rejects the whole file with `fatal: bad config line N`, which takes
+  // every unrelated setting down with it.
+  it('escapes backslashes in a windows pipe target', () => {
+    const pipe = '\\\\.\\pipe\\git-ai-0123456789abcdef-trace2'
+
+    const result = applyGitAiTrace2Config('', pipe)
+
+    expect(result.contents).toContain('\teventTarget = \\\\\\\\.\\\\pipe\\\\git-ai-0123456789abcdef-trace2')
+  })
+
+  it('leaves a unix socket target unescaped', () => {
+    const result = applyGitAiTrace2Config('', target)
+
+    expect(result.contents).toContain(`\teventTarget = ${target}`)
+    expect(result.contents).not.toContain('\\\\')
   })
 
   it('preserves unrelated user configuration byte for byte', () => {
@@ -208,12 +244,15 @@ describe('applyGitAiTrace2Config', () => {
 })
 
 describe('ensureDesktopGitAiTrace2Config', () => {
-  it('creates the gitconfig when the user has none', () => {
+  // Unix-only: this asserts the AF_UNIX spelling end to end, and the socket path
+  // is joined with the host's separator, so on Windows the expected value would
+  // carry backslashes that the writer correctly escapes.
+  it.runIf(process.platform !== 'win32')('creates the gitconfig when the user has none', () => {
     const root = makeRoot()
     const gitConfigPath = join(root, '.gitconfig')
     const { info, logger } = makeLogger()
 
-    const result = ensureDesktopGitAiTrace2Config({ homeDir: root, gitConfigPath, logger })
+    const result = ensureDesktopGitAiTrace2Config({ homeDir: root, gitConfigPath, logger, platform: 'linux' })
 
     expect(result.changed).toBe(true)
     expect(existsSync(gitConfigPath)).toBe(true)
@@ -238,7 +277,8 @@ describe('ensureDesktopGitAiTrace2Config', () => {
     expect(result.eventTarget.startsWith('\\\\.\\pipe\\git-ai-')).toBe(true)
     expect(result.eventTarget).not.toContain('af_unix')
     const written = readFileSync(gitConfigPath, 'utf8')
-    expect(written).toContain(`\teventTarget = ${result.eventTarget}`)
+    // The value is stored escaped, because Git would otherwise reject the file.
+    expect(written).toContain(`\teventTarget = ${result.eventTarget.replace(/\\/gu, '\\\\')}`)
     // The unix spelling must never appear in a Windows user's config: Git would
     // silently route every Trace2 event to stderr and attribution would die.
     expect(written).not.toContain('af_unix')
@@ -272,7 +312,7 @@ describe('ensureDesktopGitAiTrace2Config', () => {
 
     expect(migrated.changed).toBe(true)
     const written = readFileSync(gitConfigPath, 'utf8')
-    expect(written).toContain(`\teventTarget = ${migrated.eventTarget}`)
+    expect(written).toContain(`\teventTarget = ${migrated.eventTarget.replace(/\\/gu, '\\\\')}`)
     expect(written).not.toContain('af_unix')
   })
 
