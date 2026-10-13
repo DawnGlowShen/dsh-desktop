@@ -1,0 +1,33 @@
+dsh-plugin-desktop/src/client/styles.ts
+  s_b9cb9fcacb5b8b::t_1709350fd77f2a 28-30
+  s_e9964b1dc8315c::t_bf87c3eb03a66d 32
+  s_e9964b1dc8315c::t_21bb35806f1a0b 27,31
+dsh-plugin-desktop-beta/src/client/styles.ts
+  s_e9964b1dc8315c::t_7430bb2dba1afb 27,31
+  s_b9cb9fcacb5b8b::t_1709350fd77f2a 28-30
+  s_e9964b1dc8315c::t_56506deb684fef 32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "328b71aa3aa3c865c304fde856a5cf30b80436ff",
+  "prompts": {},
+  "sessions": {
+    "s_b9cb9fcacb5b8b": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "9ba8e947-7564-48d5-b423-9541aca4c0b9",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    },
+    "s_e9964b1dc8315c": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-5fd07c1d-7519-48da-830b-c3d481892869",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": null
+    }
+  }
+}
