@@ -1,0 +1,20 @@
+dsh-plugin-desktop-beta/src/desktop-git-ai-config.ts
+  h_b23a6a8439c0dd 51-60,112-130,361,365-371
+dsh-plugin-desktop-beta/tests/desktop-git-ai-config.spec.ts
+  h_b23a6a8439c0dd 35-40,44,94-126,247-250,255,280-281,315
+dsh-plugin-desktop/src/desktop-git-ai-config.ts
+  h_b23a6a8439c0dd 51-60,112-130,361,365-371
+dsh-plugin-desktop/tests/desktop-git-ai-config.spec.ts
+  h_b23a6a8439c0dd 35-40,44,94-126,247-250,255,280-281,315
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3535ea4783098502d761650a29595a798fc88394",
+  "prompts": {},
+  "humans": {
+    "h_b23a6a8439c0dd": {
+      "author": "unknown"
+    }
+  }
+}
