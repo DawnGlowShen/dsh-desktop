@@ -46,6 +46,7 @@ import { detectDesktopWindowsInstallKind } from './desktop-windows-install-kind.
 import { createPowerShellWindowsKeyProbe } from './desktop-windows-path.ts'
 import { seedDesktopDreamSkin } from './desktop-dream-skin-default.ts'
 import {
+  desktopGitAiDisabled,
   desktopGitAiLogger,
   ensureDesktopGitAiTrace2Config,
   startDesktopGitAiDaemon,
@@ -848,37 +849,55 @@ async function start(): Promise<void> {
     }
     const mnemonRuntime = mnemonPublication.installation
     const releaseMnemonRuntime = generation.own(() => { mnemonRuntime?.dispose() })
+    // The whole git-ai runtime is behind a temporary diagnostic kill switch:
+    // publishing the CLI, starting its daemon, and editing `~/.gitconfig` are
+    // skipped together when `DSH_DESKTOP_DISABLE_GIT_AI=1`, so a single variable
+    // can rule git-ai in or out as the cause of a startup failure on a machine
+    // that cannot be rebuilt between attempts.
+    const gitAiDisabled = desktopGitAiDisabled()
+    if (gitAiDisabled) {
+      electronLogger.info(
+        `${BIN_NAME}: git-ai runtime disabled by `
+          + `${'DSH_DESKTOP_DISABLE_GIT_AI'}; skipping CLI, daemon, and gitconfig.`,
+      )
+    }
     // Publish the packaged git-ai CLI the same way, and point the user's global
     // Git at its Trace2 daemon. `dsh-git-ai` resolves `git-ai` from PATH, but
     // attribution only works once `trace2.eventTarget` reaches the daemon
     // socket, so a preinstalled git-ai has to configure that itself rather than
     // asking the user to hand-edit `~/.gitconfig`.
-    const gitAiPublication = publishDesktopGitAiRuntime(
-      join(process.resourcesPath, 'git-ai'),
-      process.platform,
-      process.arch,
-      process.env,
-    )
-    if (gitAiPublication.failure !== undefined) {
+    const gitAiPublication = gitAiDisabled
+      ? undefined
+      : publishDesktopGitAiRuntime(
+        join(process.resourcesPath, 'git-ai'),
+        process.platform,
+        process.arch,
+        process.env,
+      )
+    if (gitAiPublication?.failure !== undefined) {
       electronLogger.error(`${BIN_NAME}: ${gitAiPublication.failure}`)
     }
-    const gitAiRuntime = gitAiPublication.installation
+    const gitAiRuntime = gitAiPublication?.installation
     const releaseGitAiRuntime = generation.own(() => { gitAiRuntime?.dispose() })
     // Start the daemon before configuring Git, so the socket the config points
     // at is already listening when the user's first commit emits Trace2 events.
     // `git-ai bg start` returns once the daemon is up rather than staying in the
     // foreground, so awaiting it does not hold up startup.
-    const gitAiDaemon = await startDesktopGitAiDaemon({
-      gitAiPathDir: gitAiRuntime?.pathDir,
-      logger: desktopGitAiLogger(app.getPath('home')),
-    })
-    if (gitAiDaemon.failure !== undefined) {
+    const gitAiDaemon = gitAiDisabled
+      ? undefined
+      : await startDesktopGitAiDaemon({
+        gitAiPathDir: gitAiRuntime?.pathDir,
+        logger: desktopGitAiLogger(app.getPath('home')),
+      })
+    if (gitAiDaemon?.failure !== undefined) {
       electronLogger.error(`${BIN_NAME}: ${gitAiDaemon.failure}`)
     }
     // Point the user's global Git at that daemon. Skipped when the CLI could not
     // be published at all, because the config is useless without it and there is
-    // no reason to edit the user's gitconfig for a runtime that is missing.
-    if (gitAiRuntime !== undefined) {
+    // no reason to edit the user's gitconfig for a runtime that is missing. The
+    // kill switch is re-checked here rather than left implicit in `gitAiRuntime`,
+    // so the skipped branch is visible while the diagnostic is in place.
+    if (!gitAiDisabled && gitAiRuntime !== undefined) {
       try {
         ensureDesktopGitAiTrace2Config({
           homeDir: app.getPath('home'),

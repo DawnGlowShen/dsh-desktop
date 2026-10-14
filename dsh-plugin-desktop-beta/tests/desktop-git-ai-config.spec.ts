@@ -8,6 +8,7 @@ import {
   GIT_AI_CONFIG_MARKER_END,
   OWNED_COMMENT_PREFIX,
   applyGitAiTrace2Config,
+  desktopGitAiDisabled,
   ensureDesktopGitAiTrace2Config,
   gitAiTrace2EventTarget,
 } from '../src/desktop-git-ai-config.ts'
@@ -448,5 +449,25 @@ describe('ensureDesktopGitAiTrace2Config', () => {
 
     expect(result.changed).toBe(false)
     expect(write).not.toHaveBeenCalled()
+  })
+})
+
+describe('desktopGitAiDisabled', () => {
+  it('engages on the documented switch value', () => {
+    expect(desktopGitAiDisabled({ DSH_DESKTOP_DISABLE_GIT_AI: '1' })).toBe(true)
+  })
+
+  it('stays off when the variable is absent', () => {
+    expect(desktopGitAiDisabled({})).toBe(false)
+  })
+
+  it('treats blank and zero as unset', () => {
+    expect(desktopGitAiDisabled({ DSH_DESKTOP_DISABLE_GIT_AI: '' })).toBe(false)
+    expect(desktopGitAiDisabled({ DSH_DESKTOP_DISABLE_GIT_AI: '0' })).toBe(false)
+  })
+
+  it('engages for any other value, so a typo still disables rather than silently enabling', () => {
+    expect(desktopGitAiDisabled({ DSH_DESKTOP_DISABLE_GIT_AI: 'true' })).toBe(true)
+    expect(desktopGitAiDisabled({ DSH_DESKTOP_DISABLE_GIT_AI: 'yes' })).toBe(true)
   })
 })
