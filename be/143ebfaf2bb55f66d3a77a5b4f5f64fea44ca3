@@ -1,0 +1,29 @@
+dsh-plugin-desktop-beta/src/offline-install-plugins.ts
+  s_0f839b88721b02::t_581e0e1889b34c 184,189-224
+  s_0f839b88721b02::t_060184442531e8 225-226
+dsh-plugin-desktop/tests/offline-install-subpath-exports.spec.ts
+  s_0f839b88721b02::t_b44bcb63c6b23e 1-16,18-33,36-38,44-55,57-64,66-87,89-99,105-115,117-142,144-165
+  s_0f839b88721b02::t_a664fcc5b03fb2 17,34-35,39-43,56,65,88,100-104,116,143
+dsh-plugin-desktop/src/offline-install-plugins.ts
+  s_0f839b88721b02::t_cd07993f05d841 189,191,197,202,209-214,223
+  s_0f839b88721b02::t_7feb430e334bf6 184,190,192-196,198-201,203-208,215-222,224
+  s_0f839b88721b02::t_d7e5bbf88c9d9b 225-226
+dsh-plugin-desktop-beta/tests/offline-install-subpath-exports.spec.ts
+  s_0f839b88721b02::t_581e0e1889b34c 1-165
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "be143ebfaf2bb55f66d3a77a5b4f5f64fea44ca3",
+  "prompts": {},
+  "sessions": {
+    "s_0f839b88721b02": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-36ca2a32-3027-4cdc-b766-ac222f4acaf3",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
