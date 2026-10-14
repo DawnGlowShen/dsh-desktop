@@ -1,0 +1,43 @@
+dsh-plugin-desktop-beta/tsconfig.tests.json
+  s_0f839b88721b02::t_b4bb72e2a8a324 15
+dsh-plugin-desktop/tests/offline-install-plugins.spec.ts
+  s_0f839b88721b02::t_1fb492e0c643c9 3
+dsh-plugin-desktop/tsconfig.tests.json
+  s_0f839b88721b02::t_b4bb72e2a8a324 15
+dsh-plugin-desktop/tests/offline-install-tar.spec.ts
+  s_0f839b88721b02::t_1fb492e0c643c9 2
+  s_0f839b88721b02::t_4e84065355cb63 60-63
+  s_0f839b88721b02::t_850247fef66cc3 124,240
+dsh-plugin-desktop/tsconfig.tests.client.json
+  s_0f839b88721b02::t_b4bb72e2a8a324 17
+dsh-plugin-desktop/tests/helpers/offline-tar.ts
+  s_0f839b88721b02::t_4e84065355cb63 59-62
+dsh-plugin-desktop-beta/tests/offline-install-tar.spec.ts
+  s_0f839b88721b02::t_61170a1d179326 2,60-63,124,240
+dsh-plugin-desktop-beta/tests/offline-install-cli.spec.ts
+  s_0f839b88721b02::t_61170a1d179326 235-237
+dsh-plugin-desktop/tests/offline-install-cli.spec.ts
+  s_0f839b88721b02::t_850247fef66cc3 235-237
+dsh-plugin-desktop-beta/tests/helpers/offline-tar.ts
+  s_0f839b88721b02::t_61170a1d179326 59-62
+dsh-plugin-desktop-beta/tests/offline-install-plugins.spec.ts
+  s_0f839b88721b02::t_61170a1d179326 3
+dsh-plugin-desktop-beta/tsconfig.tests.client.json
+  s_0f839b88721b02::t_b4bb72e2a8a324 17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4597d80a8f96bc04581d4af8a5de6f65b334a249",
+  "prompts": {},
+  "sessions": {
+    "s_0f839b88721b02": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-36ca2a32-3027-4cdc-b766-ac222f4acaf3",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
