@@ -849,16 +849,16 @@ async function start(): Promise<void> {
     }
     const mnemonRuntime = mnemonPublication.installation
     const releaseMnemonRuntime = generation.own(() => { mnemonRuntime?.dispose() })
-    // The whole git-ai runtime is behind a temporary diagnostic kill switch:
-    // publishing the CLI, starting its daemon, and editing `~/.gitconfig` are
-    // skipped together when `DSH_DESKTOP_DISABLE_GIT_AI=1`, so a single variable
-    // can rule git-ai in or out as the cause of a startup failure on a machine
-    // that cannot be rebuilt between attempts.
+    // The whole packaged git-ai runtime is off by default while this diagnostic
+    // is in place: publishing the CLI, starting its daemon, and editing
+    // `~/.gitconfig` are skipped together, so a freshly installed build answers
+    // "is git-ai the cause?" with no setup on the target machine. Setting
+    // `DSH_DESKTOP_ENABLE_GIT_AI=1` restores normal behaviour for comparison.
     const gitAiDisabled = desktopGitAiDisabled()
     if (gitAiDisabled) {
       electronLogger.info(
-        `${BIN_NAME}: git-ai runtime disabled by `
-          + `${'DSH_DESKTOP_DISABLE_GIT_AI'}; skipping CLI, daemon, and gitconfig.`,
+        `${BIN_NAME}: git-ai runtime disabled by default (diagnostic); `
+          + 'skipping CLI, daemon, and gitconfig. Set DSH_DESKTOP_ENABLE_GIT_AI=1 to re-enable.',
       )
     }
     // Publish the packaged git-ai CLI the same way, and point the user's global

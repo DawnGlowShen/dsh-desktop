@@ -99,31 +99,35 @@ const EVENT_NESTING_VALUE = '0'
 const DAEMON_START_TIMEOUT_MS = 5_000
 
 /**
- * Temporary diagnostic kill switch for every packaged side of git-ai.
+ * Temporary diagnostic switch for every packaged side of git-ai.
  *
- * Set `DSH_DESKTOP_DISABLE_GIT_AI=1` to skip publishing the CLI, starting its
- * Trace2 daemon, and editing `~/.gitconfig`, without rebuilding or uninstalling
- * anything. It exists to isolate a Windows second-launch failure that git-ai is
- * suspected of causing: an environment variable is checkable on the failing
- * machine, whereas a commented-out call would need a rebuilt installer to test.
+ * git-ai is **disabled by default** while this diagnostic is in place: the
+ * packaged CLI is not published, its Trace2 daemon is not started, and the
+ * user's `~/.gitconfig` is left alone. Set `DSH_DESKTOP_ENABLE_GIT_AI=1` to
+ * restore the normal behaviour, so the same installed build can be tested both
+ * ways on a machine that cannot be rebuilt between attempts — which is what
+ * isolates a Windows second-launch failure that git-ai is suspected of causing.
+ *
+ * The default is inverted relative to a normal feature flag on purpose: the
+ * build is being taken to a target machine to answer "is git-ai the cause?",
+ * and that question should be answerable by simply installing it.
  *
  * It is a diagnostic escape hatch, not a supported configuration, and is
  * expected to be removed once the cause is confirmed.
  */
-const DISABLE_ENVIRONMENT_VARIABLE = 'DSH_DESKTOP_DISABLE_GIT_AI'
+const ENABLE_ENVIRONMENT_VARIABLE = 'DSH_DESKTOP_ENABLE_GIT_AI'
 
 /**
- * Whether the git-ai kill switch is engaged.
+ * Whether the packaged git-ai runtime must stay inactive.
  *
- * `0` and the empty string read as "not set" so an exported-but-blank variable
- * in a Windows environment block does not silently disable the feature.
+ * Only the exact value `1` enables git-ai, so a typo cannot silently turn the
+ * suspected component back on mid-investigation while it looks disabled.
  *
  * @param environment - environment to read the switch from.
  * @returns true when git-ai must stay entirely inactive.
  */
 export function desktopGitAiDisabled(environment: NodeJS.ProcessEnv = process.env): boolean {
-  const value = environment[DISABLE_ENVIRONMENT_VARIABLE]
-  return value !== undefined && value !== '' && value !== '0'
+  return environment[ENABLE_ENVIRONMENT_VARIABLE] !== '1'
 }
 
 /** Socket path, relative to the home directory, that the git-ai daemon listens on. */

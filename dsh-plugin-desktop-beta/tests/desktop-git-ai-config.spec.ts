@@ -453,21 +453,26 @@ describe('ensureDesktopGitAiTrace2Config', () => {
 })
 
 describe('desktopGitAiDisabled', () => {
-  it('engages on the documented switch value', () => {
+  it('disables by default, so a freshly installed build needs no setup', () => {
+    expect(desktopGitAiDisabled({})).toBe(true)
+  })
+
+  it('re-enables only on the exact documented value', () => {
+    expect(desktopGitAiDisabled({ DSH_DESKTOP_ENABLE_GIT_AI: '1' })).toBe(false)
+  })
+
+  it('stays disabled for blank and zero, which read as not enabling git-ai', () => {
+    expect(desktopGitAiDisabled({ DSH_DESKTOP_ENABLE_GIT_AI: '' })).toBe(true)
+    expect(desktopGitAiDisabled({ DSH_DESKTOP_ENABLE_GIT_AI: '0' })).toBe(true)
+  })
+
+  it('stays disabled for near-miss values, so a typo cannot silently re-enable the suspect', () => {
+    expect(desktopGitAiDisabled({ DSH_DESKTOP_ENABLE_GIT_AI: 'true' })).toBe(true)
+    expect(desktopGitAiDisabled({ DSH_DESKTOP_ENABLE_GIT_AI: 'yes' })).toBe(true)
+    expect(desktopGitAiDisabled({ DSH_DESKTOP_ENABLE_GIT_AI: '01' })).toBe(true)
+  })
+
+  it('ignores the retired variable name', () => {
     expect(desktopGitAiDisabled({ DSH_DESKTOP_DISABLE_GIT_AI: '1' })).toBe(true)
-  })
-
-  it('stays off when the variable is absent', () => {
-    expect(desktopGitAiDisabled({})).toBe(false)
-  })
-
-  it('treats blank and zero as unset', () => {
-    expect(desktopGitAiDisabled({ DSH_DESKTOP_DISABLE_GIT_AI: '' })).toBe(false)
-    expect(desktopGitAiDisabled({ DSH_DESKTOP_DISABLE_GIT_AI: '0' })).toBe(false)
-  })
-
-  it('engages for any other value, so a typo still disables rather than silently enabling', () => {
-    expect(desktopGitAiDisabled({ DSH_DESKTOP_DISABLE_GIT_AI: 'true' })).toBe(true)
-    expect(desktopGitAiDisabled({ DSH_DESKTOP_DISABLE_GIT_AI: 'yes' })).toBe(true)
   })
 })
