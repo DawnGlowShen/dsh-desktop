@@ -1,0 +1,87 @@
+dsh-plugin-desktop/tests/plugin.spec.ts
+  s_0f839b88721b02::t_2405be316df20e 29,547
+dsh-plugin-desktop-beta/tests/client-desktop-offline-settings.spec.ts
+  s_0f839b88721b02::t_d486ee958cc81b 1-136
+dsh-plugin-desktop/src/index.ts
+  s_0f839b88721b02::t_f68c4c1ff264f5 23,41,245
+dsh-plugin-desktop/src/desktop-settings-route.ts
+  s_0f839b88721b02::t_f68c4c1ff264f5 500-527
+dsh-plugin-desktop-beta/tests/client-desktop-settings.spec.ts
+  s_0f839b88721b02::t_00e1df62d295a6 36,379-381,400-402,417
+  s_0f839b88721b02::t_ceb407ff50f52d 765-810
+dsh-plugin-desktop-beta/src/host-bootstrap.ts
+  s_0f839b88721b02::t_7ca1d9451ed566 64-71
+  s_0f839b88721b02::t_448d24411b18d3 16,289-293
+dsh-plugin-desktop-beta/src/index.ts
+  s_0f839b88721b02::t_d11a89f48e1f81 23
+  s_0f839b88721b02::t_6d62333a818c0c 41,245
+dsh-plugin-desktop/src/main.ts
+  s_0f839b88721b02::t_53108897db8853 92-93,1325-1331,1333,1337,1345-1348,1358-1378,1691-1692
+dsh-plugin-desktop-beta/src/desktop-settings-contract.ts
+  s_0f839b88721b02::t_5ddb27ee8a61e5 43-51
+  s_0f839b88721b02::t_269570a200a7ad 197-217
+dsh-plugin-desktop-beta/src/client/DesktopSettingsSection.tsx
+  s_0f839b88721b02::t_b9e5a91c1edb6a 959-996
+  s_0f839b88721b02::t_a9d7fd4d564827 80-91,395,564-575
+  s_0f839b88721b02::t_d92682ef3ecf7a 576-577
+dsh-plugin-desktop/src/client/desktop-settings-api.ts
+  s_0f839b88721b02::t_f68c4c1ff264f5 22-23,75-86,110-116,314-333,441-447,464
+dsh-plugin-desktop-beta/tests/plugin.spec.ts
+  s_0f839b88721b02::t_ac1fb43b86a620 29,547
+dsh-plugin-desktop-beta/src/desktop-settings-controller.ts
+  s_0f839b88721b02::t_c7b31260cfdc9d 235-243,249-256
+  s_0f839b88721b02::t_375cc2d5fb497c 13
+  s_0f839b88721b02::t_552895f26dc01e 67-74
+  s_0f839b88721b02::t_36fafff24b5cd4 244-248
+  s_0f839b88721b02::t_8830856244995c 27-41
+dsh-plugin-desktop-beta/tests/desktop-settings-api.spec.ts
+  s_0f839b88721b02::t_15cbe8616ff61e 21,805-880
+  s_0f839b88721b02::t_b22ca1d0e7fb05 881-912
+dsh-plugin-desktop-beta/src/client/desktop-settings-locales.ts
+  s_0f839b88721b02::t_2c6e0e11c521bc 41-45,49,180-184,188
+  s_0f839b88721b02::t_1a0356a746f082 46-48,185-187
+dsh-plugin-desktop-beta/src/client/desktop-settings-api.ts
+  s_0f839b88721b02::t_7319e532612c92 442-446
+  s_0f839b88721b02::t_e7b99383da8125 22-23,75-86,110-116,314-333,441,464
+  s_0f839b88721b02::t_aa8c55e146a781 447
+dsh-plugin-desktop-beta/src/desktop-settings-route.ts
+  s_0f839b88721b02::t_23a27923da6449 500-527
+dsh-plugin-desktop/src/client/desktop-settings-locales.ts
+  s_0f839b88721b02::t_f68c4c1ff264f5 41-49,180-188
+dsh-plugin-desktop-beta/src/main.ts
+  s_0f839b88721b02::t_ff805c6977f714 92,1346-1348,1378
+  s_0f839b88721b02::t_a175e8c6785a66 93,1325-1331,1333,1337,1345
+  s_0f839b88721b02::t_1b8f59d4f8ebc6 1358-1377
+  s_0f839b88721b02::t_6439df712d33af 1691-1692
+dsh-plugin-desktop/src/desktop-settings-controller.ts
+  s_0f839b88721b02::t_f68c4c1ff264f5 13,27-41,67-74,235-255
+  s_0f839b88721b02::t_03664715c6bcc5 256
+dsh-plugin-desktop/src/host-bootstrap.ts
+  s_0f839b88721b02::t_f68c4c1ff264f5 16,64-71,289-293
+dsh-plugin-desktop/tests/desktop-settings-api.spec.ts
+  s_0f839b88721b02::t_2405be316df20e 21,805-912
+dsh-plugin-desktop/tests/client-desktop-offline-settings.spec.ts
+  s_0f839b88721b02::t_fc79fb0693eeca 1-136
+dsh-plugin-desktop/src/desktop-settings-contract.ts
+  s_0f839b88721b02::t_f68c4c1ff264f5 43-51,197-215
+  s_0f839b88721b02::t_9b595b696d9805 216-217
+dsh-plugin-desktop/src/client/DesktopSettingsSection.tsx
+  s_0f839b88721b02::t_f68c4c1ff264f5 80-91,395,564-577,959-995
+  s_0f839b88721b02::t_9f5a698f2d90bd 996
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "650ea6325b689fc5ce860f0cfe52f258b61aee2c",
+  "prompts": {},
+  "sessions": {
+    "s_0f839b88721b02": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-36ca2a32-3027-4cdc-b766-ac222f4acaf3",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
