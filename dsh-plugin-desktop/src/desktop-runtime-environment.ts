@@ -698,7 +698,7 @@ function installBundledCliRuntime(
   windowsLauncher: string,
   options: DesktopCodegraphRuntimeOptions,
 ): DesktopCodegraphRuntimeInstallation {
-  if (options.platform !== 'darwin' && options.platform !== 'win32') {
+  if (options.platform !== 'darwin' && options.platform !== 'linux' && options.platform !== 'win32') {
     throw new Error(`dsh-plugin-desktop: ${label} runtime is unsupported on ${options.platform}`)
   }
   assertScriptValue(`${label} bundle directory`, options.bundleDir)

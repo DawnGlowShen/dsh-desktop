@@ -784,10 +784,10 @@ describe('desktop Host codegraph runtime', () => {
 
   it('fails loud for an unsupported platform, a relative path, and a missing launcher', () => {
     expect(() => installDesktopCodegraphRuntime({
-      platform: 'linux',
+      platform: 'freebsd',
       bundleDir: temporaryDirectory(),
       environment: {},
-    })).toThrow(/unsupported on linux/u)
+    })).toThrow(/unsupported on freebsd/u)
 
     expect(() => installDesktopCodegraphRuntime({
       platform: 'darwin',
@@ -892,10 +892,10 @@ describe('desktop Host mnemon runtime', () => {
 
   it('fails loud for an unsupported platform, a relative path, and a missing launcher', () => {
     expect(() => installDesktopMnemonRuntime({
-      platform: 'linux',
+      platform: 'freebsd',
       bundleDir: temporaryDirectory(),
       environment: {},
-    })).toThrow(/mnemon runtime is unsupported on linux/u)
+    })).toThrow(/mnemon runtime is unsupported on freebsd/u)
 
     expect(() => installDesktopMnemonRuntime({
       platform: 'darwin',
@@ -909,6 +909,19 @@ describe('desktop Host mnemon runtime', () => {
       bundleDir: temporaryDirectory(),
       environment: {},
     })).toThrow(/packaged mnemon launcher is missing/u)
+  })
+
+  it('publishes the Linux launcher under its POSIX name', () => {
+    const bundleDir = bundledMnemon('linux')
+    const binDir = join(bundleDir, 'bin')
+    const environment: NodeJS.ProcessEnv = { PATH: '/usr/bin:/bin' }
+
+    const installation = installDesktopMnemonRuntime({ platform: 'linux', bundleDir, environment })
+
+    expect(installation.pathDir).toBe(binDir)
+    expect(environment.PATH).toBe(`${binDir}:/usr/bin:/bin`)
+    installation.dispose()
+    expect(environment.PATH).toBe('/usr/bin:/bin')
   })
 
   it('resolves the packaged CLI through PATH for a spawned process', () => {
@@ -976,12 +989,13 @@ describe('publishDesktopMnemonRuntime', () => {
   /** Build a bundle directory without creating any launcher. */
   function manifestOnlyBundle(
     cpu: readonly string[] | undefined,
+    os: readonly string[] = ['darwin'],
   ): string {
     const bundleDir = join(temporaryDirectory(), 'mnemon')
     mkdirSync(join(bundleDir, 'bin'), { recursive: true })
     writeFileSync(
       join(bundleDir, 'package.json'),
-      JSON.stringify({ name: '@mnemon-dev/mnemon', ...(cpu === undefined ? {} : { os: ['darwin'], cpu }) }),
+      JSON.stringify({ name: '@mnemon-dev/mnemon', ...(cpu === undefined ? {} : { os, cpu }) }),
     )
     return bundleDir
   }
@@ -1039,6 +1053,24 @@ describe('publishDesktopMnemonRuntime', () => {
 
     expect(publication.installation).toBeUndefined()
     expect(publication.failure).toBeUndefined()
+    expect(environment.PATH).toBe('/usr/bin:/bin')
+  })
+
+  it('publishes the Linux bundle on a Linux host', () => {
+    // The Debian package ships a `mnemon` bundle whose manifest declares
+    // `os: ["linux"]`. Before this was covered, the installer rejected `linux`
+    // outright, so every Linux launch skipped the CLI and never created the
+    // shim directory the shell integration depends on.
+    const bundleDir = manifestOnlyBundle(['x64'], ['linux'])
+    writeFileSync(join(bundleDir, 'bin', 'mnemon'), '#!/bin/sh\n', { mode: 0o755 })
+    const environment: NodeJS.ProcessEnv = { PATH: '/usr/bin:/bin' }
+
+    const publication = publishDesktopMnemonRuntime(bundleDir, 'linux', 'x64', environment)
+
+    expect(publication.failure).toBeUndefined()
+    expect(publication.installation?.pathDir).toBe(join(bundleDir, 'bin'))
+    expect(environment.PATH).toBe(`${join(bundleDir, 'bin')}:/usr/bin:/bin`)
+    publication.installation?.dispose()
     expect(environment.PATH).toBe('/usr/bin:/bin')
   })
 })
