@@ -346,8 +346,9 @@ jobs:
           REPO: ${{ github.repository }}
           SHA: ${{ github.sha }}
           # Versioned releases kept for history, newest first. The rolling
-          # release is never counted here.
-          KEEP: '2'
+          # release is never counted here. Each release carries roughly a
+          # gigabyte of assets, so this bounds the repository size.
+          KEEP: '10'
         run: |
           set -euo pipefail
           mapfile -t assets < <(find artifacts -type f | sort)
