@@ -1,0 +1,36 @@
+dsh-plugin-desktop-beta/src/main.ts
+  s_0f839b88721b02::t_f48d64b468862c 39,943-960
+  s_0f839b88721b02::t_b495b7f3bb7f39 961
+dsh-plugin-desktop-beta/src/desktop-startup-hooks.ts
+  s_0f839b88721b02::t_555218eabe25a1 119,129,160,182,201
+  s_0f839b88721b02::t_08476639397caa 162
+  s_0f839b88721b02::t_6663e7b95408f9 1-44,51-118,120-128,130-159,161,163-181,183-200,202-228
+  s_0f839b88721b02::t_dc29089d68a2a6 45-50
+dsh-plugin-desktop-beta/tests/desktop-startup-hooks.spec.ts
+  s_0f839b88721b02::t_dd0eec4c05ccc9 1-206
+dsh-plugin-desktop/src/desktop-startup-hooks.ts
+  s_0f839b88721b02::t_ee66365f206f1b 162
+  s_0f839b88721b02::t_27de3febcbd514 1-44,51-118,120-128,130-159,161,163-181,183-200,202-228
+  s_0f839b88721b02::t_d275c7ee2c387d 45-50,119,129,160,182,201
+dsh-plugin-desktop/src/main.ts
+  s_0f839b88721b02::t_f48d64b468862c 39,943-960
+  s_0f839b88721b02::t_23ed7033f1adcb 961
+dsh-plugin-desktop/tests/desktop-startup-hooks.spec.ts
+  s_0f839b88721b02::t_05b1ca47d09c9f 1-206
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8245b0db421cc18eee766ebcad1e297eacc0c7ea",
+  "prompts": {},
+  "sessions": {
+    "s_0f839b88721b02": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-36ca2a32-3027-4cdc-b766-ac222f4acaf3",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
