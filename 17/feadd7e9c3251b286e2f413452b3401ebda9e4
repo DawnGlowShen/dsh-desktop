@@ -1,0 +1,21 @@
+dsh-plugin-desktop-beta/offline-install/manifest.json
+  s_0f839b88721b02::t_8e71c37b8c7fe4 3-15
+dsh-plugin-desktop/offline-install/manifest.json
+  s_0f839b88721b02::t_8e71c37b8c7fe4 3-15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "17feadd7e9c3251b286e2f413452b3401ebda9e4",
+  "prompts": {},
+  "sessions": {
+    "s_0f839b88721b02": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-36ca2a32-3027-4cdc-b766-ac222f4acaf3",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
