@@ -1,0 +1,59 @@
+dsh-plugin-desktop-beta/scripts/release-mac.ts
+  s_0f839b88721b02::t_0f8b195b96c9c3 16,83-84
+dsh-plugin-desktop-beta/package.json
+  s_0f839b88721b02::t_0f8b195b96c9c3 131,434-437,456-459
+dsh-plugin-desktop/scripts/package-linux.ts
+  s_0f839b88721b02::t_5ba2aa6437cc93 10,99
+  s_0f839b88721b02::t_8ab6b3dcabc837 98
+dsh-plugin-desktop-beta/offline-install/manifest.json
+  s_0f839b88721b02::t_0b59fec3f4db46 1-5
+dsh-plugin-desktop-beta/scripts/package-linux.ts
+  s_0f839b88721b02::t_0f8b195b96c9c3 10,98-99
+dsh-plugin-desktop/scripts/package-mac.ts
+  s_0f839b88721b02::t_5ba2aa6437cc93 13,85
+  s_0f839b88721b02::t_8ab6b3dcabc837 84
+dsh-plugin-desktop/scripts/release-mac.ts
+  s_0f839b88721b02::t_5ba2aa6437cc93 16,84
+  s_0f839b88721b02::t_20142387286e9a 83
+dsh-plugin-desktop-beta/scripts/package-mac.ts
+  s_0f839b88721b02::t_0f8b195b96c9c3 13,84-85
+dsh-plugin-desktop/package.json
+  s_0f839b88721b02::t_8bb79691594846 148,422-425,445-448
+dsh-plugin-desktop/offline-install/manifest.json
+  s_0f839b88721b02::t_0b59fec3f4db46 1-5
+dsh-plugin-desktop/scripts/package-win.ts
+  s_0f839b88721b02::t_5ba2aa6437cc93 10,129
+  s_0f839b88721b02::t_8ab6b3dcabc837 128
+dsh-plugin-desktop/tests/package.spec.ts
+  s_0f839b88721b02::t_f8a6614dc789e5 900,970-973
+dsh-plugin-desktop/scripts/prepare-offline-install.ts
+  s_0f839b88721b02::t_065f5e83b53fdf 112
+  s_0f839b88721b02::t_a02107244b3ddd 1-47,50,52-55,57-100,102-111,114-219
+  s_0f839b88721b02::t_5a2d0ebe53cddf 48-49,51,56,101,113
+dsh-plugin-desktop-beta/tests/prepare-offline-install.spec.ts
+  s_0f839b88721b02::t_fef7bda3e86fec 1-211
+dsh-plugin-desktop-beta/tests/package.spec.ts
+  s_0f839b88721b02::t_0f8b195b96c9c3 963,1044-1047
+dsh-plugin-desktop/tests/prepare-offline-install.spec.ts
+  s_0f839b88721b02::t_55b7d4fb62b36f 1-211
+dsh-plugin-desktop-beta/scripts/package-win.ts
+  s_0f839b88721b02::t_0f8b195b96c9c3 10,128-129
+dsh-plugin-desktop-beta/scripts/prepare-offline-install.ts
+  s_0f839b88721b02::t_9bf0cfd8c5f33d 1-219
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f72ad970ae0d4d9e740cf3f2834e2719fe433904",
+  "prompts": {},
+  "sessions": {
+    "s_0f839b88721b02": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-36ca2a32-3027-4cdc-b766-ac222f4acaf3",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
