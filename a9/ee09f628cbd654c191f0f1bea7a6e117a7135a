@@ -1,0 +1,27 @@
+dsh-plugin-desktop/tests/package.spec.ts
+  s_f198f6dc79c376::t_64de2c833147e1 818
+.github/workflows/ci.yml
+  s_f198f6dc79c376::t_8e0978e9174c17 349-351
+dsh-plugin-desktop-beta/package.json
+  s_f198f6dc79c376::t_64de2c833147e1 3
+dsh-plugin-desktop-beta/tests/package.spec.ts
+  s_f198f6dc79c376::t_64de2c833147e1 92,859
+dsh-plugin-desktop/package.json
+  s_f198f6dc79c376::t_64de2c833147e1 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a9ee09f628cbd654c191f0f1bea7a6e117a7135a",
+  "prompts": {},
+  "sessions": {
+    "s_f198f6dc79c376": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-e732ff07-819f-4f26-80eb-164fe584fb26",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
