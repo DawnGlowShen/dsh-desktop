@@ -1,0 +1,32 @@
+EdanSpec/feature/20261015182510-offline-payload-vendor/security-review-report.md
+  s_15215fbc556061::t_dc6f6e1c57efec 1-182
+EdanSpec/feature/20261015182510-offline-payload-vendor/code-review-report.md
+  s_15215fbc556061::t_daa5b1d0d4982b 1-4,9-17,21,25-29,31-33,35-38,40,42-44,46-49,51,53-54,56-60,62,64-66,84,112-113,116,118,127-128,130,144,150-151,153,161,163,165,167,171-172,216-220,227,229,231,245,247,249,251,257,263,265,267
+  s_a93b064c695911::t_99174ce0bc3329 5-8,18-20,22-24,30,34,39,41,45,50,52,55,61,63,67-83,85-111,114-115,117,119-126,129,131-143,145-149,152,154-160,162,164,166,168-170,173-215,221-226,228,230,232-244,246,248,250,252-256,258-262,264,266,268
+EdanSpec/feature/20261015182510-offline-payload-vendor/verify-report.md
+  s_15215fbc556061::t_537cbed0cad1e4 1-259
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5160556b2647a9c1143ef1af9d3958c5d9f09eb9",
+  "prompts": {},
+  "sessions": {
+    "s_15215fbc556061": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "74cc1829-76f8-4acd-8e40-5903f7633870",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    },
+    "s_a93b064c695911": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "c9791a56-2794-43b6-a651-69c549105a0b",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
