@@ -1,0 +1,23 @@
+dsh-plugin-desktop/tests/offline-install-config-dream-skin.spec.ts
+  s_5989a518ed79ce::t_875ba90a2cb230 4,178-219
+  s_5989a518ed79ce::t_4f0549d28278ff 220-221
+dsh-plugin-desktop-beta/tests/offline-install-config-dream-skin.spec.ts
+  s_5989a518ed79ce::t_875ba90a2cb230 4,178-219
+  s_5989a518ed79ce::t_b6559e4ecbb33d 220-221
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "db0bb5e00308a8fb7825c17609ee8a3fbf740b4f",
+  "prompts": {},
+  "sessions": {
+    "s_5989a518ed79ce": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-6dac6bdc-1e0c-40c1-baa7-2abc0237b1e6",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
