@@ -1,0 +1,38 @@
+dsh-plugin-desktop/tests/host-process.spec.ts
+  s_0f839b88721b02::t_ecee06b4130e44 85-124
+dsh-plugin-desktop-beta/src/host-bootstrap.ts
+  s_0f839b88721b02::t_46261674ebfa37 71-79,290
+dsh-plugin-desktop/src/host-process.ts
+  s_0f839b88721b02::t_c278284780c5e1 16-23,25-31,86-89
+dsh-plugin-desktop/src/main.ts
+  s_0f839b88721b02::t_bf2b5e06f96c49 1691-1694
+dsh-plugin-desktop-beta/tests/host-process.spec.ts
+  s_0f839b88721b02::t_cc1c7fe5e39018 85-124
+dsh-plugin-desktop-beta/src/main.ts
+  s_0f839b88721b02::t_46261674ebfa37 1691-1694
+dsh-plugin-desktop/src/host-bootstrap.ts
+  s_0f839b88721b02::t_2ff3ab38b0b62d 71-79,290
+dsh-plugin-desktop-beta/src/host-process-entry.ts
+  s_0f839b88721b02::t_46261674ebfa37 9,74-78
+dsh-plugin-desktop-beta/src/host-process.ts
+  s_0f839b88721b02::t_46261674ebfa37 16-23,25-31,86-89
+dsh-plugin-desktop/src/host-process-entry.ts
+  s_0f839b88721b02::t_03fe0bdb50f232 78
+  s_0f839b88721b02::t_ad63d7bdb080fa 9,74-77
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1ed9bb74b9567acbc455f9bda1e0f1d14c61e2b4",
+  "prompts": {},
+  "sessions": {
+    "s_0f839b88721b02": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-36ca2a32-3027-4cdc-b766-ac222f4acaf3",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
