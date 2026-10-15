@@ -1,0 +1,37 @@
+EdanSpec/feature/20261015182510-offline-payload-vendor/status.json
+  s_a59520c5c6abcc::t_75e58a462f5787 6
+  s_a59520c5c6abcc::t_a5ae612a428742 1-5,7-8
+EdanSpec/feature/20261015182510-offline-payload-vendor/design.md
+  s_a59520c5c6abcc::t_c917ca2ac753d8 1-104
+EdanSpec/feature/20261015182510-offline-payload-vendor/specs/offline-payload-source-spec.md
+  s_a59520c5c6abcc::t_82a505156d6a41 1-96
+EdanSpec/feature/20261015182510-offline-payload-vendor/proposal.md
+  s_a59520c5c6abcc::t_be9a1606b0ed6b 1-61
+.github/workflows/windows-package.yml
+  s_ee4ab0c0ff9a3f::t_2381e4b027c402 27
+  s_ee4ab0c0ff9a3f::t_98d083e28f55cc 132-136,142-146
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b1f8ce9bc711c3b6e4f3e70c77779bb2a44eec34",
+  "prompts": {},
+  "sessions": {
+    "s_a59520c5c6abcc": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-420f393a-1e1b-41d1-adb5-d82068058c1c",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    },
+    "s_ee4ab0c0ff9a3f": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-0e7b08a1-9690-434a-9aea-de01fc6609d0",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
