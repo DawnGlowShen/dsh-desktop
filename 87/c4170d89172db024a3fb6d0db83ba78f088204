@@ -1,0 +1,24 @@
+.gitignore
+  s_a59520c5c6abcc::t_3710ab2160a5ca 36-39
+EdanSpec/feature/20261015182510-offline-payload-vendor/tasks.md
+  s_a59520c5c6abcc::t_d3dbeea6c36dbb 317,322,324,329
+.github/workflows/windows-package.yml
+  s_a59520c5c6abcc::t_07d2d62c23f886 111
+  s_a59520c5c6abcc::t_ea09760ed0388e 12-15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "87c4170d89172db024a3fb6d0db83ba78f088204",
+  "prompts": {},
+  "sessions": {
+    "s_a59520c5c6abcc": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-420f393a-1e1b-41d1-adb5-d82068058c1c",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
