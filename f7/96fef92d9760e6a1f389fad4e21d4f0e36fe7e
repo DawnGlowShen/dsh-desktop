@@ -1,0 +1,60 @@
+dsh-plugin-desktop/src/offline-install-dependencies.ts
+  s_ee4ab0c0ff9a3f::t_acaa4d22389695 19
+  s_ee4ab0c0ff9a3f::t_70e44aa84f8200 21-26,67,77
+dsh-plugin-desktop-beta/src/offline-install-dependencies.ts
+  s_ee4ab0c0ff9a3f::t_9cf2b6a055245d 19,21-26,67,77
+dsh-plugin-desktop/scripts/prepare-offline-install.ts
+  s_ee4ab0c0ff9a3f::t_9f23d621abbc81 48-66,304-317,320-323,341-342,382-384
+  s_ee4ab0c0ff9a3f::t_af5a3eba908a98 47
+dsh-plugin-desktop/tests/offline-install-manifest.spec.ts
+  s_ee4ab0c0ff9a3f::t_9ba335f0db20b3 8,11,13,200-262
+  s_ee4ab0c0ff9a3f::t_82bc67fedf805d 263
+dsh-plugin-desktop/src/offline-install-cli.ts
+  s_ee4ab0c0ff9a3f::t_bb31cf725209d5 16-22,169,174
+package.json
+  s_ee4ab0c0ff9a3f::t_6311bbe656cbb0 1372,1412-1413
+dsh-plugin-desktop-beta/scripts/prepare-offline-install.ts
+  s_ee4ab0c0ff9a3f::t_9f23d621abbc81 48-66,304-317,320-323,341-342,382-384
+  s_ee4ab0c0ff9a3f::t_5d4396d945cd70 47
+scripts/split-offline-payload.test.mjs
+  s_ee4ab0c0ff9a3f::t_da079361719daf 14,51-55
+  s_ee4ab0c0ff9a3f::t_862ac8150588ec 1-13,15-50,56-90
+dsh-plugin-desktop/src/offline-install-manifest.ts
+  s_ee4ab0c0ff9a3f::t_daf5abc36e3ed2 16,278-288,293-339
+dsh-plugin-desktop/src/offline-install-plugins.ts
+  s_ee4ab0c0ff9a3f::t_bb31cf725209d5 23-29,501,507
+scripts/prepare-offline-clis.mjs
+  s_ee4ab0c0ff9a3f::t_5115f273c41cab 38,101-122,132-133,139,149,184-186,188-196,199-209
+dsh-plugin-desktop-beta/src/offline-install-cli.ts
+  s_ee4ab0c0ff9a3f::t_9cf2b6a055245d 16-22,169,174
+dsh-plugin-desktop-beta/tests/offline-install-manifest.spec.ts
+  s_ee4ab0c0ff9a3f::t_9ba335f0db20b3 8,11,13,200-262
+  s_ee4ab0c0ff9a3f::t_b526a4a2ea2058 263
+dsh-plugin-desktop-beta/src/offline-install-plugins.ts
+  s_ee4ab0c0ff9a3f::t_9cf2b6a055245d 23-29,501,507
+scripts/split-offline-payload.mjs
+  s_ee4ab0c0ff9a3f::t_c5097c6189c53b 1-57,74-176
+  s_ee4ab0c0ff9a3f::t_e50c1a14f1b8f8 58-65
+  s_ee4ab0c0ff9a3f::t_4277ea959741e6 67-71
+  s_ee4ab0c0ff9a3f::t_da079361719daf 66
+  s_ee4ab0c0ff9a3f::t_b9c2229b0f28b8 72
+  s_ee4ab0c0ff9a3f::t_fe036ec20259a6 73
+dsh-plugin-desktop-beta/src/offline-install-manifest.ts
+  s_ee4ab0c0ff9a3f::t_9cf2b6a055245d 16,278-288,293-339
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f796fef92d9760e6a1f389fad4e21d4f0e36fe7e",
+  "prompts": {},
+  "sessions": {
+    "s_ee4ab0c0ff9a3f": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-0e7b08a1-9690-434a-9aea-de01fc6609d0",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
