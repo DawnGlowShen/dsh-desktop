@@ -1,0 +1,27 @@
+scripts/split-offline-payload.test.mjs
+  s_a59520c5c6abcc::t_6411d3c8f9a14b 69-82
+  s_a59520c5c6abcc::t_3b7397e14d10b4 9
+  s_a59520c5c6abcc::t_462c971b2fb0c0 11,14-20
+scripts/split-offline-payload.mjs
+  s_a59520c5c6abcc::t_4412df120fe5a6 77-89,93-94,102-106
+  s_a59520c5c6abcc::t_2a3736d3b20f8e 38
+  s_a59520c5c6abcc::t_7f7c5c93a42891 15-17
+EdanSpec/feature/20261015182510-offline-payload-vendor/tasks.md
+  s_a59520c5c6abcc::t_16a7b45685556a 223-224,228,230,235-237
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5a66dc5f49579bdc87d91d4b42f775ff246f8bad",
+  "prompts": {},
+  "sessions": {
+    "s_a59520c5c6abcc": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-420f393a-1e1b-41d1-adb5-d82068058c1c",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
