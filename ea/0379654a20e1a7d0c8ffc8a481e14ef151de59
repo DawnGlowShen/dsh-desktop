@@ -1,0 +1,85 @@
+EdanSpec/feature/20261015201456-offline-payload-config/design.md
+  s_5989a518ed79ce::t_02e589e50be492 1-93,95,97,99-103,118-130,134-139,141-142
+  s_5989a518ed79ce::t_bab2ca100499f2 131-133
+  s_5989a518ed79ce::t_30774cfd201767 140
+  s_5989a518ed79ce::t_0f613fe70abad1 94,96,98,104-117
+EdanSpec/feature/20261015201456-offline-payload-config/tasks.md
+  s_5989a518ed79ce::t_956059f978a33e 1-39,41-45,47-51,53-86,88-92,94-108,110-127,131-132,137-138,140-141,143-144,148,150-175,177-179,181-182,184-185,187-191,193-228,230-234,236-266,268-272,274-309,311-315,317-349
+  s_5989a518ed79ce::t_9f4ff61cfc52bb 87,93
+  s_5989a518ed79ce::t_ca4ff169b6109b 133,139,145
+  s_5989a518ed79ce::t_6c9f544b7ffd05 40,46,52
+  s_5989a518ed79ce::t_c9026efe7629e5 136,142
+  s_5989a518ed79ce::t_5fafb21ad59c8f 180,186,192
+  s_5989a518ed79ce::t_f70c6b913f2d88 109
+  s_5989a518ed79ce::t_83c5d79a639257 310,316
+  s_5989a518ed79ce::t_c247f9d2e81de0 176,183
+  s_5989a518ed79ce::t_7add12896b8e5e 128-129
+  s_5989a518ed79ce::t_23943cb9bf7864 229,235,267,273
+  s_5989a518ed79ce::t_12467273c66fd0 130,134-135,146-147,149
+dsh-plugin-desktop-beta/src/offline-install-config-git-ai.ts
+  s_5989a518ed79ce::t_c564abb156f8ab 318-327,338,344
+EdanSpec/feature/20261015201456-offline-payload-config/security-review-report.md
+  s_45c875d62e27fe::t_826ed5c114beeb 1-306
+dsh-plugin-desktop/tests/offline-install-run.spec.ts
+  s_5989a518ed79ce::t_a590f2daed2a05 236-239,256
+EdanSpec/feature/20261015201456-offline-payload-config/status.json
+  s_5989a518ed79ce::t_2a3c95f4034673 1-8
+EdanSpec/feature/20261015201456-offline-payload-config/specs/offline-preinstall-spec.md
+  s_5989a518ed79ce::t_83ccacdcf7c3f2 1-40
+EdanSpec/feature/20261015201456-offline-payload-config/specs/offline-payload-config-spec.md
+  s_5989a518ed79ce::t_038e6941e5e9ff 1-60,62,64,66,76-84
+  s_5989a518ed79ce::t_a636d34ccdb03b 61,63,65,67-75
+EdanSpec/feature/20261015201456-offline-payload-config/proposal.md
+  s_5989a518ed79ce::t_387c8821a0817f 1-37,39-43
+  s_5989a518ed79ce::t_e7114f8d512c5c 38
+EdanSpec/feature/20261015201456-offline-payload-config/verify-report.md
+  s_45c875d62e27fe::t_b68019f11e538c 1-411
+dsh-plugin-desktop-beta/tests/offline-install-end-to-end.spec.ts
+  s_5989a518ed79ce::t_8109c2c2f42618 143-147,202-204,206
+dsh-plugin-desktop-beta/tests/offline-install-run.spec.ts
+  s_5989a518ed79ce::t_a590f2daed2a05 236-239,256
+dsh-plugin-desktop/tests/offline-install-configure.spec.ts
+  s_5989a518ed79ce::t_05dea98a3f4893 11-13,121-154
+  s_5989a518ed79ce::t_6e52ca4589afa5 22-23
+  s_5989a518ed79ce::t_eacd8c80e17dc1 24,155
+dsh-plugin-desktop-beta/tests/offline-install-config-git-ai.spec.ts
+  s_5989a518ed79ce::t_4e778620c82295 625-659
+  s_5989a518ed79ce::t_da064068befebd 250-288
+EdanSpec/feature/20261015201456-offline-payload-config/code-review-report.md
+  s_45c875d62e27fe::t_b3f9f05fdc4289 1-345
+dsh-plugin-desktop/tests/offline-install-end-to-end.spec.ts
+  s_5989a518ed79ce::t_8109c2c2f42618 143-147,202-204,206
+dsh-plugin-desktop/tests/offline-install-config-git-ai.spec.ts
+  s_5989a518ed79ce::t_da064068befebd 250-288
+  s_5989a518ed79ce::t_4e778620c82295 625-659
+dsh-plugin-desktop/src/offline-install-config-git-ai.ts
+  s_5989a518ed79ce::t_c564abb156f8ab 318-327,338,344
+dsh-plugin-desktop-beta/tests/offline-install-configure.spec.ts
+  s_5989a518ed79ce::t_05dea98a3f4893 11-13,121-154
+  s_5989a518ed79ce::t_6e52ca4589afa5 22-23
+  s_5989a518ed79ce::t_a1a57e2ac25a44 24,155
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ea0379654a20e1a7d0c8ffc8a481e14ef151de59",
+  "prompts": {},
+  "sessions": {
+    "s_45c875d62e27fe": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "ae34bd9c-84d3-4735-97f0-587c673492bd",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    },
+    "s_5989a518ed79ce": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-6dac6bdc-1e0c-40c1-baa7-2abc0237b1e6",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
