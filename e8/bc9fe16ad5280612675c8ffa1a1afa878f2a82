@@ -1,0 +1,21 @@
+.gitignore
+  s_fbb9fd06c37e26::t_f9e1fd96a7ccd3 42-48
+dsh-plugin-desktop-beta/offline-install
+  s_fbb9fd06c37e26::t_3f7e81021ab642 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e8bc9fe16ad5280612675c8ffa1a1afa878f2a82",
+  "prompts": {},
+  "sessions": {
+    "s_fbb9fd06c37e26": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-e6a5539c-acb4-4c7a-8004-40a88ee2002a",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
