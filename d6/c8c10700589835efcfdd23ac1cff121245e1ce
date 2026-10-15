@@ -1,0 +1,26 @@
+scripts/prepare-offline-clis.mjs
+  s_ee4ab0c0ff9a3f::t_7063f6b3b98439 95-102
+  s_ee4ab0c0ff9a3f::t_9482c44a9bebd7 103
+  s_ee4ab0c0ff9a3f::t_6022f9e273e917 105
+scripts/prepare-offline-clis.test.mjs
+  s_ee4ab0c0ff9a3f::t_37d741fd5e1637 95-96,118-120
+  s_ee4ab0c0ff9a3f::t_5ce276b81074e9 90
+  s_ee4ab0c0ff9a3f::t_f76ae20ddb6d4f 91-94,97-98,100-116
+  s_ee4ab0c0ff9a3f::t_b110fedb85e568 89,99,117
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d6c8c10700589835efcfdd23ac1cff121245e1ce",
+  "prompts": {},
+  "sessions": {
+    "s_ee4ab0c0ff9a3f": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-0e7b08a1-9690-434a-9aea-de01fc6609d0",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
