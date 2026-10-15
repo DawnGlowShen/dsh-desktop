@@ -1,0 +1,33 @@
+dsh-plugin-desktop-beta/package.json
+  s_5989a518ed79ce::t_7711e5765f92f2 438-441,464-467
+scripts/prepare-dream-skin-default.mjs
+  s_5989a518ed79ce::t_2c4bb9787630e2 1-86
+dsh-plugin-desktop-beta/tests/package.spec.ts
+  s_5989a518ed79ce::t_3e95cdf4fcc18f 1048-1049,1054
+dsh-plugin-desktop-beta/src/offline-install-config-dream-skin.ts
+  s_5989a518ed79ce::t_a9f1434f27cedf 1-133
+dsh-plugin-desktop-beta/tests/offline-install-run.spec.ts
+  s_5989a518ed79ce::t_5af6853d078f4c 16,237-241,257-258
+dsh-plugin-desktop-beta/tests/offline-install-config-dream-skin.spec.ts
+  s_5989a518ed79ce::t_e861db18f861ef 1-2,4,10-102,111-126,129-137,140-149,152-162,165-176
+  s_5989a518ed79ce::t_9e5524b5bec771 3,103-110,127-128,138-139,150-151,163-164
+  s_5989a518ed79ce::t_bcbd28377c5cc2 5-9
+dsh-plugin-desktop-beta/src/offline-install-configure.ts
+  s_5989a518ed79ce::t_324c9c26b5fb1d 53,157-160
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e6d3d7c8944103ab0521f39386721e390dcb435e",
+  "prompts": {},
+  "sessions": {
+    "s_5989a518ed79ce": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-6dac6bdc-1e0c-40c1-baa7-2abc0237b1e6",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
