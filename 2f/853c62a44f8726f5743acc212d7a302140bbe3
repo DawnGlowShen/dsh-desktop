@@ -1,0 +1,19 @@
+EdanSpec/feature/20261015182510-offline-payload-vendor/tasks.md
+  s_a59520c5c6abcc::t_f58176585f6ab5 138-152
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2f853c62a44f8726f5743acc212d7a302140bbe3",
+  "prompts": {},
+  "sessions": {
+    "s_a59520c5c6abcc": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-420f393a-1e1b-41d1-adb5-d82068058c1c",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
