@@ -1,0 +1,35 @@
+EdanSpec/feature/20261015182510-offline-payload-vendor/tasks.md
+  s_a59520c5c6abcc::t_c2d6d2158eb9b8 5
+  s_a59520c5c6abcc::t_786656ab6373f0 254,257
+  s_a59520c5c6abcc::t_a8b5e9837fecde 1-4,6-69,72-74,76,78-79,81,83,85-239,241-253,255-256,258-311,313-314,331-348,350-367,369-376,379,381-383,385,388-389
+  s_a59520c5c6abcc::t_d6af9958dc651e 70-71,75,77,80,82,84
+  s_a59520c5c6abcc::t_1522400f4f830c 368,377-378,380,384,386-387
+  s_a59520c5c6abcc::t_4110d97bdf9ad6 240
+  s_a59520c5c6abcc::t_4be795888a3942 312,315-330
+  s_a59520c5c6abcc::t_6dcfce27de1d6a 349
+dsh-plugin-desktop-beta/tests/prepare-offline-install.spec.ts
+  s_a59520c5c6abcc::t_baaa0a52a77db8 321-325
+  s_a59520c5c6abcc::t_b2453524b094b4 165-171
+dsh-plugin-desktop-beta/scripts/prepare-offline-install.ts
+  s_a59520c5c6abcc::t_0cfccdd5a531d5 157-174
+  s_a59520c5c6abcc::t_68ec1f7f74e0e9 409-411
+  s_a59520c5c6abcc::t_12c9939bac78eb 301-305
+  s_a59520c5c6abcc::t_fe99d381c70a8b 417
+  s_a59520c5c6abcc::t_5dc7522fe3d857 323
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d5f0e047d26c7fbefda7066eb784782620bc5172",
+  "prompts": {},
+  "sessions": {
+    "s_a59520c5c6abcc": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-420f393a-1e1b-41d1-adb5-d82068058c1c",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
