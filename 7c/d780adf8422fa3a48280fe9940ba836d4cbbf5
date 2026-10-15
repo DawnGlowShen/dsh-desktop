@@ -1,0 +1,34 @@
+scripts/prepare-offline-clis.mjs
+  s_a59520c5c6abcc::t_2de487be859ffc 266
+  s_a59520c5c6abcc::t_54247ca9a23388 14,48,51-62
+  s_a59520c5c6abcc::t_f6069e587e4459 6-8,11-13
+  s_a59520c5c6abcc::t_58942d185f184f 278
+  s_a59520c5c6abcc::t_513be9ebf49a0e 204
+  s_a59520c5c6abcc::t_ed8c611fb59242 63
+scripts/prepare-offline-clis.test.mjs
+  s_a59520c5c6abcc::t_9a85747a94d8ef 78-84
+  s_a59520c5c6abcc::t_5039a81cb4832c 14,23
+  s_a59520c5c6abcc::t_99a9e803931767 256
+  s_a59520c5c6abcc::t_f89c56648194e6 181
+  s_a59520c5c6abcc::t_20ba3792f98786 65
+  s_a59520c5c6abcc::t_02d9f3da0703a4 30-37,39-42,44
+EdanSpec/feature/20261015182510-offline-payload-vendor/tasks.md
+  s_a59520c5c6abcc::t_ab8338ffd58ce5 180-181,185,187-188,192-194
+  s_a59520c5c6abcc::t_a3eaac411dc2e9 264,269,271-272,276,278,283
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7cd780adf8422fa3a48280fe9940ba836d4cbbf5",
+  "prompts": {},
+  "sessions": {
+    "s_a59520c5c6abcc": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-420f393a-1e1b-41d1-adb5-d82068058c1c",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
