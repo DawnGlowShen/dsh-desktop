@@ -1,0 +1,24 @@
+dsh-desktop-next/package.json
+  h_00830f4b5426b8 39,212
+dsh-plugin-desktop-beta/package.json
+  h_00830f4b5426b8 153,328
+dsh-plugin-desktop/package.json
+  h_00830f4b5426b8 152,318
+package.json
+  h_00830f4b5426b8 18,1331
+vendor/agents-anywhere/provenance.json
+  h_00830f4b5426b8 4,7-9,16
+yarn.lock
+  h_00830f4b5426b8 17-19,32,36-38,51,15986,16175,16222,16413,16455,16637,16675-16677,16690,16694-16696,16709
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "92ca960a1e2666563451f1e73f9bb9188de4b076",
+  "prompts": {},
+  "humans": {
+    "h_00830f4b5426b8": {
+      "author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
