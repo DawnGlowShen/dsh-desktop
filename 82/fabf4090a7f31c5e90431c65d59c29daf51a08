@@ -1,0 +1,27 @@
+.agents/notes/implemented/architecture/2026-10-15-offline-payload-configuration.i18n.yaml
+  s_5989a518ed79ce::t_55e9fad740c779 1-5
+dsh-plugin-desktop-beta/src/offline-install-config-git-ai.ts
+  s_5989a518ed79ce::t_2c0f23ccb7b3a2 482-498,529,543
+.agents/notes/implemented/architecture/2026-10-15-offline-payload-configuration.md
+  s_5989a518ed79ce::t_0b5a6e9dafed8b 1-67
+dsh-plugin-desktop-beta/src/offline-install-configure.ts
+  s_5989a518ed79ce::t_f905f33b1f703e 44-56,58-62
+.agents/notes/implemented/architecture/2026-10-15-offline-payload-configuration.zh.md
+  s_5989a518ed79ce::t_0bcf590de5a656 1-67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "82fabf4090a7f31c5e90431c65d59c29daf51a08",
+  "prompts": {},
+  "sessions": {
+    "s_5989a518ed79ce": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-6dac6bdc-1e0c-40c1-baa7-2abc0237b1e6",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
