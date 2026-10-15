@@ -1,0 +1,19 @@
+dsh-plugin-desktop-beta/tests/offline-install-end-to-end.spec.ts
+  s_5989a518ed79ce::t_bd6bd758a2f97d 1-190
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "46eeb0bf3a05b3662885a7a1c1d08d1122d966dd",
+  "prompts": {},
+  "sessions": {
+    "s_5989a518ed79ce": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-6dac6bdc-1e0c-40c1-baa7-2abc0237b1e6",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
