@@ -1,0 +1,51 @@
+dsh-plugin-desktop-beta/src/desktop-settings-contract.ts
+  s_5989a518ed79ce::t_9e8c5ea2a1d7db 218-227
+dsh-plugin-desktop/tests/offline-install-config-dream-skin.spec.ts
+  s_5989a518ed79ce::t_e2b403ae142000 11,174-202
+  s_5989a518ed79ce::t_f1d75ed6813482 203-204
+dsh-plugin-desktop/src/desktop-settings-contract.ts
+  s_5989a518ed79ce::t_999f4fe5125acb 218-227
+dsh-plugin-desktop/tests/offline-install-end-to-end.spec.ts
+  s_5989a518ed79ce::t_043d4613dfe326 180-184
+  s_5989a518ed79ce::t_00d9adb3298d23 190-210
+EdanSpec/feature/20261015201456-offline-payload-config/specs/offline-payload-config-spec.md
+  s_5989a518ed79ce::t_9e8c5ea2a1d7db 59-61
+dsh-plugin-desktop-beta/tests/offline-install-end-to-end.spec.ts
+  s_5989a518ed79ce::t_043d4613dfe326 180-184
+  s_5989a518ed79ce::t_00d9adb3298d23 190-210
+dsh-plugin-desktop/tests/offline-install-configure.spec.ts
+  s_5989a518ed79ce::t_07ac088a0b6994 183-187,189
+  s_5989a518ed79ce::t_2dc24d07ee46a9 12,16-17,170-182,188,190,196-206,208-211,217-244,250-252
+  s_5989a518ed79ce::t_46416a5fb9d9b4 125-168
+  s_5989a518ed79ce::t_4566c6a5a43e4c 11,191-195,212-216
+dsh-plugin-desktop/tests/offline-install-config-git-ai.spec.ts
+  s_5989a518ed79ce::t_8e1b46d29589ba 710-743,748,750
+  s_5989a518ed79ce::t_c72a0c4df99a79 744-747,749
+dsh-plugin-desktop-beta/tests/offline-install-configure.spec.ts
+  s_5989a518ed79ce::t_2dc24d07ee46a9 12,16-17,170-182,188,190,196-206,208-211,217-244,250-252
+  s_5989a518ed79ce::t_46416a5fb9d9b4 125-168
+  s_5989a518ed79ce::t_4566c6a5a43e4c 11,191-195,212-216
+  s_5989a518ed79ce::t_07ac088a0b6994 183-187,189
+dsh-plugin-desktop-beta/tests/offline-install-config-git-ai.spec.ts
+  s_5989a518ed79ce::t_c72a0c4df99a79 744-747,749
+  s_5989a518ed79ce::t_8e1b46d29589ba 710-743,748,750
+dsh-plugin-desktop-beta/tests/offline-install-config-dream-skin.spec.ts
+  s_5989a518ed79ce::t_e2b403ae142000 11,174-202
+  s_5989a518ed79ce::t_58a49ed603c254 203-204
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "709d1e49b664b2868a522552554b5a29ecb35c95",
+  "prompts": {},
+  "sessions": {
+    "s_5989a518ed79ce": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-6dac6bdc-1e0c-40c1-baa7-2abc0237b1e6",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
