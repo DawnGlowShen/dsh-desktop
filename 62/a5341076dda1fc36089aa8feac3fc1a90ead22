@@ -1,0 +1,24 @@
+dsh-plugin-desktop/scripts/prepare-offline-install.ts
+  s_a59520c5c6abcc::t_327f946223bbd6 9-13,21-27,144-149,152,157-174,301-305,323,409-411,417
+dsh-plugin-desktop/tests/prepare-offline-install.spec.ts
+  s_a59520c5c6abcc::t_327f946223bbd6 10,22-29,31-33,41-49,75-83,165-171,321-324
+  s_a59520c5c6abcc::t_0e92b3fa2afa40 325
+EdanSpec/feature/20261015182510-offline-payload-vendor/tasks.md
+  s_a59520c5c6abcc::t_fbbf38a739607f 114,119,121,126
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "62a5341076dda1fc36089aa8feac3fc1a90ead22",
+  "prompts": {},
+  "sessions": {
+    "s_a59520c5c6abcc": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-420f393a-1e1b-41d1-adb5-d82068058c1c",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
