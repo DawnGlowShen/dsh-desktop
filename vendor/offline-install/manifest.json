@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "dependencies": {
+    "version": "1.0.0",
+    "tarball": "dependencies-1.0.0.tgz"
+  },
+  "plugins": [
+    {
+      "name": "@edan/edan-spec",
+      "version": "1.0.1",
+      "tarball": "edan-edan-spec-1.0.1.tgz"
+    },
+    {
+      "name": "@huanlin/dsh-plugin-better-sidebar-plugin-office",
+      "version": "0.2.0",
+      "tarball": "dsh-plugin-better-sidebar-plugin-office-0.2.0.tgz"
+    },
+    {
+      "name": "@hyzyn/dsh-codegraph",
+      "version": "0.6.6",
+      "tarball": "dsh-codegraph-0.6.6.tgz"
+    },
+    {
+      "name": "@linxin666/dsh-client-ui-git-graph",
+      "version": "0.4.5",
+      "tarball": "dsh-client-ui-git-graph-0.4.5.tgz"
+    },
+    {
+      "name": "billion-context",
+      "version": "0.1.197",
+      "tarball": "billion-context-0.1.197.tgz"
+    },
+    {
+      "name": "dsh-better-sidebar",
+      "version": "0.24.1",
+      "tarball": "dsh-better-sidebar-0.24.1.tgz"
+    },
+    {
+      "name": "dsh-dream-skin",
+      "version": "10.8.1",
+      "tarball": "dsh-dream-skin-10.8.1.tgz"
+    },
+    {
+      "name": "dsh-git-ai",
+      "version": "0.1.2-evo",
+      "tarball": "dsh-git-ai-0.1.2-evo.tgz"
+    },
+    {
+      "name": "dsh-mnemon",
+      "version": "0.5.24",
+      "tarball": "dsh-mnemon-0.5.24.tgz"
+    },
+    {
+      "name": "dsh-rewind-plugin",
+      "version": "0.15.1",
+      "tarball": "dsh-rewind-plugin-0.15.1.tgz"
+    },
+    {
+      "name": "dsh-session-manager",
+      "version": "0.6.2",
+      "tarball": "dsh-session-manager-0.6.2.tgz"
+    }
+  ],
+  "clis": []
+}
