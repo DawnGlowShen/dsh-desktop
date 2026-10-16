@@ -77,6 +77,18 @@ export type DesktopSettingsSectionProps =
 type Translate = DesktopSettingsSectionProps['t']
 type BusyOperation = 'load' | 'create-profile' | 'select-profile' | 'delete-profile' | 'select-aa' | 'select-market' | 'mode' | 'material' | 'web' | 'notification' | 'logging'
 type RestartState = 'none' | 'restarting' | 'required'
+/**
+ * Progress of the offline restore action.
+ *
+ * The result is kept after success rather than reset to idle, because the interesting
+ * answer is often "nothing needed doing" — clearing it would show the same blank state
+ * as never having pressed the button.
+ */
+type OfflineRestoreState =
+  | { readonly status: 'idle' }
+  | { readonly status: 'running' }
+  | { readonly status: 'failed' }
+  | { readonly status: 'done'; readonly installed: readonly string[]; readonly skipped: readonly string[]; readonly failed: readonly string[] }
 type LanPollWait = (signal: AbortSignal) => Promise<void>
 
 const LAN_POLL_INTERVAL_MS = 250
@@ -380,6 +392,7 @@ export function DesktopSettingsSection({
   const [pendingProfileDelete, setPendingProfileDelete] = useState<string>()
   const [confirmLan, setConfirmLan] = useState(false)
   const [updateCheck, setUpdateCheck] = useState<'idle' | 'checking' | 'failed'>('idle')
+  const [offlineRestore, setOfflineRestore] = useState<OfflineRestoreState>({ status: 'idle' })
   const lanPoll = useRef<AbortController>()
 
   const refreshView = useCallback(async () => {
@@ -546,6 +559,20 @@ export function DesktopSettingsSection({
     void api.checkForUpdates()
       .then(() => { setUpdateCheck('idle') })
       .catch(() => { setUpdateCheck('failed') })
+  }
+
+  const runOfflineRestore = (): void => {
+    setOfflineRestore({ status: 'running' })
+    void api.restoreOfflinePayloads()
+      .then(result => {
+        setOfflineRestore({
+          status: 'done',
+          installed: result.installed,
+          skipped: result.skipped,
+          failed: result.failed,
+        })
+      })
+      .catch(() => { setOfflineRestore({ status: 'failed' }) })
   }
 
   const setBrowserAccess = (checked: boolean): void => {
@@ -928,6 +955,44 @@ export function DesktopSettingsSection({
           )}
         </section>
       )}
+
+      <section className="dshDesktopSettingsGroup" aria-labelledby="dsh-desktop-offline-title">
+        <div>
+          <h3 id="dsh-desktop-offline-title">{t('offlineTitle')}</h3>
+          <p className="dshDesktopSettingsGroupIntro">{t('offlineIntro')}</p>
+        </div>
+        <div className="dshDesktopSettingsUpdateRow">
+          <span className="dshDesktopSettingsChoiceCopy">
+            <span className="dshDesktopSettingsChoiceTitle">{t('offlineRestore')}</span>
+            {offlineRestore.status === 'done' && offlineRestore.installed.length > 0 && (
+              <span className="dshDesktopSettingsChoiceBody">
+                {`${t('offlineRestored')} ${offlineRestore.installed.length}`}
+              </span>
+            )}
+            {offlineRestore.status === 'done' && offlineRestore.installed.length === 0
+              && offlineRestore.failed.length === 0 && (
+              <span className="dshDesktopSettingsChoiceBody">{t('offlineNothing')}</span>
+            )}
+          </span>
+          <button
+            type="button"
+            className="dshDesktopSettingsButton"
+            disabled={offlineRestore.status === 'running'}
+            onClick={runOfflineRestore}
+          >
+            {t(offlineRestore.status === 'running' ? 'offlineRestoring' : 'offlineRestore')}
+          </button>
+        </div>
+        {offlineRestore.status === 'failed' && (
+          <p className="dshDesktopSettingsError" role="alert">{t('offlineRestoreError')}</p>
+        )}
+        {offlineRestore.status === 'done' && offlineRestore.failed.length > 0 && (
+          // Named rather than counted: which payload failed decides what to do next.
+          <p className="dshDesktopSettingsError" role="alert">
+            {`${t('offlineFailed')}: ${offlineRestore.failed.join(', ')}`}
+          </p>
+        )}
+      </section>
 
       {capabilities?.logging !== false && <section className="dshDesktopSettingsGroup" aria-labelledby="dsh-desktop-logging-title">
         <h3 id="dsh-desktop-logging-title">{t('loggingTitle')}</h3>
