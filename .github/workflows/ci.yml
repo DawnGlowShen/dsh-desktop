@@ -160,11 +160,16 @@ jobs:
           # CI artifacts are never published; skipping compression saves minutes.
           DSH_WINDOWS_PACKAGE_COMPRESSION: store
         run: yarn workspace ${{ matrix.workspace }} dist:win
-      - name: Build Windows portable archive
-        env:
-          DSH_PACKAGE_CHECK_ALREADY_RAN: '1'
-          DSH_WINDOWS_PACKAGE_COMPRESSION: store
-        run: yarn workspace ${{ matrix.workspace }} dist:win-portable
+      # The portable archive is disabled to keep this job quick: the installer alone
+      # proves that Windows packaging still works, and the second artifact roughly
+      # doubles the job's tail. `package.json` keeps `dist:win-portable`, so restoring
+      # the step is a matter of uncommenting it.
+      #
+      # - name: Build Windows portable archive
+      #   env:
+      #     DSH_PACKAGE_CHECK_ALREADY_RAN: '1'
+      #     DSH_WINDOWS_PACKAGE_COMPRESSION: store
+      #   run: yarn workspace ${{ matrix.workspace }} dist:win-portable
 
   # macOS-only universal packaging smoke on a real macOS runner: the signed
   # release is built manually on a credentialed machine, so an unsigned DMG

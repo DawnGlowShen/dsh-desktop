@@ -1,0 +1,247 @@
+name: Windows package
+
+# A Windows-only packaging run, kept separate from `CI` so it can be started by
+# hand for a branch that `CI` does not watch.
+#
+# `CI` triggers on master only. Verifying that the offline CLI payload survives
+# Windows packaging therefore needs either a change to that trigger — which would
+# run the whole macOS/Linux/Windows matrix on every push — or this workflow, which
+# runs the Windows job alone. The latter is what a packaging check actually needs:
+# the installer, nothing else. The portable archive is not built here: it is the same
+# application in a different wrapper, and its build roughly doubles the job's tail.
+#
+# The payload is the reason this exists. `vendor/offline-install/` holds the CLI
+# artifacts for every platform in one shared directory, and only the Windows runner
+# can prove that the `win32-x64` artifacts reach the installer with the `.cmd` and
+# `.exe` entry points the installer looks for.
+
+on:
+  workflow_dispatch:
+    inputs:
+      workspace:
+        description: Workspace to package
+        required: true
+        default: both
+        type: choice
+        options: [both, dsh-plugin-desktop, dsh-plugin-desktop-beta]
+      compression:
+        description: electron-builder compression; a manual run is not published, so `store` is fine
+        required: true
+        default: store
+        type: choice
+        options: [store, normal, maximum]
+  push:
+    branches: [evo3]
+    paths:
+      # Only the inputs that can change what a Windows artifact contains. A
+      # documentation or macOS-only edit does not need a Windows runner, and the
+      # path filter is what keeps a push here from being slower than a `CI` run.
+      - '.github/workflows/windows-package.yml'
+      - 'dsh-plugin-desktop/**'
+      - 'dsh-plugin-desktop-beta/**'
+      - 'package.json'
+      - 'yarn.lock'
+      - '.yarnrc.yml'
+      - 'scripts/**'
+      - 'vendor/**'
+
+permissions:
+  # `contents: write` is what the release step needs. GitHub's artifact download
+  # requires being signed in, so a shared build has to be a release asset — which is
+  # the point of publishing here at all: an installer someone else can fetch.
+  contents: write
+
+concurrency:
+  group: windows-package-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DSH_TELEMETRY_DISABLED: '1'
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    # The package gate, then two electron-builder runs. `store` compression keeps
+    # the artifacts small to produce but not to download, so this is the slow part.
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        # A push builds the stable variant only: the beta workspace differs in
+        # packaging inputs this workflow does not exercise, and building both would
+        # double an already long job for no extra signal. `workflow_dispatch` can ask
+        # for beta, or for both.
+        workspace: ${{ fromJSON(
+          github.event_name != 'workflow_dispatch' && '["dsh-plugin-desktop"]'
+            || inputs.workspace == 'both' && '["dsh-plugin-desktop","dsh-plugin-desktop-beta"]'
+            || format('["{0}"]', inputs.workspace)
+          ) }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+          submodules: recursive
+          # Full history: the release notes list the commits between this build and the
+          # previous one, which the default single-commit checkout cannot see.
+          fetch-depth: 0
+          # The baseline is a release tag, and tags are not fetched by default — without
+          # this the comparison below silently finds nothing to compare against.
+          fetch-tags: true
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22.23.2
+      - run: corepack enable
+      - name: Resolve Yarn cache folder
+        id: yarn-cache
+        run: echo "dir=$(yarn config get cacheFolder)" >> "$env:GITHUB_OUTPUT"
+      - uses: actions/cache@v6
+        with:
+          path: ${{ steps.yarn-cache.outputs.dir }}
+          key: yarn-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('yarn.lock', '.yarnrc.yml') }}
+      - run: yarn install --immutable
+
+      # The platform gate runs first and on its own: it compiles and runs the 14
+      # Windows specs, so a regression there fails in minutes instead of after the
+      # packaging minutes below.
+      - name: Windows package gate
+        run: yarn workspace ${{ matrix.workspace }} check:win-package:platform
+
+      # Proves the CLI payload reached the build before electron-builder packs it.
+      # The gate above calls the same script, but a payload that failed to
+      # materialize would otherwise only show up as a missing `~/.dsh/bin` command
+      # on a user's machine.
+      - name: Report the offline CLI payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          manifest="vendor/offline-install/manifest.clis.win32-x64.json"
+          if [ ! -f "$manifest" ]; then
+            echo "::error::$manifest is missing; the Windows CLI payload was not prepared"
+            exit 1
+          fi
+          node -e '
+            const manifest = require("./" + process.argv[1])
+            if (manifest.target !== "win32-x64") throw new Error(`target is ${manifest.target}`)
+            if (manifest.clis.length === 0) throw new Error("no CLIs listed")
+            for (const cli of manifest.clis) {
+              console.log(`${cli.name} ${cli.version} -> ${cli.executable}`)
+              // The Windows entry points are the ones this run exists to verify.
+              if (!/\.(cmd|exe)$/u.test(cli.executable)) {
+                throw new Error(`${cli.name} does not name a Windows entry point: ${cli.executable}`)
+              }
+            }
+          ' "$manifest"
+
+      - name: Build Windows installer
+        env:
+          DSH_PACKAGE_CHECK_ALREADY_RAN: '1'
+          # A pushed build becomes a release asset, so it is compressed: `store`
+          # writes the application uncompressed, which is why the first published
+          # installer was 1.58 GB. A manual run is for checking the build, not for
+          # shipping it, so it keeps the caller's choice and defaults to `store`.
+          DSH_WINDOWS_PACKAGE_COMPRESSION: ${{ github.event_name == 'workflow_dispatch' && inputs.compression || 'maximum' }}
+        run: yarn workspace ${{ matrix.workspace }} dist:win
+
+      # Uploaded so the artifact can be installed and checked by hand — the point
+      # of this workflow is a verifiable installer, not a green check.
+      # v4 rather than a newer major: this repository has never used this action, and a
+      # version that does not resolve fails the whole run.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-${{ matrix.workspace }}-${{ github.sha }}
+          # `if-no-files-found: error` because a packaging run that produced
+          # nothing must not report success.
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            ${{ matrix.workspace }}/dist/*Setup*.exe
+
+      # A release asset is the only form of this build that anyone can download.
+      # GitHub's artifact endpoint requires being signed in, so a shared installer has
+      # to live on a release; the artifact above stays as the run-scoped copy.
+      #
+      # One release per build, tagged with the commit: a rolling tag would keep the
+      # link stable but silently replace the installer, so a hash quoted in a bug
+      # report would no longer be the hash of what the link serves.
+      - name: Publish the Windows build
+        if: github.event_name == 'push'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version=$(node -p "require('./${{ matrix.workspace }}/package.json').version")
+          short=$(echo "${{ github.sha }}" | cut -c1-8)
+          tag="evo-${version}-${short}"
+          # The tag is derived from the commit, so an existing one is a re-run of the
+          # same build; uploading would fail on the name, so it is skipped with a note
+          # rather than treated as an error.
+          if gh release view "$tag" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            echo "::notice::release $tag already exists; leaving it untouched"
+            exit 0
+          fi
+          # What changed since the last build, so a tester can tell two installers apart
+          # without reading the commit graph themselves.
+          #
+          # The baseline is the previous release tag when there is one, because releases
+          # here are per-build rather than per-version: `version` stays at 2.0.17 while the
+          # commit moves, so the version alone cannot separate two installers. The first
+          # build of the line has no predecessor to compare against, so it falls back to
+          # master — the upstream commit this branch starts from.
+          previous=$(gh release list --repo "${{ github.repository }}" \
+            --limit 1 --exclude-drafts --json tagName --jq '.[0].tagName // ""')
+          # Resolved to a commit rather than used as a tag name: a missing tag would make
+          # `git log` fail and quietly fall back to an empty list, hiding a real regression
+          # behind "nothing changed".
+          baseline=""
+          baseline_label=""
+          if [ -n "$previous" ] && git rev-parse --verify --quiet "${previous}^{commit}" >/dev/null; then
+            baseline=$(git rev-parse "${previous}^{commit}")
+            baseline_label="上次构建 ${previous}"
+          else
+            # The first build of the line has no predecessor, so the baseline is this
+            # repository's own master — the upstream commit the branch starts from, not the
+            # upstream project's master.
+            #
+            # `origin/master` first: `actions/checkout` fetches into remote-tracking refs
+            # and leaves the job on a detached HEAD, so a local `master` branch does not
+            # exist there. Reading only `master` would pass in a developer's clone and
+            # silently produce no changelog in CI — the one place it is needed.
+            for candidate in origin/master master; do
+              if git rev-parse --verify --quiet "${candidate}^{commit}" >/dev/null; then
+                baseline=$(git rev-parse "${candidate}^{commit}")
+                baseline_label="master（首个构建）"
+                break
+              fi
+            done
+          fi
+          if [ -n "$baseline" ]; then
+            commits=$(git log --no-merges --format='- %s (`%h`)' "${baseline}..${GITHUB_SHA}" 2>/dev/null || true)
+          else
+            baseline_label="无法确定（未能解析出基准提交）"
+            commits=""
+          fi
+          if [ -z "$commits" ]; then
+            commits='- 与基线无差异'
+          fi
+          count=$(printf '%s\n' "$commits" | grep -c '^- ' || true)
+
+          {
+            echo "未签名构建的 Windows x64 安装包，由 windows-package 工作流产出。"
+            echo "安装包与其中的可执行文件都没有代码签名，首次运行 Windows 会给出 SmartScreen 提示："
+            echo "选择「更多信息」，再选择「仍要运行」。"
+            echo
+            echo "## 本次变更"
+            echo
+            echo "对比基线：${baseline_label}，共 ${count} 个提交。"
+            echo
+            printf '%s\n' "$commits"
+          } > release-notes.md
+
+          gh release create "$tag" \
+            --repo "${{ github.repository }}" \
+            --target "${{ github.sha }}" \
+            --title "DSH Desktop Evo ${version} (${short})" \
+            --notes-file release-notes.md \
+            ${{ matrix.workspace }}/dist/*Setup*.exe
