@@ -19,6 +19,8 @@ const RENDERER_RELOAD_PATH = '/api/desktop/developer/reload'
 const DEVELOPER_TOOLS_TOGGLE_PATH = '/api/desktop/developer/devtools'
 const UPDATE_CHECK_PATH = '/api/desktop/updates/check'
 const DIAGNOSTICS_EXPORT_PATH = '/api/desktop/diagnostics/export'
+const OFFLINE_RESTORE_PATH = '/api/desktop/offline/restore'
+const MAX_OFFLINE_PAYLOADS = 1024
 const MAX_PROFILES = 256
 const MAX_PROFILE_NAME_LENGTH = 255
 const MAX_LAN_URLS = 32
@@ -70,6 +72,18 @@ export interface DesktopSettingsView {
 }
 
 /** A persisted selection that requires a new Desktop generation. */
+/**
+ * What one offline restore changed.
+ *
+ * Names rather than counts: the surface says which payloads were added and which could
+ * not be, and a count could not be turned back into those names.
+ */
+export interface DesktopOfflineRestoreOutcome {
+  readonly installed: readonly string[]
+  readonly skipped: readonly string[]
+  readonly failed: readonly string[]
+}
+
 export interface DesktopRestartAcceptance {
   readonly accepted: true
   readonly restartRequired: boolean
@@ -93,6 +107,13 @@ export interface DesktopSettingsApi {
   toggleDeveloperTools(): Promise<void>
   checkForUpdates(): Promise<void>
   exportDiagnostics(): Promise<void>
+  /**
+   * Re-apply the offline payloads this build shipped.
+   *
+   * Resolves with what changed, so the page can say "nothing to do" rather than show
+   * the same success message as a run that installed something.
+   */
+  restoreOfflinePayloads(): Promise<DesktopOfflineRestoreOutcome>
 }
 
 type FetchLike = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
@@ -290,6 +311,26 @@ export function parseDesktopActionAcceptance(value: unknown): void {
   }
 }
 
+function readNameList(value: unknown, field: string): readonly string[] {
+  if (!Array.isArray(value) || value.length > MAX_OFFLINE_PAYLOADS
+    || !value.every(name => typeof name === 'string' && name.length > 0 && name.length <= MAX_PROFILE_NAME_LENGTH)) {
+    throw new Error(`dsh-plugin-desktop: invalid offline restore response (${field})`)
+  }
+  return Object.freeze([...value] as string[])
+}
+
+/** Validate one offline restore outcome before it reaches React state. */
+export function parseOfflineRestoreOutcome(value: unknown): DesktopOfflineRestoreOutcome {
+  if (!isObject(value) || value.accepted !== true) {
+    throw new Error('dsh-plugin-desktop: invalid offline restore response')
+  }
+  return Object.freeze({
+    installed: readNameList(value.installed, 'installed'),
+    skipped: readNameList(value.skipped, 'skipped'),
+    failed: readNameList(value.failed, 'failed'),
+  })
+}
+
 async function readResponse(response: Response): Promise<unknown> {
   if (!response.ok) {
     throw new Error(`dsh-plugin-desktop: Desktop settings request failed (${String(response.status)})`)
@@ -397,6 +438,13 @@ export function createDesktopSettingsApi(
     async exportDiagnostics() {
       await native('diagnostics', () => post(fetcher, DIAGNOSTICS_EXPORT_PATH, {}))
     },
+    async restoreOfflinePayloads() {
+      // Deliberately not routed through the actions bridge: the installer runs in the
+      // Host, so there is nothing to fall back to when the Host is gone — and the bridge
+      // is action-free and void by design, which could not carry the outcome back.
+      const body = await readResponse(await post(fetcher, OFFLINE_RESTORE_PATH, {}))
+      return parseOfflineRestoreOutcome(body)
+    },
   })
 }
 
@@ -413,4 +461,5 @@ export const desktopSettingsPaths = Object.freeze({
   developerToolsToggle: DEVELOPER_TOOLS_TOGGLE_PATH,
   updateCheck: UPDATE_CHECK_PATH,
   diagnosticsExport: DIAGNOSTICS_EXPORT_PATH,
+  offlineRestore: OFFLINE_RESTORE_PATH,
 })

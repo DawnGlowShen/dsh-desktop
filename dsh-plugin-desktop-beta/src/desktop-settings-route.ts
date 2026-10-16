@@ -497,6 +497,34 @@ export async function handleDesktopDiagnosticsExportRequest(
   }
 }
 
+/**
+ * Re-apply the offline payloads this build shipped.
+ *
+ * A partial install is still a success: the installer reports which payloads it could
+ * not place, and answering 500 would throw that away along with the ones that worked.
+ */
+export async function handleDesktopOfflineRestoreRequest(
+  req: IncomingMessage,
+  res: ServerResponse,
+  expectedOrigin: string,
+  controller: DesktopSettingsController,
+  reportError: (operation: string, cause: unknown) => void = () => {},
+): Promise<void> {
+  if (req.method !== 'POST') return finishJson(res, 405, error('method not allowed'), 'POST')
+  if (!isSameOriginLoopbackRequest(req, expectedOrigin, true)) {
+    return finishJson(res, 403, error('forbidden'))
+  }
+  const value = await parsePostBody(req, res)
+  if (value === INVALID_BODY) return
+  if (!isEmptyRequest(value)) return finishJson(res, 400, error('invalid offline restore request'))
+  try {
+    finishJson(res, 200, await controller.restoreOfflinePayloads())
+  } catch (cause) {
+    reportError('restore offline payloads', cause)
+    finishJson(res, 500, error('offline payloads could not be restored'))
+  }
+}
+
 export const desktopSettingsRouteConstants = Object.freeze({
   maxBodyBytes: MAX_SETTINGS_BODY_BYTES,
 })

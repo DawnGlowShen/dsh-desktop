@@ -10,6 +10,7 @@ import type {
   DesktopMarketSelectResponse,
   DesktopDeveloperToolsToggleResponse,
   DesktopDiagnosticsExportResponse,
+  DesktopOfflineRestoreResponse,
   DesktopProfileCreateResponse,
   DesktopProfileDeleteResponse,
   DesktopProfileSelectResponse,
@@ -22,6 +23,34 @@ import type {
   DesktopSettingsWebView,
   DesktopTerminalOpenResponse,
 } from './desktop-settings-contract.ts'
+
+/**
+ * What one offline restore changed, as the launcher observed it.
+ *
+ * Names rather than counts: the page says which payloads were added and which could not
+ * be, and a count could not be turned back into those names.
+ */
+export interface DesktopOfflineRestoreReport {
+  /** Payloads installed by this run. */
+  readonly installed: readonly string[]
+  /** Payloads already at the shipped version, left untouched. */
+  readonly skipped: readonly string[]
+  /** Payloads that could not be installed. */
+  readonly failed: readonly string[]
+  /**
+   * Configurations this run wrote.
+   *
+   * Separate from `installed` because the two answer different questions: a payload can be
+   * installed while its configuration was already current, and — the case that matters — a
+   * configuration can be written by a run that installed nothing at all. Folding them into
+   * one list would make the second press of the button report work it did not do.
+   */
+  readonly configured: readonly string[]
+  /** Configurations already in their wanted state, left untouched. */
+  readonly configurationSkipped: readonly string[]
+  /** Configurations that could not be applied. */
+  readonly configurationFailed: readonly string[]
+}
 
 /** Launcher capabilities used without exposing their filesystem roots. */
 export interface DesktopSettingsControllerBootstrap {
@@ -48,6 +77,14 @@ export interface DesktopSettingsControllerBootstrap {
   toggleDeveloperTools(): void
   /** Export diagnostics through the launcher-owned privacy flow. */
   exportDiagnostics(): void | Promise<void>
+  /**
+   * Install whatever the shipped offline manifest lists and this machine lacks.
+   *
+   * Additive: it must not delete, downgrade or overwrite anything already present, so a
+   * plugin the user upgraded through the market survives. Optional because only a build
+   * carrying the installer can answer it.
+   */
+  restoreOfflinePayloads?(): Promise<DesktopOfflineRestoreReport>
 }
 
 /** A persisted response plus work that must run only after `res.end()`. */
@@ -207,6 +244,31 @@ export class DesktopSettingsController {
   async exportDiagnostics(): Promise<DesktopDiagnosticsExportResponse> {
     await this.bootstrap.exportDiagnostics()
     return Object.freeze({ accepted: true })
+  }
+
+  /**
+   * Re-apply the offline payloads this build shipped.
+   *
+   * The bootstrap does the work and reports what it found; this only shapes it for the
+   * page. A payload that is already current is counted as skipped rather than installed,
+   * so pressing the button twice tells the truth about the second press.
+   */
+  async restoreOfflinePayloads(): Promise<DesktopOfflineRestoreResponse> {
+    // A build without the installer cannot answer this. Reporting empty success would
+    // claim nothing needed doing, which is a different statement from "cannot tell".
+    if (this.bootstrap.restoreOfflinePayloads === undefined) {
+      throw new Error('dsh-plugin-desktop: this build has no offline installer')
+    }
+    const report = await this.bootstrap.restoreOfflinePayloads()
+    return Object.freeze({
+      accepted: true,
+      installed: Object.freeze(report.installed),
+      skipped: Object.freeze(report.skipped),
+      failed: Object.freeze(report.failed),
+      configured: Object.freeze(report.configured),
+      configurationSkipped: Object.freeze(report.configurationSkipped),
+      configurationFailed: Object.freeze(report.configurationFailed),
+    })
   }
 }
 

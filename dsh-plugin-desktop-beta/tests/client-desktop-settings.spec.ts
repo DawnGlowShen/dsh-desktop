@@ -33,6 +33,7 @@ import {
   parseDesktopActionAcceptance,
   parseDesktopRestartAcceptance,
   parseDesktopSettingsView,
+  parseOfflineRestoreOutcome,
   type DesktopSettingsView,
 } from '../src/client/desktop-settings-api.ts'
 import { DESKTOP_RENDERER_ACTIONS_BRIDGE } from '../src/renderer-actions-contract.ts'
@@ -375,6 +376,9 @@ describe('Desktop settings API', () => {
         || path === desktopSettingsPaths.diagnosticsExport) {
         return json({ accepted: true })
       }
+      if (path === desktopSettingsPaths.offlineRestore) {
+        return json({ accepted: true, installed: ['dsh-mnemon'], skipped: ['dsh-codegraph'], failed: [] })
+      }
       return path === desktopSettingsPaths.settings || path === desktopSettingsPaths.profileCreate || path === desktopSettingsPaths.profileDelete
         ? json(VIEW)
         : json({ accepted: true, restartRequired: true })
@@ -393,6 +397,9 @@ describe('Desktop settings API', () => {
     await expect(api.toggleDeveloperTools()).resolves.toBeUndefined()
     await expect(api.checkForUpdates()).resolves.toBeUndefined()
     await expect(api.exportDiagnostics()).resolves.toBeUndefined()
+    await expect(api.restoreOfflinePayloads()).resolves.toEqual({
+      installed: ['dsh-mnemon'], skipped: ['dsh-codegraph'], failed: [],
+    })
 
     expect(fetcher.mock.calls.map(call => call[0])).toEqual([
       desktopSettingsPaths.settings,
@@ -407,6 +414,7 @@ describe('Desktop settings API', () => {
       desktopSettingsPaths.developerToolsToggle,
       desktopSettingsPaths.updateCheck,
       desktopSettingsPaths.diagnosticsExport,
+      desktopSettingsPaths.offlineRestore,
     ])
     expect(fetcher.mock.calls[1]?.[1]).toMatchObject({
       method: 'POST',
@@ -752,5 +760,51 @@ describe('Desktop settings Slot registration', () => {
     }, expect.any(Function))
     await control.setMode('extended')
     expect(scope.set).toHaveBeenCalledWith('mode', 'extended')
+  })
+})
+
+describe('parseOfflineRestoreOutcome', () => {
+  const VALID = { accepted: true, installed: ['a'], skipped: [], failed: [] }
+
+  it('accepts a well-formed outcome and freezes it', () => {
+    const parsed = parseOfflineRestoreOutcome(VALID)
+    expect(parsed).toEqual({ installed: ['a'], skipped: [], failed: [] })
+    // React state must not share an array with the response object.
+    expect(Object.isFrozen(parsed)).toBe(true)
+    expect(Object.isFrozen(parsed.installed)).toBe(true)
+  })
+
+  it('rejects a response that was not accepted', () => {
+    expect(() => parseOfflineRestoreOutcome({ ...VALID, accepted: false })).toThrow(/invalid offline restore/)
+  })
+
+  it('rejects each shape that could not be rendered', () => {
+    // Each of these would otherwise reach the page as a name it cannot print.
+    const cases: unknown[] = [
+      undefined,
+      null,
+      'text',
+      [],
+      { ...VALID, installed: undefined },
+      { ...VALID, installed: 'a' },
+      { ...VALID, installed: [1] },
+      { ...VALID, installed: [''] },
+      { ...VALID, failed: {} },
+      { ...VALID, skipped: [null] },
+    ]
+    for (const value of cases) {
+      expect(() => parseOfflineRestoreOutcome(value)).toThrow(/invalid offline restore/)
+    }
+  })
+
+  it('rejects a name long enough to be a payload rather than an identity', () => {
+    // The bound matches the profile-name limit the rest of this API enforces.
+    expect(() => parseOfflineRestoreOutcome({ ...VALID, installed: ['x'.repeat(256)] }))
+      .toThrow(/invalid offline restore/)
+  })
+
+  it('rejects a list long enough to be an unbounded install report', () => {
+    const many = Array.from({ length: 1025 }, (_, index) => `p${index}`)
+    expect(() => parseOfflineRestoreOutcome({ ...VALID, installed: many })).toThrow(/invalid offline restore/)
   })
 })

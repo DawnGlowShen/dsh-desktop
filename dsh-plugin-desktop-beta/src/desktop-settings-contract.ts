@@ -40,6 +40,15 @@ export const DESKTOP_UPDATE_CHECK_PATH = '/api/desktop/updates/check'
 /** Export one local diagnostic archive through the launcher-owned flow. */
 export const DESKTOP_DIAGNOSTICS_EXPORT_PATH = '/api/desktop/diagnostics/export'
 
+/**
+ * Re-apply the offline payloads this build shipped.
+ *
+ * Additive by design: it installs what is missing and leaves everything else — including
+ * a plugin the user upgraded through the market — exactly where it is. See
+ * {@link DesktopOfflineRestoreResponse} for why that matters.
+ */
+export const DESKTOP_OFFLINE_RESTORE_PATH = '/api/desktop/offline/restore'
+
 /** Renderer-safe projection of one discovered profile. */
 export interface DesktopSettingsProfileView {
   /** Profile name accepted by the launcher. */
@@ -183,6 +192,42 @@ export type DesktopDiagnosticsExportRequest = Readonly<Record<string, never>>
 /** Successful handoff to the launcher-owned diagnostic export flow. */
 export interface DesktopDiagnosticsExportResponse {
   readonly accepted: true
+}
+
+/** Exact empty body accepted by the offline restore endpoint. */
+export type DesktopOfflineRestoreRequest = Readonly<Record<string, never>>
+
+/**
+ * Outcome of one offline restore.
+ *
+ * Counts rather than a bare `accepted`, because the interesting answer is "nothing
+ * needed doing": a user pressing this twice should be told the second press changed
+ * nothing, not shown the same success as the first. `failed` names the payloads that
+ * could not be installed, so the surface can say which rather than only that some did.
+ */
+export interface DesktopOfflineRestoreResponse {
+  readonly accepted: true
+  /** Payloads installed by this run. */
+  readonly installed: readonly string[]
+  /** Payloads already present at the shipped version, left untouched. */
+  readonly skipped: readonly string[]
+  /** Payloads that could not be installed. */
+  readonly failed: readonly string[]
+  /** Configurations this run wrote. */
+  readonly configured: readonly string[]
+  /**
+   * Configurations that changed nothing: already in their wanted state, or deliberately
+   * skipped because their packaged resource is absent or their target is the user's own.
+   *
+   * Merged on purpose. The executor keeps `current` and `skipped` distinct, but the
+   * difference is not one a page can act on — both mean "this run wrote nothing" — and
+   * leaving the choice to each surface would produce two different phrasings for the same
+   * fact. Use `configured` and `configurationFailed` to tell a run that did work from one
+   * that did not.
+   */
+  readonly configurationSkipped: readonly string[]
+  /** Configurations that could not be applied. */
+  readonly configurationFailed: readonly string[]
 }
 
 /** Stable API failure shape that never contains native paths or raw causes. */

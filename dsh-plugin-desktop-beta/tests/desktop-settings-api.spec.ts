@@ -18,6 +18,7 @@ import {
   handleDesktopRendererReloadRequest,
   handleDesktopSettingsRequest,
   handleDesktopTerminalOpenRequest,
+  handleDesktopOfflineRestoreRequest,
   handleDesktopUpdateCheckRequest,
   desktopSettingsRouteConstants,
 } from '../src/desktop-settings-route.ts'
@@ -799,5 +800,132 @@ describe('desktop settings HTTP boundary', () => {
     expect(res.statusCode).toBe(405)
     expect(res.setHeader).toHaveBeenCalledWith('allow', 'GET')
     expect(readMarket).not.toHaveBeenCalled()
+  })
+})
+
+describe('offline restore route', () => {
+  /** A controller stub exposing only what this route reaches for. */
+  function controllerRestoring(restoreOfflinePayloads: () => Promise<unknown>): DesktopSettingsController {
+    return { restoreOfflinePayloads } as unknown as DesktopSettingsController
+  }
+
+  it('returns the per-payload outcome rather than a bare acknowledgement', async () => {
+    const restore = vi.fn(async () => ({ installed: ['dsh-mnemon'], skipped: ['dsh-codegraph'], failed: [] }))
+    const res = response()
+
+    await handleDesktopOfflineRestoreRequest(jsonRequest({}), res, ORIGIN, controllerRestoring(restore))
+
+    expect(res.statusCode).toBe(200)
+    // The page distinguishes "installed" from "already current", so both must survive.
+    expect(JSON.parse(res.body)).toEqual({ installed: ['dsh-mnemon'], skipped: ['dsh-codegraph'], failed: [] })
+    expect(restore).toHaveBeenCalledOnce()
+  })
+
+  it('reports a partial install as success and keeps the failures visible', async () => {
+    // 500 here would discard the payloads that did install, and the retry would redo them.
+    const res = response()
+
+    await handleDesktopOfflineRestoreRequest(jsonRequest({}), res, ORIGIN, controllerRestoring(
+      async () => ({ installed: ['a'], skipped: [], failed: ['b'] }),
+    ))
+
+    expect(res.statusCode).toBe(200)
+    expect(JSON.parse(res.body).failed).toEqual(['b'])
+  })
+
+  it('rejects another method before invoking the controller', async () => {
+    const restore = vi.fn(async () => ({ installed: [], skipped: [], failed: [] }))
+    const res = response()
+
+    await handleDesktopOfflineRestoreRequest(request('GET'), res, ORIGIN, controllerRestoring(restore))
+
+    expect(res.statusCode).toBe(405)
+    expect(res.setHeader).toHaveBeenCalledWith('allow', 'POST')
+    expect(restore).not.toHaveBeenCalled()
+  })
+
+  it('refuses a request that did not come from the loopback page', async () => {
+    const restore = vi.fn(async () => ({ installed: [], skipped: [], failed: [] }))
+    const res = response()
+
+    await handleDesktopOfflineRestoreRequest(
+      jsonRequest({}, { headers: { origin: 'http://evil.example' } }), res, ORIGIN, controllerRestoring(restore),
+    )
+
+    expect(res.statusCode).toBe(403)
+    expect(restore).not.toHaveBeenCalled()
+  })
+
+  it('refuses a non-empty body', async () => {
+    const restore = vi.fn(async () => ({ installed: [], skipped: [], failed: [] }))
+    const res = response()
+
+    await handleDesktopOfflineRestoreRequest(jsonRequest({ path: '/tmp/evil' }), res, ORIGIN, controllerRestoring(restore))
+
+    expect(res.statusCode).toBe(400)
+    expect(restore).not.toHaveBeenCalled()
+  })
+
+  it('answers 500 without leaking the failure when the installer throws', async () => {
+    const reportError = vi.fn()
+    const res = response()
+
+    await handleDesktopOfflineRestoreRequest(jsonRequest({}), res, ORIGIN, controllerRestoring(
+      async () => { throw new Error('EACCES: /private/profiles/desktop') },
+    ), reportError)
+
+    expect(res.statusCode).toBe(500)
+    expect(reportError).toHaveBeenCalledWith('restore offline payloads', expect.any(Error))
+    // A path from the failure must not reach the page.
+    expect(res.body).not.toContain('/private')
+  })
+})
+
+describe('offline restore controller', () => {
+  it('passes the installer report through as frozen name lists', async () => {
+    const controller = new DesktopSettingsController(bootstrap({
+      restoreOfflinePayloads: async () => ({
+        installed: ['a'],
+        skipped: ['b'],
+        failed: ['c'],
+        configured: ['git-ai'],
+        configurationSkipped: ['dream-skin'],
+        configurationFailed: ['broken-config'],
+      }),
+    }))
+
+    const result = await controller.restoreOfflinePayloads()
+
+    // Configuration is reported in its own lists rather than merged into the payload ones:
+    // a configuration can be written by a run that installed nothing, and collapsing the
+    // two would make that press look like it installed a payload.
+    expect(result).toEqual({
+      accepted: true,
+      installed: ['a'],
+      skipped: ['b'],
+      failed: ['c'],
+      configured: ['git-ai'],
+      configurationSkipped: ['dream-skin'],
+      configurationFailed: ['broken-config'],
+    })
+    expect(Object.isFrozen(result)).toBe(true)
+    expect(Object.isFrozen(result.installed)).toBe(true)
+    expect(Object.isFrozen(result.configured)).toBe(true)
+  })
+
+  it('refuses to report success when the build carries no installer', async () => {
+    // Empty success would read as "nothing needed doing", which is a claim this build
+    // cannot make — the page must show an error instead.
+    const controller = new DesktopSettingsController(bootstrap())
+
+    await expect(controller.restoreOfflinePayloads()).rejects.toThrow(/no offline installer/)
+  })
+
+  it('propagates an installer failure rather than swallowing it', async () => {
+    const controller = new DesktopSettingsController(bootstrap({
+      restoreOfflinePayloads: async () => { throw new Error('disk full') },
+    }))
+
+    await expect(controller.restoreOfflinePayloads()).rejects.toThrow(/disk full/)
   })
 })
