@@ -13,6 +13,7 @@ import { prepareInstalledMacUniversalRuntime } from './mac-universal.ts'
 import { prepareFsExtForElectron } from './prepare-fs-ext.ts'
 import { electronBuilderEnvironment } from './electron-builder-environment.ts'
 import { desktopRuntimeTargets, prepareDesktopInterpreters, primaryRuntimeDirectory, verifyPreparedDesktopRuntime } from './prepare-runtime.ts'
+import { prepareOfflineInstallPayload, verifyPreparedOfflineInstall } from './prepare-offline-install.ts'
 import { signMacRuntime, withMacSigningIdentity } from './sign-runtime.ts'
 
 /** Injectable release boundary used by focused tests. */
@@ -79,6 +80,8 @@ function defaultReleaseOptions(): MacReleaseOptions {
       prepareFsExtForElectron({ platform: 'darwin', arch: 'x64', desktopRoot })
       prepareInstalledMacUniversalRuntime(desktopRoot)
       verifyPreparedDesktopRuntime(desktopRoot, 'darwin')
+      prepareOfflineInstallPayload(desktopRoot, message => { console.log(message) }, 'darwin-universal')
+      verifyPreparedOfflineInstall(desktopRoot)
     },
   }
 }

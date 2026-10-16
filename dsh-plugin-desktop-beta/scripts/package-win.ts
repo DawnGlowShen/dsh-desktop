@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url'
 import { prepareFsExtForElectron } from './prepare-fs-ext.ts'
 import { electronBuilderEnvironment } from './electron-builder-environment.ts'
 import { prepareDesktopInterpreters, verifyPreparedDesktopRuntime } from './prepare-runtime.ts'
+import { prepareOfflineInstallPayload, verifyPreparedOfflineInstall } from './prepare-offline-install.ts'
 
 const WINDOWS_SIGNING_KEYS = [
   'CSC_IDENTITY_AUTO_DISCOVERY',
@@ -124,6 +125,8 @@ export function createWindowsPackageOptions(verifier = './verify-win-installer.t
     prepareRuntime: () => {
       prepareFsExtForElectron({ platform: 'win32', arch: 'x64', desktopRoot })
       verifyPreparedDesktopRuntime(desktopRoot, 'win32')
+      prepareOfflineInstallPayload(desktopRoot, message => { console.log(message) }, 'win32-x64')
+      verifyPreparedOfflineInstall(desktopRoot)
     },
     verifier: fileURLToPath(new URL(verifier, import.meta.url)),
     nodeExecutable: process.execPath,
