@@ -8,6 +8,7 @@
 node_modules/
 *.tsbuildinfo
 .build/
+.codegraph/
 
 dsh-plugin-desktop/dist/
 dsh-plugin-desktop/lib/
@@ -20,3 +21,25 @@ dsh-desktop-next/.desktop-next/
 dsh-desktop-next/.desktop-build/
 dsh-plugin-desktop/.desktop-build/
 dsh-plugin-desktop-beta/.desktop-build/
+
+# Materialized CLI bundles. `scripts/prepare-{codegraph,mnemon,git-ai}.mjs` unpacks the
+# vendored artifacts here, and `prepare-offline-clis.mjs` turns them into the payload
+# tarballs that ARE tracked. Intermediates, so hundreds of megabytes nothing reads.
+dsh-plugin-desktop/build/codegraph/
+dsh-plugin-desktop/build/mnemon/
+dsh-plugin-desktop/build/git-ai/
+dsh-plugin-desktop-beta/build/codegraph/
+dsh-plugin-desktop-beta/build/mnemon/
+dsh-plugin-desktop-beta/build/git-ai/
+
+# Upstream CLI binaries, fetched rather than authored. The payload they produce IS
+# tracked at `vendor/offline-install/`, which every Desktop package shares; these are
+# only its inputs, and they are hundreds of megabytes per platform. Only the three
+# directories below are ignored — `vendor/offline-install/` is not. See
+# scripts/prepare-offline-clis.mjs.
+vendor/codegraph/
+vendor/mnemon/
+vendor/git-ai/
+
+# EdanSpec feature documents are local working notes, not repository content.
+EdanSpec/
