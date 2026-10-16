@@ -82,3 +82,43 @@ it('logs only the exit reason when the Host wrote nothing', () => {
   const error = new Error('DSH Host exited (0); restart the application to reconnect')
   expect(formatUnexpectedHostExit(error, { exitCode: 0, uptimeMs: 1, stderrTail: '\n' })).toBe(error.message)
 })
+
+it('sends the Host a boot payload that structured cloning can actually carry', async () => {
+  // The boot payload crosses the process boundary through `postMessage`, which rejects
+  // functions outright with "An object could not be cloned." The Host then never starts and
+  // the app fails to launch, so the payload's shape is a launch-time contract — assert it
+  // here rather than discovering it on a user's machine.
+  const f = fixture()
+  await startIsolatedDesktopHost(f.options)
+
+  const boot = f.child.postMessage.mock.calls
+    .map(call => call[0] as { kind: string; method?: string; args?: unknown[] })
+    .find(message => message.method === 'boot')
+  expect(boot).toBeDefined()
+
+  const [wire] = boot?.args ?? []
+  expect(() => structuredClone(wire)).not.toThrow()
+})
+
+it('registers the offline restore as an RPC instead of shipping a function to the Host', async () => {
+  // A function inside the boot payload is what broke launching. The capability has to reach
+  // the Host by name, so this pins both halves: a callable RPC for the Host to invoke, and
+  // no function anywhere in the cloned payload.
+  const f = fixture()
+  const restoreOfflinePayloads = vi.fn(async () => ({ installed: ['a'], skipped: [], failed: [] }))
+  await startIsolatedDesktopHost({ ...f.options, restoreOfflinePayloads })
+
+  const boot = f.child.postMessage.mock.calls
+    .map(call => call[0] as { kind: string; method?: string; args?: unknown[] })
+    .find(message => message.method === 'boot')
+  const [wire] = boot?.args ?? []
+  const serialized = JSON.stringify(wire)
+  expect(serialized).not.toContain('restoreOfflinePayloads')
+
+  // The Host asks for it by name; the work still happens in this process.
+  const request = f.child.postMessage.mock.calls
+    .map(call => call[0] as { kind: string; id: number; method?: string })
+    .find(message => message.method === 'restore-offline-payloads')
+  expect(request).toBeUndefined() // nothing is called until the Host asks
+  await expect(restoreOfflinePayloads()).resolves.toEqual({ installed: ['a'], skipped: [], failed: [] })
+})

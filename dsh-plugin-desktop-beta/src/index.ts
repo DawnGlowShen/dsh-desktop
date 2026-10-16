@@ -20,6 +20,7 @@ import {
 } from './directory-picker-route.ts'
 import {
   DESKTOP_DIAGNOSTICS_EXPORT_PATH,
+  DESKTOP_OFFLINE_RESTORE_PATH,
   DESKTOP_DEVELOPER_TOOLS_TOGGLE_PATH,
   DESKTOP_AA_SELECT_PATH,
   DESKTOP_MARKET_SELECT_PATH,
@@ -37,6 +38,7 @@ import {
   handleDesktopDeveloperToolsToggleRequest,
   handleDesktopAaSelectRequest,
   handleDesktopMarketSelectRequest,
+  handleDesktopOfflineRestoreRequest,
   handleDesktopProfileCreateRequest,
   handleDesktopProfileDeleteRequest,
   handleDesktopProfileSelectRequest,
@@ -240,6 +242,7 @@ export function apply(ctx: Context, config: DesktopShellConfig): void {
       [DESKTOP_RENDERER_RELOAD_PATH, handleDesktopRendererReloadRequest],
       [DESKTOP_DEVELOPER_TOOLS_TOGGLE_PATH, handleDesktopDeveloperToolsToggleRequest],
       [DESKTOP_DIAGNOSTICS_EXPORT_PATH, handleDesktopDiagnosticsExportRequest],
+      [DESKTOP_OFFLINE_RESTORE_PATH, handleDesktopOfflineRestoreRequest],
     ] as const
     for (const [path, handler] of settingsRoutes) {
       ctx.effect(
