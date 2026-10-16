@@ -10,6 +10,7 @@ import { macSmokeArchitecture, prepareInstalledMacUniversalRuntime } from './mac
 import { prepareFsExtForElectron } from './prepare-fs-ext.ts'
 import { electronBuilderEnvironment } from './electron-builder-environment.ts'
 import { prepareDesktopInterpreters, verifyPreparedDesktopRuntime } from './prepare-runtime.ts'
+import { prepareOfflineInstallPayload, verifyPreparedOfflineInstall } from './prepare-offline-install.ts'
 
 /** Injectable native macOS packaging boundary used by focused tests. */
 export interface MacSmokePackageOptions {
@@ -80,6 +81,8 @@ function defaultOptions(): MacSmokePackageOptions {
       prepareFsExtForElectron({ platform: 'darwin', arch: 'x64', desktopRoot })
       prepareInstalledMacUniversalRuntime(desktopRoot)
       verifyPreparedDesktopRuntime(desktopRoot, 'darwin')
+      prepareOfflineInstallPayload(desktopRoot, message => { console.log(message) }, 'darwin-universal')
+      verifyPreparedOfflineInstall(desktopRoot)
     },
     builderCli: require.resolve('electron-builder/cli.js'),
     verifier: fileURLToPath(new URL('./verify-mac-smoke.ts', import.meta.url)),

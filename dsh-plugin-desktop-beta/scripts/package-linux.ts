@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url'
 import { prepareFsExtForElectron } from './prepare-fs-ext.ts'
 import { electronBuilderEnvironment } from './electron-builder-environment.ts'
 import { prepareDesktopInterpreters, verifyPreparedDesktopRuntime } from './prepare-runtime.ts'
+import { prepareOfflineInstallPayload, verifyPreparedOfflineInstall } from './prepare-offline-install.ts'
 
 const LINUX_SIGNING_KEYS = [
   'CSC_IDENTITY_AUTO_DISCOVERY',
@@ -94,6 +95,8 @@ export function createLinuxPackageOptions(verifier = './verify-linux-artifacts.t
       prepareFsExtForElectron({ platform: 'linux', arch: 'x64', desktopRoot })
       // Linux ships no interpreter payload; the check confirms the tree declares none.
       verifyPreparedDesktopRuntime(desktopRoot, 'linux')
+      prepareOfflineInstallPayload(desktopRoot, message => { console.log(message) }, 'linux-x64')
+      verifyPreparedOfflineInstall(desktopRoot)
     },
     verifier: fileURLToPath(new URL(verifier, import.meta.url)),
     nodeExecutable: process.execPath,
