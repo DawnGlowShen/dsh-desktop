@@ -13,7 +13,22 @@ import type { DesktopStartupGenerationHost } from './startup-generation.ts'
 import type { DesktopLanHttpsRuntimeOptions } from './lan-https-runtime.ts'
 
 export interface IsolatedHostOptions {
+  /**
+   * Facts the Host is given at fork time.
+   *
+   * Everything here must survive structured cloning: this object is what `postMessage`
+   * carries across the process boundary, so it cannot hold a function. Behaviour the Host
+   * needs to trigger belongs in {@link IsolatedHostOptions.restoreOfflinePayloads} or
+   * another `rpc.handle` registration, not inside this object.
+   */
   host: DesktopHostOptions
+  /**
+   * Re-apply the shipped offline payloads, served to the Host over RPC.
+   *
+   * Lives here rather than in {@link host} because the installer needs this process's own
+   * paths — and because a function cannot be cloned into the Host.
+   */
+  restoreOfflinePayloads?: () => Promise<unknown>
   runtime: DesktopRuntime
   rendererToken: string
   prepareCertificate: NonNullable<DesktopLanHttpsRuntimeOptions['prepareCertificate']>
@@ -68,6 +83,10 @@ export async function startIsolatedDesktopHost(options: IsolatedHostOptions): Pr
   }, 120_000)
   const releaseNative = bindNativeRuntime(rpc, options.runtime)
   rpc.handle('certificate', () => options.prepareCertificate())
+  // Registered as an RPC rather than passed inside `host`: that object crosses the process
+  // boundary through `postMessage`, which cannot carry a function at all. The Host asks for
+  // this by name instead, and the work still happens here, where the installer lives.
+  rpc.handle('restore-offline-payloads', () => options.restoreOfflinePayloads?.() ?? null)
   rpc.handle('quit', ([code]) => { setImmediate(() => options.requestQuit(code)) })
   let stopping = false
   let exited = false

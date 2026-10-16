@@ -89,6 +89,8 @@ import { LogFileSink } from './log-files.ts'
 import { maskSecrets } from './mask-secrets.ts'
 import { resolveDesktopShellEnvironment } from './shell-environment.ts'
 import { installProfilePackageResolver } from './module-resolution.ts'
+import type { DesktopOfflineRestoreReport } from './desktop-settings-controller.ts'
+import { runOfflineInstall, type RunOfflineInstallOptions } from './offline-install-run.ts'
 import { DesktopPluginPackages } from './plugin-packages.ts'
 import { packagedDependencyPath } from './packaged-runtime-path.ts'
 import {
@@ -1315,6 +1317,81 @@ async function start(): Promise<void> {
       },
     }
     await healDesktopProfileModuleFallback(homeDir)
+    // Apply the offline payloads this build shipped before the Profile is composed, so
+    // anything they install is visible to this launch rather than the next one. Placed
+    // here rather than earlier because the active Profile is only now known, and the
+    // plugins are linked into that Profile. A failure is logged and swallowed: a machine
+    // whose payloads did not install must still reach a window.
+    /**
+     * The application facts the offline installer needs.
+     *
+     * Built per call rather than kept, so the settings action and a fresh launch reach
+     * the same options object and cannot disagree about what has been applied.
+     */
+    const offlineInstallOptions = (profileDir: string): RunOfflineInstallOptions => {
+      const packageRoot = fileURLToPath(new URL('..', import.meta.url))
+      return {
+        resourcesPath: process.resourcesPath,
+        packageRoot,
+        homeDir,
+        // Configuration may target a file outside the DSH home, such as the user's own
+        // gitconfig, so the user's home has to travel with the rest of the facts.
+        userHomeDir: app.getPath('home'),
+        profileDir,
+        // Plugins are linked rather than copied, so they resolve their dependencies out
+        // of the application's own tree — the only one guaranteed to hold them.
+        appModulesDir: join(packageRoot, 'node_modules'),
+        binName: BIN_NAME,
+        platform: process.platform,
+        packaged: app.isPackaged,
+        logger: electronLogger,
+      }
+    }
+    try {
+      const report = runOfflineInstall(offlineInstallOptions(activeProfileDir))
+      // Running from source has no manifest; that is the normal development case, not a
+      // fault, so it stays at info and only speaks when the logger has that channel.
+      if (!report.ran) electronLogger.info?.(`${BIN_NAME}: no offline install manifest; skipping`)
+    } catch (cause) {
+      electronLogger.error(
+        `${BIN_NAME}: offline install failed: `
+          + `${cause instanceof Error ? cause.message : String(cause)}`,
+      )
+    }
+    /**
+     * Install whatever the shipped manifest lists and this machine lacks.
+     *
+     * The same call the startup path makes, so the settings action and a fresh launch
+     * cannot disagree about what has been applied. It reports rather than throws: the
+     * page shows which payloads failed, and a partial install is still worth keeping.
+     */
+    const restoreOfflinePayloads = async (): Promise<DesktopOfflineRestoreReport> => {
+      const report = runOfflineInstall(offlineInstallOptions(activeProfileDir))
+      const installed: string[] = []
+      const skipped: string[] = []
+      const failed: string[] = []
+      for (const outcome of [...report.clis, ...report.plugins]) {
+        // `current` is the interesting one to keep distinct: it is what makes pressing
+        // the button twice report that the second press changed nothing.
+        if (outcome.action === 'installed') installed.push(outcome.name)
+        else if (outcome.action === 'current') skipped.push(outcome.name)
+        else failed.push(outcome.name)
+      }
+      // Configuration is reported separately rather than merged into the lists above.
+      // The two stages answer different questions, and only a separate list can say that a
+      // configuration was written by a run that installed nothing.
+      const configured: string[] = []
+      const configurationSkipped: string[] = []
+      const configurationFailed: string[] = []
+      for (const outcome of report.configurations) {
+        // `skipped` and `current` both mean "nothing changed", so the page reports them
+        // together; only a real write counts as configured.
+        if (outcome.action === 'configured') configured.push(outcome.name)
+        else if (outcome.action === 'failed') configurationFailed.push(outcome.name)
+        else configurationSkipped.push(outcome.name)
+      }
+      return { installed, skipped, failed, configured, configurationSkipped, configurationFailed }
+    }
     let prepared = prepareDesktopProfile(
       process.env.DSH_TELEMETRY_DISABLED,
       homeDir,
@@ -1628,6 +1705,9 @@ async function start(): Promise<void> {
           selectionStatePath, marketUserDataDir, releaseUserDataLocations, desktopLaunchEnvironment,
           desktopProxyOverlay: proxyResolution.overlay,
           desktopPnpmBootstrap, primaryRuntime, diagnosticRunId: diagnosticRunId(), logDirectory: join(desktopUserDataDir, 'logs', 'host') },
+        // Outside `host`: that object is cloned across the process boundary, and a
+        // function cannot be. The Host asks for this by name over RPC instead.
+        restoreOfflinePayloads: () => restoreOfflinePayloads(),
         runtime, rendererToken: browserAccess.rendererHeader.value,
         prepareCertificate: prepareHostCertificate,
         bindHost: host => generation.bindHost(host), requestQuit,

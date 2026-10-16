@@ -6,6 +6,7 @@ import { desktopProxyEnvLookup } from './system-proxy.ts'
 import { HostRpc } from './host-rpc.ts'
 import { createHostRuntime, type RuntimeSnapshot } from './host-runtime-bridge.ts'
 import { bootDesktopHost, type DesktopHostOptions } from './host-bootstrap.ts'
+import type { DesktopOfflineRestoreReport } from './desktop-settings-controller.ts'
 import { createDesktopBrowserAccess } from './desktop-browser-access.ts'
 import { DesktopLanHttpsRuntime } from './lan-https-runtime.ts'
 import type { DesktopStartupGenerationHost } from './startup-generation.ts'
@@ -70,7 +71,11 @@ rpc.handle('boot', async args => {
       prepareCertificate: () => rpc.call('certificate'),
     })
     inspectServices = await bootDesktopHost(options, runtime, browser, lan,
-      value => { host = value }, code => { void rpc.call('quit', [code]).catch(() => {}) })
+      value => { host = value }, code => { void rpc.call('quit', [code]).catch(() => {}) },
+      // The installer runs in the supervisor, where the application's own resource and
+      // module paths live; this process only asks for it. A supervisor started without an
+      // installer answers null, which the settings page reports as "build has none".
+      async () => await rpc.call<DesktopOfflineRestoreReport>('restore-offline-payloads'))
     if (stopping) { await host?.fiber.dispose(); throw new Error('DSH Host stopped during startup') }
     await runtime.mountScheduled()
     return { pid: process.pid }

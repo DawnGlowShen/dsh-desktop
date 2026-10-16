@@ -13,7 +13,7 @@ import { DesktopProfileService } from './profile-service.ts'
 import { DesktopActionsService } from './desktop-actions.ts'
 import { clearDesktopProfilePluginState, DesktopPluginsService } from './desktop-plugins.ts'
 import { desktopMarketSnapshotWithEffective, selectDesktopMarketProvider, type DesktopMarketProvider, type DesktopMarketSnapshot } from './desktop-market.ts'
-import DesktopSettingsController from './desktop-settings-controller.ts'
+import DesktopSettingsController, { type DesktopOfflineRestoreReport } from './desktop-settings-controller.ts'
 import { clearDesktopProfilePreferences, desktopProfilePreferencesFromSettings, readDesktopProfilePreferences, writeDesktopProfilePreferences, type DesktopProfilePreferences, type DesktopProfilePreferencesStateV1 } from './profile-preferences.ts'
 import { clearDesktopProfileUsageHistory, type DesktopReleaseUserDataLocations } from './profile-channel-admission.ts'
 import { desktopInstallAnchor, type PreparedDesktopProfile } from './profile.ts'
@@ -68,6 +68,15 @@ export interface DesktopHostOptions {
 export async function bootDesktopHost(options: DesktopHostOptions, runtime: DesktopRuntime,
   browserAccess: DesktopBrowserAccess, lanHttps: DesktopLanHttpsRuntime,
   bindHost: (host: DesktopStartupGenerationHost) => void, requestQuit: (code: number) => void,
+  /**
+   * Re-apply the shipped offline payloads, implemented in the supervisor process.
+   *
+   * Reaches this process as an RPC rather than as a field of {@link options}: that object
+   * is cloned across the process boundary and cannot carry a function. Absent when the
+   * supervisor started without an installer, which the settings page reports as an error
+   * rather than as "nothing needed doing".
+   */
+  restoreOfflinePayloads?: () => Promise<DesktopOfflineRestoreReport>,
 ): Promise<() => { aaRuntime: boolean; aaOnboarding: boolean }> {
   const { prepared, profilePreferences, homeDir, activeProfileName, pluginManagementStatePath,
     selectionStatePath, marketUserDataDir, releaseUserDataLocations, desktopLaunchEnvironment,
@@ -278,6 +287,7 @@ export async function bootDesktopHost(options: DesktopHostOptions, runtime: Desk
           reloadRenderer: () => { runtime.reloadRenderer() },
           toggleDeveloperTools: () => { runtime.toggleDeveloperTools() },
           exportDiagnostics: () => runtime.exportDiagnostics(),
+          ...(restoreOfflinePayloads === undefined ? {} : { restoreOfflinePayloads }),
         }))
         provideCmdline(hostCtx, {
           args: [
