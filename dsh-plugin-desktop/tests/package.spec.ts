@@ -897,6 +897,7 @@ describe('published package surface', () => {
 
     expect(manifest.scripts?.['package:dir']).toBe('yarn run build && yarn run prepare:electron-native && yarn run prepare:runtime && node scripts/package-dir.mjs')
     expect(manifest.scripts?.['prepare:runtime']).toBe('node scripts/prepare-runtime.ts')
+    expect(manifest.scripts?.['prepare:offline-install']).toBe('node scripts/prepare-offline-install.ts')
     // Like upstream Desktop's dev launcher, every development launch prepares the payload before the shell starts.
     expect(manifest.scripts?.dev).toBe('yarn run build && yarn run prepare:electron-native && yarn run prepare:runtime && node lib/bin.js')
     expect(manifest.scripts?.start).toBe('yarn run prepare:runtime && node lib/bin.js')
@@ -905,10 +906,15 @@ describe('published package surface', () => {
     expect(packageDir).toContain("'--config.mac.identity=null'")
     expect(packageDir).toContain("'--config.mac.notarize=false'")
     expect(packageDir).toContain("'--config.win.signExecutable=false'")
-    expect(manifest.scripts?.['dist:mac']).toBe('node scripts/release-mac.ts')
-    expect(manifest.scripts?.['dist:mac-smoke']).toBe('node scripts/package-mac.ts')
-    expect(manifest.scripts?.['dist:win']).toBe('node scripts/package-win.ts')
-    expect(manifest.scripts?.['dist:win-portable']).toBe('node scripts/package-win-portable.ts')
+    // Each distribution command materializes its platform's CLI payload before
+    // packaging: the payload is what the installer unpacks, so a build that skipped
+    // it would ship an application with no `~/.dsh/bin` commands.
+    expect(manifest.scripts?.['dist:mac']).toBe('node ../scripts/prepare-offline-clis.mjs --target darwin-universal && node scripts/release-mac.ts')
+    expect(manifest.scripts?.['dist:mac-smoke']).toBe('node ../scripts/prepare-offline-clis.mjs --target darwin-universal && node scripts/package-mac.ts')
+    expect(manifest.scripts?.['dist:win']).toBe('node ../scripts/prepare-offline-clis.mjs --target win32-x64 && node scripts/package-win.ts')
+    // The portable build installs the same payload, so it needs the same step.
+    expect(manifest.scripts?.['dist:win-portable']).toBe('node ../scripts/prepare-offline-clis.mjs --target win32-x64 && node scripts/package-win-portable.ts')
+    expect(manifest.scripts?.['dist:linux']).toBe('node ../scripts/prepare-offline-clis.mjs --target linux-x64 && node scripts/package-linux.ts')
     expect(manifest.scripts?.['check:win-package:platform']).toContain('yarn workspace dsh-community-market build')
     expect(manifest.scripts?.['check:win-package:platform']).toContain('yarn run build')
     expect(manifest.scripts?.['check:win-package']).toBe('yarn run check:win-package:platform && yarn run typecheck')
@@ -965,14 +971,29 @@ describe('published package surface', () => {
 
   it('carries the primary runtime beside the application like upstream Desktop', () => {
     // Both CPU payloads ride beside the application as extra resources; Linux ships none.
+    // The dream-skin default appearance rides along too: the plugin reads it at mount, so
+    // shipping it in the asar would not do.
     for (const platform of ['mac', 'win'] as const) {
-      expect(manifest.build?.[platform]?.extraResources, platform).toEqual([{ from: '.desktop-build/runtime', to: 'runtime' }])
+      expect(manifest.build?.[platform]?.extraResources, platform).toEqual([
+        { from: '.desktop-build/runtime', to: 'runtime' },
+        { from: '.desktop-build/offline-install', to: 'offline-install' },
+        { from: 'build/dream-skin-default.json', to: 'dream-skin-default.json' },
+      ])
     }
     expect(manifest.build).not.toHaveProperty('extraResources')
     expect(manifest.build?.linux).not.toHaveProperty('extraResources')
     // electron-builder must not re-sign the pre-signed payloads, and the universal merge keeps the identical payloads as they are.
     expect(manifest.build?.mac?.signIgnore).toContain('/Contents/Resources/runtime/(?:arm64|x64)/primary-runtime(?:/|$)')
-    expect(manifest.build?.mac?.x64ArchFiles).toMatch(/^\{\*\*\/node_modules\/\{.+\},Contents\/Resources\/runtime\/\*\*\}$/u)
+    // Asserted by shape rather than by exact text: the rule must cover the node_modules
+    // platforms under a brace group and the whole runtime tree. The runtime tree needs
+    // both entries because minimatch's `**` does not match dot-prefixed directories by
+    // default, and the Python dependencies under runtime/ contain `PIL/.dylibs` — a file
+    // reached only by the second pattern, whose absence fails the universal merge with
+    // "Detected file ... not covered by the x64ArchFiles rule".
+    const x64ArchFiles = manifest.build?.mac?.x64ArchFiles
+    expect(x64ArchFiles).toMatch(/^\{\*\*\/node_modules\/\{.+\}/u)
+    expect(x64ArchFiles).toContain('Contents/Resources/runtime/**')
+    expect(x64ArchFiles).toContain('Contents/Resources/runtime/**/.*/**')
     expect(manifest.scripts?.['prepare:runtime']).toBe('node scripts/prepare-runtime.ts')
     for (const name of ['@deepseek-ai/dsh-skill-office', '@deepseek-ai/dsh-tool-workspace-dependencies']) {
       expect(manifest.dependencies?.[name], name).toBe(runtimeVersion)
