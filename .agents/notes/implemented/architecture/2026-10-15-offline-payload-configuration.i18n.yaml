@@ -1,0 +1,5 @@
+# Bilingual-pair consistency record: the git blob hash of each side as of the last
+# confirmed-consistent state. Both languages carry equal authority. Update both files
+# and re-record their hashes with git hash-object after editing either side.
+2026-10-15-offline-payload-configuration.md: 60f5bb5d2c9522e01ca5f9bb03e139df50114d6c
+2026-10-15-offline-payload-configuration.zh.md: 96814db206e89f27ea325e1b0736042bf281f07e
