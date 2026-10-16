@@ -1,0 +1,25 @@
+dsh-plugin-desktop/src/offline-install-config-git-ai.ts
+  s_0f839b88721b02::t_5d70773939cbde 272-276,278-294,313
+dsh-plugin-desktop/tests/offline-install-config-git-ai.spec.ts
+  s_0f839b88721b02::t_fc06e48a9bf1e0 163-199
+dsh-plugin-desktop-beta/src/offline-install-config-git-ai.ts
+  s_0f839b88721b02::t_bc800e69769977 272-276,278-294,313
+dsh-plugin-desktop-beta/tests/offline-install-config-git-ai.spec.ts
+  s_0f839b88721b02::t_bc800e69769977 163-199
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e62f3f21560858791775c8a8d61e12ab6c4276db",
+  "prompts": {},
+  "sessions": {
+    "s_0f839b88721b02": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-36ca2a32-3027-4cdc-b766-ac222f4acaf3",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
