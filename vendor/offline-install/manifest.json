@@ -7,8 +7,8 @@
   "plugins": [
     {
       "name": "@edan/edan-spec",
-      "version": "1.0.1",
-      "tarball": "edan-edan-spec-1.0.1.tgz"
+      "version": "1.1.0",
+      "tarball": "edan-edan-spec-1.1.0.tgz"
     },
     {
       "name": "@huanlin/dsh-plugin-better-sidebar-plugin-office",
