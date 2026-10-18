@@ -2,6 +2,7 @@
   s_71cec2c8d51075::t_fe04308beed408 163-172
 .github/workflows/windows-package.yml
   s_71cec2c8d51075::t_a3fbe011a2a56e 1-247
+  s_71cec2c8d51075::t_c585fb73948113 1-175,177-244,246-247
 ---
 {
   "schema_version": "authorship/3.0.0",
