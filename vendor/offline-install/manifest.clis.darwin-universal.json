@@ -7,6 +7,12 @@
       "version": "1.6.0",
       "tarball": "codegraph-1.6.0-darwin-universal.tgz",
       "executable": "bin/codegraph"
+    },
+    {
+      "name": "mnemon",
+      "version": "0.2.9",
+      "tarball": "mnemon-0.2.9-darwin-universal.tgz",
+      "executable": "bin/mnemon"
     }
   ]
 }

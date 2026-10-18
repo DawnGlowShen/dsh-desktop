@@ -36,6 +36,11 @@
       "tarball": "dsh-better-sidebar-0.24.1.tgz"
     },
     {
+      "name": "dsh-mnemon",
+      "version": "0.5.24",
+      "tarball": "dsh-mnemon-0.5.24.tgz"
+    },
+    {
       "name": "dsh-rewind-plugin",
       "version": "0.15.1",
       "tarball": "dsh-rewind-plugin-0.15.1.tgz"
