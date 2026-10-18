@@ -1,0 +1,33 @@
+.github/workflows/windows-package.yml
+  s_71cec2c8d51075::t_5dd05532c0156f 34,120-121
+dsh-plugin-desktop-beta/package.json
+  s_71cec2c8d51075::t_e1cbe6b0f8c822 3
+dsh-plugin-desktop-beta/tests/package.spec.ts
+  s_71cec2c8d51075::t_6e1495ff973727 94,868
+dsh-plugin-desktop/package.json
+  s_71cec2c8d51075::t_0f1ff860c5b870 3
+dsh-plugin-desktop/src/offline-install-config-dream-skin.ts
+  s_71cec2c8d51075::t_64105fe093c918 1-133
+dsh-plugin-desktop/src/offline-install-config-git-ai.ts
+  s_71cec2c8d51075::t_b046544fd45aa6 1-415
+dsh-plugin-desktop/tests/package.spec.ts
+  s_71cec2c8d51075::t_fcc387ac8de75f 818
+vendor/offline-install/manifest.json
+  s_71cec2c8d51075::t_e4cfa5e611588b 7-43
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7dd00210e4d45bbfa5fe57e81d96f6ecf9aa28e9",
+  "prompts": {},
+  "sessions": {
+    "s_71cec2c8d51075": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-102a6f64-bf60-476c-b114-098620f17ef7",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
