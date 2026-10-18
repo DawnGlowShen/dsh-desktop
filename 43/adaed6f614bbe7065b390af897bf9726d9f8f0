@@ -1,0 +1,28 @@
+dsh-plugin-desktop-beta/package.json
+  h_00830f4b5426b8 3
+dsh-plugin-desktop-beta/tests/package.spec.ts
+  h_00830f4b5426b8 94
+dsh-plugin-desktop/package.json
+  h_00830f4b5426b8 3
+dsh-plugin-desktop/tests/package.spec.ts
+  h_00830f4b5426b8 817
+vendor/offline-install/manifest.clis.darwin-universal.json
+  h_00830f4b5426b8 10-15
+vendor/offline-install/manifest.clis.linux-x64.json
+  h_00830f4b5426b8 10-15
+vendor/offline-install/manifest.clis.win32-x64.json
+  h_00830f4b5426b8 10-15
+vendor/offline-install/manifest.json
+  h_00830f4b5426b8 12-16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "43adaed6f614bbe7065b390af897bf9726d9f8f0",
+  "prompts": {},
+  "humans": {
+    "h_00830f4b5426b8": {
+      "author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
