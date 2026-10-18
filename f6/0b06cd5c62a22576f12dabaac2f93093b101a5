@@ -1,0 +1,25 @@
+dsh-plugin-desktop-beta/src/offline-install-configure.ts
+  s_71cec2c8d51075::t_92517bfadf3aeb 1-210
+dsh-plugin-desktop-beta/tests/offline-install-configure.spec.ts
+  s_71cec2c8d51075::t_f5d4f2227346e4 1-263
+dsh-plugin-desktop/src/offline-install-configure.ts
+  s_71cec2c8d51075::t_8c175c2bafc6ac 1-210
+dsh-plugin-desktop/tests/offline-install-configure.spec.ts
+  s_71cec2c8d51075::t_08b9988dafa66e 1-182
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f60b06cd5c62a22576f12dabaac2f93093b101a5",
+  "prompts": {},
+  "sessions": {
+    "s_71cec2c8d51075": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-102a6f64-bf60-476c-b114-098620f17ef7",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
