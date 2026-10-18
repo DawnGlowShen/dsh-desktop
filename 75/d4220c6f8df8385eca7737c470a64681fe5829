@@ -1,0 +1,51 @@
+.agents/notes/implemented/architecture/2026-10-15-offline-payload-configuration.i18n.yaml
+  s_71cec2c8d51075::t_bbe709adc8b499 1-5
+.agents/notes/implemented/architecture/2026-10-15-offline-payload-configuration.md
+  s_71cec2c8d51075::t_66e324f09ed1e9 1-67
+.agents/notes/implemented/architecture/2026-10-15-offline-payload-configuration.zh.md
+  s_71cec2c8d51075::t_9f41c8b35c4e6c 1-67
+dsh-plugin-desktop-beta/package.json
+  s_71cec2c8d51075::t_b4d462f64e2778 3
+dsh-plugin-desktop-beta/src/offline-install-config-git-ai.ts
+  s_71cec2c8d51075::t_6c4d4bffb9725f 1-415
+dsh-plugin-desktop-beta/tests/offline-install-config-git-ai.spec.ts
+  s_71cec2c8d51075::t_e21937627ea058 1-317
+dsh-plugin-desktop-beta/tests/package.spec.ts
+  s_71cec2c8d51075::t_62e316459966a4 94,868
+dsh-plugin-desktop/package.json
+  s_71cec2c8d51075::t_2fd8181bdbdd30 3
+dsh-plugin-desktop/src/offline-install-config-git-ai.ts
+  s_71cec2c8d51075::t_446b68853095d3 1-415
+dsh-plugin-desktop/src/offline-install-configure.ts
+  s_71cec2c8d51075::t_45c757edbf9c3d 66,170
+dsh-plugin-desktop/tests/offline-install-config-git-ai.spec.ts
+  s_71cec2c8d51075::t_a28847f44fa58e 1-317
+dsh-plugin-desktop/tests/offline-install-configure.spec.ts
+  s_71cec2c8d51075::t_3aec6df2719db5 17,219-244
+dsh-plugin-desktop/tests/package.spec.ts
+  s_71cec2c8d51075::t_99619de7e390fa 818
+vendor/offline-install/manifest.clis.darwin-universal.json
+  s_71cec2c8d51075::t_c21f15af0a2582 11-16
+vendor/offline-install/manifest.clis.linux-x64.json
+  s_71cec2c8d51075::t_a4058d652182b7 11-16
+vendor/offline-install/manifest.clis.win32-x64.json
+  s_71cec2c8d51075::t_e239294ba4ea60 11-16
+vendor/offline-install/manifest.json
+  s_71cec2c8d51075::t_3257dd1034c1be 43-47
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "75d4220c6f8df8385eca7737c470a64681fe5829",
+  "prompts": {},
+  "sessions": {
+    "s_71cec2c8d51075": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-102a6f64-bf60-476c-b114-098620f17ef7",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
