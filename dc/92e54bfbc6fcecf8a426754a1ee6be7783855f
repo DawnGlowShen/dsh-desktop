@@ -1,0 +1,67 @@
+dsh-plugin-desktop-beta/build/codegraph/.prepared.json
+  s_ee4ab0c0ff9a3f::t_4758ffce22a0d3 1-10
+dsh-plugin-desktop-beta/build/codegraph/host/bin/codegraph.cmd
+  s_ee4ab0c0ff9a3f::t_68e63b6b1bf859 1
+dsh-plugin-desktop-beta/build/codegraph/host/lib/package.json
+  s_ee4ab0c0ff9a3f::t_dfae1326e940fb 1-61
+dsh-plugin-desktop-beta/build/codegraph/host/package.json
+  s_ee4ab0c0ff9a3f::t_8d01456a6103dc 1-21
+dsh-plugin-desktop-beta/build/git-ai/.prepared.json
+  s_ee4ab0c0ff9a3f::t_58952ae28d9868 1-8
+dsh-plugin-desktop-beta/build/git-ai/host/package.json
+  s_ee4ab0c0ff9a3f::t_6a84f6fa52c422 1-19
+dsh-plugin-desktop-beta/build/mnemon/.prepared.json
+  s_ee4ab0c0ff9a3f::t_c580c31ac4835b 1-10
+dsh-plugin-desktop-beta/build/mnemon/host/LICENSE
+  s_ee4ab0c0ff9a3f::t_eecd53a16bd31d 1-201
+dsh-plugin-desktop-beta/build/mnemon/host/README.md
+  s_ee4ab0c0ff9a3f::t_c046b259f099f3 1-3
+dsh-plugin-desktop-beta/build/mnemon/host/package.json
+  s_ee4ab0c0ff9a3f::t_0d58b41ac0b928 1-25
+dsh-plugin-desktop/build/codegraph/.prepared.json
+  s_ee4ab0c0ff9a3f::t_650be78e169a19 1-10
+dsh-plugin-desktop/build/codegraph/host/bin/codegraph.cmd
+  s_ee4ab0c0ff9a3f::t_c9c44d82436ca7 1
+dsh-plugin-desktop/build/codegraph/host/lib/package.json
+  s_ee4ab0c0ff9a3f::t_71315b59523f13 1-61
+dsh-plugin-desktop/build/codegraph/host/package.json
+  s_ee4ab0c0ff9a3f::t_a3b0fc26e5c63c 1-21
+dsh-plugin-desktop/build/git-ai/.prepared.json
+  s_ee4ab0c0ff9a3f::t_11b746dac0538b 1-8
+dsh-plugin-desktop/build/git-ai/host/package.json
+  s_ee4ab0c0ff9a3f::t_75f15ef075dd29 1-19
+dsh-plugin-desktop/build/mnemon/.prepared.json
+  s_ee4ab0c0ff9a3f::t_5d0e302601f4aa 1-10
+dsh-plugin-desktop/build/mnemon/host/LICENSE
+  s_ee4ab0c0ff9a3f::t_8ba861a7296bf9 1-201
+dsh-plugin-desktop/build/mnemon/host/README.md
+  s_ee4ab0c0ff9a3f::t_33b482e86adc74 1-3
+dsh-plugin-desktop/build/mnemon/host/package.json
+  s_ee4ab0c0ff9a3f::t_d3567c05b595dc 1-25
+vendor/offline-install/manifest.json
+  s_71cec2c8d51075::t_f3d4a14ace7d05 1-9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "dc92e54bfbc6fcecf8a426754a1ee6be7783855f",
+  "prompts": {},
+  "sessions": {
+    "s_71cec2c8d51075": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-102a6f64-bf60-476c-b114-098620f17ef7",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    },
+    "s_ee4ab0c0ff9a3f": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-0e7b08a1-9690-434a-9aea-de01fc6609d0",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
