@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "target": "darwin-universal",
+  "clis": [
+    {
+      "name": "codegraph",
+      "version": "1.6.0",
+      "tarball": "codegraph-1.6.0-darwin-universal.tgz",
+      "executable": "bin/codegraph"
+    }
+  ]
+}

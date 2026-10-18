@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "target": "win32-x64",
+  "clis": [
+    {
+      "name": "codegraph",
+      "version": "1.6.0",
+      "tarball": "codegraph-1.6.0-win32-x64.tgz",
+      "executable": "bin/codegraph.cmd"
+    }
+  ]
+}

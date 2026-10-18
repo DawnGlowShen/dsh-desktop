@@ -16,6 +16,11 @@
       "tarball": "dsh-plugin-better-sidebar-plugin-office-0.2.0.tgz"
     },
     {
+      "name": "@hyzyn/dsh-codegraph",
+      "version": "0.6.6",
+      "tarball": "dsh-codegraph-0.6.6.tgz"
+    },
+    {
       "name": "@linxin666/dsh-client-ui-git-graph",
       "version": "0.4.5",
       "tarball": "dsh-client-ui-git-graph-0.4.5.tgz"
