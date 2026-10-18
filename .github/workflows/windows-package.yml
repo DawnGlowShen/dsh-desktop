@@ -31,7 +31,7 @@ on:
         type: choice
         options: [store, normal, maximum]
   push:
-    branches: [evo3]
+    branches: [evo3, pack-evo4fix]
     paths:
       # Only the inputs that can change what a Windows artifact contains. A
       # documentation or macOS-only edit does not need a Windows runner, and the
