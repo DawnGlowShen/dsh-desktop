@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "dependencies": {
+    "version": "1.0.0",
+    "tarball": "dependencies-1.0.0.tgz"
+  },
+  "plugins": [],
+  "clis": []
+}
