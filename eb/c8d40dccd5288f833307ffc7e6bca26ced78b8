@@ -1,0 +1,37 @@
+dsh-plugin-desktop/tests/verify-linux-artifacts.spec.ts
+  s_81141489a2c4ee::t_ed45d813734287 25-44,57-58
+  s_81141489a2c4ee::t_5c28b59b8bc7f7 82-88
+dsh-plugin-desktop-beta/package.json
+  s_81141489a2c4ee::t_cf7ed9390b34f1 3
+dsh-plugin-desktop-beta/scripts/verify-linux-artifacts.ts
+  s_81141489a2c4ee::t_a2d187c35a07bd 29-30,43-62,159-160
+dsh-plugin-desktop-beta/tests/package.spec.ts
+  s_81141489a2c4ee::t_cf7ed9390b34f1 94,868
+dsh-plugin-desktop/tests/package.spec.ts
+  s_81141489a2c4ee::t_cf7ed9390b34f1 818
+dsh-plugin-desktop/scripts/verify-linux-artifacts.ts
+  s_81141489a2c4ee::t_5162ebee6c3294 29-30
+  s_81141489a2c4ee::t_b167fc12dbeccd 159-160
+  s_81141489a2c4ee::t_2f5a783dd0d86c 44-62
+  s_81141489a2c4ee::t_5b74dba1f67d03 43
+dsh-plugin-desktop/package.json
+  s_81141489a2c4ee::t_cf7ed9390b34f1 3
+dsh-plugin-desktop-beta/tests/verify-linux-artifacts.spec.ts
+  s_81141489a2c4ee::t_a2d187c35a07bd 6,25-44,55-58,82-88,93
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ebc8d40dccd5288f833307ffc7e6bca26ced78b8",
+  "prompts": {},
+  "sessions": {
+    "s_81141489a2c4ee": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-af6e4848-6ee6-4fec-b611-4a75bf901e65",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
