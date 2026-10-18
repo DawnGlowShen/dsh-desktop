@@ -1,0 +1,45 @@
+dsh-plugin-desktop-beta/build/dream-skin-default.json
+  s_71cec2c8d51075::t_cafa4bec919a2b 1
+dsh-plugin-desktop-beta/package.json
+  s_71cec2c8d51075::t_83271ec2bccb18 3
+dsh-plugin-desktop-beta/src/offline-install-config-dream-skin.ts
+  s_71cec2c8d51075::t_90075ffdb14115 1-133
+dsh-plugin-desktop-beta/tests/offline-install-config-dream-skin.spec.ts
+  s_71cec2c8d51075::t_dc61f5c5ee2f32 1-252
+dsh-plugin-desktop-beta/tests/package.spec.ts
+  s_71cec2c8d51075::t_023c103318d5ce 94,868
+dsh-plugin-desktop/build/dream-skin-default.json
+  s_71cec2c8d51075::t_4b94e49c443b4f 1
+dsh-plugin-desktop/package.json
+  s_71cec2c8d51075::t_751bd7ac3026c4 3
+dsh-plugin-desktop/src/offline-install-config-dream-skin.ts
+  s_71cec2c8d51075::t_d55c527d8ffa9c 1-133
+dsh-plugin-desktop/src/offline-install-configure.ts
+  s_71cec2c8d51075::t_918cf47b816297 65,168-170
+dsh-plugin-desktop/tests/offline-install-config-dream-skin.spec.ts
+  s_71cec2c8d51075::t_14a001cc6a29da 1-252
+dsh-plugin-desktop/tests/offline-install-configure.spec.ts
+  s_71cec2c8d51075::t_7d33180e7a4fa1 16,168-220
+dsh-plugin-desktop/tests/package.spec.ts
+  s_71cec2c8d51075::t_0a602c49303f20 818
+scripts/prepare-dream-skin-default.mjs
+  s_71cec2c8d51075::t_b66526ddee6f04 1-86
+vendor/offline-install/manifest.json
+  s_71cec2c8d51075::t_78a00810f17b76 38-42
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7fdb9457094a1551bb6bfb75d40a8b2648ae3c63",
+  "prompts": {},
+  "sessions": {
+    "s_71cec2c8d51075": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-102a6f64-bf60-476c-b114-098620f17ef7",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
