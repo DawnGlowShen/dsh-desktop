@@ -1,0 +1,19 @@
+vendor/offline-install/manifest.json
+  s_71cec2c8d51075::t_f7a33cb107267f 1-9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2ac9c4df4d20051c6d9ab9aed132eedfcc8f8729",
+  "prompts": {},
+  "sessions": {
+    "s_71cec2c8d51075": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-102a6f64-bf60-476c-b114-098620f17ef7",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
