@@ -8,10 +8,12 @@
  * registry is injected here and the executor is exercised on its own.
  */
 
-import { readFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
+import { configureDreamSkin } from '../src/offline-install-config-dream-skin.ts'
 import {
   applyPayloadConfigurations,
   type ConfigureContext,
@@ -164,6 +166,58 @@ describe('applyPayloadConfigurations', () => {
   })
 
 describe('目标路径不来自载荷（架构不变量）', () => {
+  it('writes only under the context home, whatever the resources directory holds', () => {
+    // The spec requirement is that no payload value can steer where a configuration
+    // writes. A configuration is code in the registry rather than data in the manifest, so
+    // there is no payload-supplied path to validate; what has to be shown is that the
+    // write target follows the context and nothing else.
+    //
+    // Asserted by behaviour rather than by scanning source text: a text check passes when
+    // the module merely avoids certain words, and fails when an unrelated comment mentions
+    // one — it measures vocabulary, not reachability.
+    const root = mkdtempSync(join(tmpdir(), 'config-target-'))
+    try {
+      const resourcesPath = join(root, 'resources')
+      mkdirSync(resourcesPath, { recursive: true })
+      // Populate the resources directory with everything a payload-influenced target could
+      // plausibly key off: the snapshot it legitimately reads, plus a file whose name and
+      // contents look like a path, plus a decoy directory. A test that only ships the
+      // snapshot cannot distinguish "the target comes from the context" from "the target
+      // comes from the snapshot when present" — the hostile names are what make it able to.
+      writeFileSync(join(resourcesPath, 'dream-skin-default.json'), JSON.stringify({ 'dsh-dream-skin:skin': 'x' }), 'utf8')
+      writeFileSync(join(resourcesPath, 'steer.json'), JSON.stringify({ homeDir: join(resourcesPath, 'steered') }), 'utf8')
+
+      // Record what the directory holds before the run, so the assertion below can ask
+      // "did anything new appear" rather than "does this path exist" — the decoys are
+      // meant to be there.
+      const before = new Set(readdirSync(resourcesPath, { recursive: true }).map(String))
+
+      const first = join(root, 'home-one')
+      const second = join(root, 'home-two')
+      for (const homeDir of [first, second]) {
+        configureDreamSkin({
+          homeDir,
+          userHomeDir: join(root, 'user'),
+          platform: 'darwin',
+          resourcesPath,
+          binName: 'dsh-test',
+          logger: { error: () => {} },
+        })
+      }
+
+      // The state file lands under the home it was given, in both cases, and nowhere else.
+      expect(existsSync(join(first, 'dream-skin.json'))).toBe(true)
+      expect(existsSync(join(second, 'dream-skin.json'))).toBe(true)
+      // Nothing new appeared beside the resources directory. Comparing directory listings
+      // catches a write under any name, including one derived from a payload value that the
+      // test did not think to guess.
+      const after = readdirSync(resourcesPath, { recursive: true }).map(String)
+      expect(after.filter(entry => !before.has(entry))).toEqual([])
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
   it('keeps ConfigureContext free of payload entry fields', () => {
     // The type is the enforcement point: a configuration can only reach these fields, and
     // none of them comes from the manifest, so no payload value can reach a path. Checked

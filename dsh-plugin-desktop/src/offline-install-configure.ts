@@ -62,6 +62,7 @@
  * it at mount.
  */
 
+import { dreamSkinConfiguration } from './offline-install-config-dream-skin.ts'
 
 /** What a configuration did, in the terms the caller reports. */
 export type ConfigureAction =
@@ -164,12 +165,9 @@ export interface PayloadConfiguration {
  * first; no configuration depends on another, and the executor runs them all regardless
  * of what an earlier one did.
  */
-/**
- * The registry is empty here on purpose: each configuration lands in the commit that
- * also ships the resource or CLI it needs, so this file never imports a module a
- * narrower build does not carry.
- */
-export const PAYLOAD_CONFIGURATIONS: readonly PayloadConfiguration[] = []
+export const PAYLOAD_CONFIGURATIONS: readonly PayloadConfiguration[] = [
+  dreamSkinConfiguration,
+]
 
 /**
  * Apply one configuration, turning any throw into a reported failure.
