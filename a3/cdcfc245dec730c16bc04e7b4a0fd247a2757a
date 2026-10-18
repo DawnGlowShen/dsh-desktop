@@ -1,67 +1,132 @@
 dsh-plugin-desktop/scripts/build-windows-nsis-ab.ts
   s_71cec2c8d51075::t_84ede0f639f75c 17,309
+  s_71cec2c8d51075::t_c585fb73948113 17,309
+  s_71cec2c8d51075::t_e2552689ec6a0c 17,309
 dsh-plugin-desktop/src/profile-manager.ts
   s_71cec2c8d51075::t_84ede0f639f75c 30,34
+  s_71cec2c8d51075::t_c585fb73948113 30,34
+  s_71cec2c8d51075::t_e2552689ec6a0c 30,34
 dsh-plugin-desktop/tests/desktop-plugins.spec.ts
   s_71cec2c8d51075::t_84ede0f639f75c 16,99,168,188,217,292,316,328,346,361,374,386,413,439,443,446,451-452,455,464,469,473,476,482,487,525
+  s_71cec2c8d51075::t_c585fb73948113 16,99,168,188,217,292,316,328,346,361,374,386,413,439,443,446,451-452,455,464,469,473,476,482,487,525
+  s_71cec2c8d51075::t_e2552689ec6a0c 16,99,168,188,217,292,316,328,346,361,374,386,413,439,443,446,451-452,455,464,469,473,476,482,487,525
 dsh-plugin-desktop/tests/profile-manager.spec.ts
   s_71cec2c8d51075::t_84ede0f639f75c 16,158,160,165,167,177,188,197,199,213,219,221,223,234,236,255,274,290-291,295,297-298,309-310,318,322,324,327,350,398-399,402,414-415,420,423-424,436-437,440,462
+  s_71cec2c8d51075::t_c585fb73948113 16,158,160,165,167,177,188,197,199,213,219,221,223,234,236,255,274,290-291,295,297-298,309-310,318,322,324,327,350,398-399,402,414-415,420,423-424,436-437,440,462
+  s_71cec2c8d51075::t_e2552689ec6a0c 16,158,160,165,167,177,188,197,199,213,219,221,223,234,236,255,274,290-291,295,297-298,309-310,318,322,324,327,350,398-399,402,414-415,420,423-424,436-437,440,462
 .codegraph/daemon.log
   s_71cec2c8d51075::t_84ede0f639f75c 1-560
+  s_71cec2c8d51075::t_c585fb73948113 1-560
+  s_71cec2c8d51075::t_2f86a74d3636ae 1-560
 dsh-plugin-desktop/package.json
   s_71cec2c8d51075::t_84ede0f639f75c 371-372,434,468,482,485,503,507,512
+  s_71cec2c8d51075::t_c585fb73948113 371-372,434,468,482,485,503,507,512
+  s_71cec2c8d51075::t_e2552689ec6a0c 371
+  s_71cec2c8d51075::t_437b072e449570 372,434,468,482,485,503,507,512
 dsh-plugin-desktop/tests/package.spec.ts
   s_71cec2c8d51075::t_84ede0f639f75c 20,819-820,863,875,878,890
+  s_71cec2c8d51075::t_c585fb73948113 20,819-820,863,875,878,890
+  s_71cec2c8d51075::t_e2552689ec6a0c 20,819
+  s_71cec2c8d51075::t_0be2ca129ffa7b 820,863,875,878,890
 dsh-plugin-desktop-beta/scripts/verify-linux-artifacts.ts
   s_71cec2c8d51075::t_84ede0f639f75c 6,135-136
+  s_71cec2c8d51075::t_c585fb73948113 6,135-136
+  s_71cec2c8d51075::t_e2552689ec6a0c 6,135-136
 dsh-plugin-desktop-beta/scripts/verify-mac-smoke.ts
   s_71cec2c8d51075::t_84ede0f639f75c 8,66
+  s_71cec2c8d51075::t_c585fb73948113 8,66
+  s_71cec2c8d51075::t_e2552689ec6a0c 8,66
 dsh-plugin-desktop/scripts/verify-win-installer.ts
   s_71cec2c8d51075::t_84ede0f639f75c 6,94,96
+  s_71cec2c8d51075::t_c585fb73948113 6,94,96
+  s_71cec2c8d51075::t_e2552689ec6a0c 6,94,96
 dsh-plugin-desktop/tests/verify-win-portable.spec.ts
   s_71cec2c8d51075::t_84ede0f639f75c 7,24,26,47,55
+  s_71cec2c8d51075::t_c585fb73948113 7,24,26,47,55
+  s_71cec2c8d51075::t_e2552689ec6a0c 7,24,26,47,55
 dsh-plugin-desktop/tests/windows-nsis-ab.spec.ts
   s_71cec2c8d51075::t_84ede0f639f75c 120
+  s_71cec2c8d51075::t_c585fb73948113 120
+  s_71cec2c8d51075::t_e2552689ec6a0c 120
 dsh-plugin-desktop-beta/scripts/verify-win-installer.ts
   s_71cec2c8d51075::t_84ede0f639f75c 6,94,96
+  s_71cec2c8d51075::t_c585fb73948113 6,94,96
+  s_71cec2c8d51075::t_e2552689ec6a0c 6,94,96
 dsh-plugin-desktop/tests/verify-linux-artifacts.spec.ts
   s_71cec2c8d51075::t_84ede0f639f75c 6,36-37,66
+  s_71cec2c8d51075::t_c585fb73948113 6,36-37,66
+  s_71cec2c8d51075::t_e2552689ec6a0c 6,36-37,66
 dsh-plugin-desktop-beta/src/profile-manager.ts
   s_71cec2c8d51075::t_84ede0f639f75c 30,34
+  s_71cec2c8d51075::t_c585fb73948113 30,34
+  s_71cec2c8d51075::t_e2552689ec6a0c 30,34
 .codegraph/daemon.pid
   s_71cec2c8d51075::t_84ede0f639f75c 1-6
+  s_71cec2c8d51075::t_c585fb73948113 1-6
 dsh-plugin-desktop/scripts/verify-linux-artifacts.ts
   s_71cec2c8d51075::t_84ede0f639f75c 6,135-136
+  s_71cec2c8d51075::t_c585fb73948113 6,135-136
+  s_71cec2c8d51075::t_e2552689ec6a0c 6,135-136
 dsh-plugin-desktop/scripts/verify-mac-smoke.ts
   s_71cec2c8d51075::t_84ede0f639f75c 8,66
+  s_71cec2c8d51075::t_c585fb73948113 8,66
+  s_71cec2c8d51075::t_e2552689ec6a0c 8,66
 dsh-plugin-desktop/tests/profile-context.spec.ts
   s_71cec2c8d51075::t_84ede0f639f75c 8,19,22
+  s_71cec2c8d51075::t_c585fb73948113 8,19,22
+  s_71cec2c8d51075::t_e2552689ec6a0c 8,19,22
 dsh-plugin-desktop/src/product-identity.ts
   s_71cec2c8d51075::t_84ede0f639f75c 6-7,9,17,32-39
+  s_71cec2c8d51075::t_c585fb73948113 6-7,9,17,32-39
+  s_71cec2c8d51075::t_e2552689ec6a0c 6-7,9,17,32-39
 dsh-plugin-desktop/tests/profile.spec.ts
   s_71cec2c8d51075::t_84ede0f639f75c 15,70,438,482,505,534,567,595,602,614,638,645,676,1332,1554,1586,1616,1622
+  s_71cec2c8d51075::t_c585fb73948113 15,70,438,482,505,534,567,595,602,614,638,645,676,1332,1554,1586,1616,1622
+  s_71cec2c8d51075::t_e2552689ec6a0c 15,70,438,482,505,534,567,595,602,614,638,645,676,1332,1554,1586,1616,1622
 dsh-plugin-desktop/src/profile.ts
   s_71cec2c8d51075::t_84ede0f639f75c 52,79
+  s_71cec2c8d51075::t_c585fb73948113 52,79
+  s_71cec2c8d51075::t_e2552689ec6a0c 52,79
 dsh-plugin-desktop-beta/scripts/verify-win-portable.ts
   s_71cec2c8d51075::t_84ede0f639f75c 6,39,47,49,57
+  s_71cec2c8d51075::t_c585fb73948113 6,39,47,49,57
+  s_71cec2c8d51075::t_e2552689ec6a0c 6,39,47,49,57
 dsh-plugin-desktop/tests/bin.spec.ts
   s_71cec2c8d51075::t_84ede0f639f75c 5,57,59
+  s_71cec2c8d51075::t_c585fb73948113 5,57,59
+  s_71cec2c8d51075::t_e2552689ec6a0c 5,57,59
 dsh-plugin-desktop/tests/plugin.spec.ts
   s_71cec2c8d51075::t_84ede0f639f75c 12,467
+  s_71cec2c8d51075::t_c585fb73948113 12,467
+  s_71cec2c8d51075::t_e2552689ec6a0c 12,467
 dsh-plugin-desktop-beta/src/product-identity.ts
   s_71cec2c8d51075::t_84ede0f639f75c 9,17,32-39
+  s_71cec2c8d51075::t_c585fb73948113 9,17,32-39
+  s_71cec2c8d51075::t_e2552689ec6a0c 9,17,32-39
 dsh-plugin-desktop/tests/verify-win-installer.spec.ts
   s_71cec2c8d51075::t_84ede0f639f75c 6,28-29,53
+  s_71cec2c8d51075::t_c585fb73948113 6,28-29,53
+  s_71cec2c8d51075::t_e2552689ec6a0c 6,28-29,53
 dsh-plugin-desktop/scripts/verify-mac-release.ts
   s_71cec2c8d51075::t_84ede0f639f75c 8,58
+  s_71cec2c8d51075::t_c585fb73948113 8,58
+  s_71cec2c8d51075::t_e2552689ec6a0c 8,58
 dsh-plugin-desktop-beta/scripts/verify-mac-release.ts
   s_71cec2c8d51075::t_84ede0f639f75c 8,58
+  s_71cec2c8d51075::t_c585fb73948113 8,58
+  s_71cec2c8d51075::t_e2552689ec6a0c 8,58
 dsh-plugin-desktop/scripts/verify-win-portable.ts
   s_71cec2c8d51075::t_84ede0f639f75c 6,39,47,49,57
+  s_71cec2c8d51075::t_c585fb73948113 6,39,47,49,57
+  s_71cec2c8d51075::t_e2552689ec6a0c 6,39,47,49,57
 dsh-plugin-desktop/tests/desktop-data-directory.spec.ts
   s_71cec2c8d51075::t_84ede0f639f75c 16,40-41
+  s_71cec2c8d51075::t_c585fb73948113 16,40-41
+  s_71cec2c8d51075::t_e2552689ec6a0c 16,40-41
 dsh-plugin-desktop-beta/src/profile.ts
   s_71cec2c8d51075::t_84ede0f639f75c 52,79
+  s_71cec2c8d51075::t_c585fb73948113 52,79
+  s_71cec2c8d51075::t_e2552689ec6a0c 52,79
 ---
 {
   "schema_version": "authorship/3.0.0",
