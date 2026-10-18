@@ -1,0 +1,83 @@
+dsh-plugin-desktop/src/product-identity.ts
+  s_71cec2c8d51075::t_d8fa394adc50d1 6-7,9,17,32-39
+dsh-plugin-desktop/scripts/verify-mac-smoke.ts
+  s_71cec2c8d51075::t_d8fa394adc50d1 8,66
+dsh-plugin-desktop-beta/scripts/verify-win-installer.ts
+  s_71cec2c8d51075::t_d8fa394adc50d1 6,94,96
+dsh-plugin-desktop-beta/scripts/verify-win-portable.ts
+  s_71cec2c8d51075::t_d8fa394adc50d1 6,39,47,49,57
+dsh-plugin-desktop/tests/plugin.spec.ts
+  s_71cec2c8d51075::t_d8fa394adc50d1 12,467
+dsh-plugin-desktop/scripts/verify-win-portable.ts
+  s_71cec2c8d51075::t_d8fa394adc50d1 6,39,47,49,57
+dsh-plugin-desktop-beta/src/profile.ts
+  s_71cec2c8d51075::t_d8fa394adc50d1 52,79
+dsh-plugin-desktop/src/profile.ts
+  s_71cec2c8d51075::t_d8fa394adc50d1 52,79
+dsh-plugin-desktop/tests/windows-nsis-ab.spec.ts
+  s_71cec2c8d51075::t_d8fa394adc50d1 120
+dsh-plugin-desktop/scripts/build-windows-nsis-ab.ts
+  s_71cec2c8d51075::t_d8fa394adc50d1 17,309
+dsh-plugin-desktop/tests/profile-context.spec.ts
+  s_71cec2c8d51075::t_d8fa394adc50d1 8,19,22
+dsh-plugin-desktop/scripts/verify-mac-release.ts
+  s_71cec2c8d51075::t_d8fa394adc50d1 8,58
+dsh-plugin-desktop/tests/package.spec.ts
+  s_71cec2c8d51075::t_d8fa394adc50d1 20,819-820,863,875,878,890
+dsh-plugin-desktop/scripts/verify-win-installer.ts
+  s_71cec2c8d51075::t_d8fa394adc50d1 6,94,96
+dsh-plugin-desktop/package.json
+  s_71cec2c8d51075::t_d8fa394adc50d1 371-372,434,468,482,485,503,507,512
+dsh-plugin-desktop-beta/scripts/verify-mac-smoke.ts
+  s_71cec2c8d51075::t_d8fa394adc50d1 8,66
+dsh-plugin-desktop/tests/bin.spec.ts
+  s_71cec2c8d51075::t_d8fa394adc50d1 5,57,59
+dsh-plugin-desktop/src/profile-manager.ts
+  s_71cec2c8d51075::t_d8fa394adc50d1 30,34
+dsh-plugin-desktop/tests/profile-manager.spec.ts
+  s_71cec2c8d51075::t_d8fa394adc50d1 16,158,160,165,167,177,188,197,199,213,219,221,223,234,236,255,274,290-291,295,297-298,309-310,318,322,324,327,350,398-399,402,414-415,420,423-424,436-437,440,462
+dsh-plugin-desktop/tests/profile.spec.ts
+  s_71cec2c8d51075::t_d8fa394adc50d1 15,70,438,482,505,534,567,595,602,614,638,645,676,1332,1554,1586,1616,1622
+CHANGELOG.md
+  s_71cec2c8d51075::t_d8fa394adc50d1 17-31
+.github/workflows/windows-package.yml
+  s_71cec2c8d51075::t_d8fa394adc50d1 176,245
+dsh-plugin-desktop-beta/scripts/verify-mac-release.ts
+  s_71cec2c8d51075::t_d8fa394adc50d1 8,58
+dsh-plugin-desktop/tests/verify-linux-artifacts.spec.ts
+  s_71cec2c8d51075::t_d8fa394adc50d1 6,36-37,66
+dsh-plugin-desktop-beta/src/profile-manager.ts
+  s_71cec2c8d51075::t_d8fa394adc50d1 30,34
+dsh-plugin-desktop-beta/tests/package.spec.ts
+  s_71cec2c8d51075::t_d8fa394adc50d1 868
+dsh-plugin-desktop/tests/verify-win-portable.spec.ts
+  s_71cec2c8d51075::t_d8fa394adc50d1 7,24,26,47,55
+dsh-plugin-desktop/tests/desktop-data-directory.spec.ts
+  s_71cec2c8d51075::t_d8fa394adc50d1 16,40-41
+dsh-plugin-desktop/tests/desktop-plugins.spec.ts
+  s_71cec2c8d51075::t_d8fa394adc50d1 16,99,168,188,217,292,316,328,346,361,374,386,413,439,443,446,451-452,455,464,469,473,476,482,487,525
+dsh-plugin-desktop/scripts/verify-linux-artifacts.ts
+  s_71cec2c8d51075::t_d8fa394adc50d1 6,135-136
+dsh-plugin-desktop-beta/scripts/verify-linux-artifacts.ts
+  s_71cec2c8d51075::t_d8fa394adc50d1 6,135-136
+dsh-plugin-desktop-beta/src/product-identity.ts
+  s_71cec2c8d51075::t_d8fa394adc50d1 9,17,32-39
+dsh-plugin-desktop/tests/verify-win-installer.spec.ts
+  s_71cec2c8d51075::t_d8fa394adc50d1 6,28-29,53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3b28f752f327e2c0a28440bacf0a939ccc2471cd",
+  "prompts": {},
+  "sessions": {
+    "s_71cec2c8d51075": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-102a6f64-bf60-476c-b114-098620f17ef7",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
