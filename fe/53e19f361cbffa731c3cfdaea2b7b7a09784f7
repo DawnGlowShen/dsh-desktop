@@ -1,0 +1,49 @@
+dsh-plugin-desktop-beta/tests/package.spec.ts
+  s_71cec2c8d51075::t_9ae03ae105451c 94,868
+dsh-plugin-desktop/tests/offline-install-config-git-ai.spec.ts
+  s_71cec2c8d51075::t_9ae03ae105451c 1-317
+dsh-plugin-desktop-beta/src/offline-install-config-git-ai.ts
+  s_71cec2c8d51075::t_9ae03ae105451c 1-415
+dsh-plugin-desktop-beta/tests/offline-install-config-git-ai.spec.ts
+  s_71cec2c8d51075::t_9ae03ae105451c 1-317
+dsh-plugin-desktop/package.json
+  s_71cec2c8d51075::t_9ae03ae105451c 3
+dsh-plugin-desktop/tests/offline-install-config-dream-skin.spec.ts
+  s_71cec2c8d51075::t_9ae03ae105451c 1-252
+dsh-plugin-desktop/tests/package.spec.ts
+  s_71cec2c8d51075::t_9ae03ae105451c 818
+dsh-plugin-desktop-beta/build/dream-skin-default.json
+  s_71cec2c8d51075::t_9ae03ae105451c 1
+dsh-plugin-desktop-beta/tests/offline-install-config-dream-skin.spec.ts
+  s_71cec2c8d51075::t_9ae03ae105451c 1-252
+scripts/prepare-dream-skin-default.mjs
+  s_71cec2c8d51075::t_9ae03ae105451c 1-86
+dsh-plugin-desktop/src/offline-install-config-dream-skin.ts
+  s_71cec2c8d51075::t_9ae03ae105451c 1-133
+dsh-plugin-desktop-beta/package.json
+  s_71cec2c8d51075::t_9ae03ae105451c 3
+dsh-plugin-desktop/build/dream-skin-default.json
+  s_71cec2c8d51075::t_9ae03ae105451c 1
+dsh-plugin-desktop/src/offline-install-config-git-ai.ts
+  s_71cec2c8d51075::t_9ae03ae105451c 1-415
+dsh-plugin-desktop-beta/src/offline-install-config-dream-skin.ts
+  s_71cec2c8d51075::t_9ae03ae105451c 1-133
+vendor/offline-install/manifest.json
+  s_71cec2c8d51075::t_04e3bf25610673 38-42
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fe53e19f361cbffa731c3cfdaea2b7b7a09784f7",
+  "prompts": {},
+  "sessions": {
+    "s_71cec2c8d51075": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-102a6f64-bf60-476c-b114-098620f17ef7",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
