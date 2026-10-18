@@ -1,0 +1,27 @@
+dsh-plugin-desktop-beta/package.json
+  s_71cec2c8d51075::t_7483c6d3b268de 3
+dsh-plugin-desktop-beta/tests/package.spec.ts
+  s_71cec2c8d51075::t_4dcd89964c4b28 94,868
+dsh-plugin-desktop/package.json
+  s_71cec2c8d51075::t_260f685f5fb1aa 3
+dsh-plugin-desktop/tests/package.spec.ts
+  s_71cec2c8d51075::t_43d2bb22dd4437 817
+vendor/offline-install/manifest.json
+  s_71cec2c8d51075::t_de16370bb8f838 8-12,18-22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f8748f4b1ef82f0c7ec0163e878ce86a2019d361",
+  "prompts": {},
+  "sessions": {
+    "s_71cec2c8d51075": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-102a6f64-bf60-476c-b114-098620f17ef7",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
