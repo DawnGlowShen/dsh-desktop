@@ -17,6 +17,7 @@
 
 import { existsSync, lstatSync, mkdirSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
+import { homedir } from 'node:os'
 import { dirname, join, relative } from 'node:path'
 import { readProfileManifest, writeProfileManifest } from '@deepseek-ai/dsh-app-boot'
 import { parseDocument } from 'yaml'
@@ -35,6 +36,15 @@ const COMPATIBLE_PNPM_PACKAGE_MANAGER = 'pnpm@11.8.0'
 
 /** Lower-case pnpm generation, as recorded on Windows. */
 const COMPATIBLE_PNPM_PACKAGE_MANAGER_WINDOWS = `${COMPATIBLE_PNPM_PACKAGE_MANAGER}+sha512`
+
+/** Layout version pnpm 11 records for the hoisted linker; pnpm rejects a different value. */
+const PNPM_MODULES_LAYOUT_VERSION = 5
+
+/** Private hoist pattern pnpm 11 applies while `nodeLinker` is `hoisted`. */
+const PNPM_HOIST_PATTERN = ['*'] as const
+
+/** Store generation pnpm 11 puts under its data directory. */
+const PNPM_STORE_VERSION = 'v11'
 
 /** One dependency that cannot be resolved for an installed plugin. */
 export interface UnresolvedDependency {
@@ -270,22 +280,64 @@ export function linkDependencyIntoProfile(source: string, dependency: string, pr
 }
 
 /**
+ * Resolve the pnpm data directory the way pnpm 11 does on this host.
+ *
+ * pnpm checks `PNPM_HOME`, then `XDG_DATA_HOME`, then a platform default, and hangs both
+ * its global install root and its content-addressable store off the result. Mirroring that
+ * order keeps a fresh Profile pointing at the store pnpm is about to use; a `store-dir` set
+ * in pnpm's own configuration is out of reach here, so such a Profile needs pnpm to write
+ * the module record itself.
+ *
+ * @param platform - Host platform.
+ * @returns Absolute data directory pnpm resolves for the current process.
+ */
+function pnpmDataDirectory(platform: NodeJS.Platform): string {
+  const env = process.env
+  if (env.PNPM_HOME !== undefined && env.PNPM_HOME !== '') return env.PNPM_HOME
+  if (env.XDG_DATA_HOME !== undefined && env.XDG_DATA_HOME !== '') return join(env.XDG_DATA_HOME, 'pnpm')
+  if (platform === 'darwin') return join(homedir(), 'Library/pnpm')
+  if (platform !== 'win32') return join(homedir(), '.local/share/pnpm')
+  if (env.LOCALAPPDATA !== undefined && env.LOCALAPPDATA !== '') return join(env.LOCALAPPDATA, 'pnpm')
+  return join(homedir(), '.pnpm')
+}
+
+/** Render a module record that satisfies every field pnpm 11 validates. */
+function moduleRecord(expectedManager: string, expectedLimit: number, storeDir: string): string {
+  return [
+    `hoistPattern: ${JSON.stringify(PNPM_HOIST_PATTERN)}`,
+    `layoutVersion: ${PNPM_MODULES_LAYOUT_VERSION}`,
+    `nodeLinker: hoisted`,
+    `packageManager: ${expectedManager}`,
+    `publicHoistPattern: []`,
+    `storeDir: ${JSON.stringify(storeDir)}`,
+    `virtualStoreDirMaxLength: ${expectedLimit}`,
+    '',
+  ].join('\n')
+}
+
+/**
  * Write the pnpm bookkeeping a Profile needs to look already-installed.
  *
  * Three files make `profileDependencyMigrationRequired` false: `pnpm-workspace.yaml`
  * pinning the hoisted linker, `node_modules/.modules.yaml` describing the layout, and a
  * lockfile whose settings opt out of peer auto-install.
  *
- * Existing files are corrected only where they would fail that check, and then only in
- * the fields it reads. Anything pnpm wrote is its own record of what it did — a full
- * `.modules.yaml` carries a store directory, registries and a layout version that this
- * code has no business inventing — so the rest of the document is left untouched and the
- * three fields are merged in. That keeps a layout pnpm produced usable instead of
- * discarding it, which is the whole point: an incompatible record makes the launcher
- * reinstall the Profile with pnpm on the next start and flatten the links written here.
+ * `.modules.yaml` also has to survive pnpm's own validation, not only that check. pnpm 11
+ * refuses a record whose `hoistPattern`, `layoutVersion` or `storeDir` differs from what
+ * it would write, and reports the difference as a hint to run `pnpm install` — which
+ * would flatten the links written here. A new record therefore carries those fields with
+ * pnpm's defaults: the hoisted linker hoists `*` privately, the layout version is the one
+ * this module pins, and the store sits under the data directory pnpm derives from
+ * `PNPM_HOME`, `XDG_DATA_HOME` or a platform default (see {@link pnpmDataDirectory}).
+ *
+ * Existing files are corrected only where a field the launcher or pnpm checks is missing,
+ * so a record pnpm wrote keeps its own values — including a `storeDir` that a configured
+ * `store-dir` moved away from the default. That keeps a layout pnpm produced usable
+ * instead of discarding it: an incompatible record makes pnpm refuse the next install and
+ * makes the launcher reinstall the Profile, flattening the links written here.
  *
  * @param profileDir - Profile directory to make consistent.
- * @param platform - Host platform; decides the Windows virtual-store limit.
+ * @param platform - Host platform; decides the Windows virtual-store limit and default store.
  * @returns The files that were created or corrected.
  */
 export function writeProfilePnpmMetadata(profileDir: string, platform: NodeJS.Platform): string[] {
@@ -304,19 +356,16 @@ export function writeProfilePnpmMetadata(profileDir: string, platform: NodeJS.Pl
   const expectedManager = platform === 'win32'
     ? COMPATIBLE_PNPM_PACKAGE_MANAGER_WINDOWS
     : COMPATIBLE_PNPM_PACKAGE_MANAGER
+  const expectedStore = join(pnpmDataDirectory(platform), 'store', PNPM_STORE_VERSION)
   if (!existsSync(modulesState)) {
-    writeFileSync(modulesState, [
-      `nodeLinker: hoisted`,
-      `packageManager: ${expectedManager}`,
-      `virtualStoreDirMaxLength: ${expectedLimit}`,
-      '',
-    ].join('\n'))
+    writeFileSync(modulesState, moduleRecord(expectedManager, expectedLimit, expectedStore))
     written.push(modulesState)
   } else {
     const reconciled = reconcileModulesState(
       readFileSync(modulesState, 'utf8'),
       expectedManager,
       expectedLimit,
+      expectedStore,
     )
     if (reconciled !== undefined) {
       writeFileSync(modulesState, reconciled)
@@ -341,33 +390,35 @@ export function writeProfilePnpmMetadata(profileDir: string, platform: NodeJS.Pl
 }
 
 /**
- * Merge the layout fields the launcher checks into an existing module record.
+ * Merge the layout fields the launcher and pnpm check into an existing module record.
  *
- * A record that already satisfies the check is left byte-for-byte alone, so this never
- * rewrites a file pnpm just wrote. A malformed one is replaced outright, because there is
- * nothing worth preserving in a document that cannot be read.
+ * A record that already satisfies both is left byte-for-byte alone, so this never rewrites
+ * a file pnpm just wrote. A malformed one is replaced outright, because there is nothing
+ * worth preserving in a document that cannot be read.
  *
  * @param contents - Current text of `.modules.yaml`.
  * @param expectedManager - Package manager string the launcher accepts.
  * @param expectedLimit - Virtual-store path limit for this platform.
+ * @param expectedStore - Store directory pnpm would use on this host.
  * @returns Replacement text, or undefined when the record already satisfies the check.
  */
 function reconcileModulesState(
   contents: string,
   expectedManager: string,
   expectedLimit: number,
+  expectedStore: string,
 ): string | undefined {
   let document: ReturnType<typeof parseDocument>
   try {
     document = parseDocument(contents)
     if (document.errors.length > 0) throw new Error('unparsable')
   } catch {
-    return [
-      `nodeLinker: hoisted`,
-      `packageManager: ${expectedManager}`,
-      `virtualStoreDirMaxLength: ${expectedLimit}`,
-      '',
-    ].join('\n')
+    return moduleRecord(expectedManager, expectedLimit, expectedStore)
+  }
+
+  const missing = (field: string): boolean => {
+    const value = document.get(field)
+    return value === undefined || value === null
   }
 
   let changed = false
@@ -383,6 +434,20 @@ function reconcileModulesState(
   }
   if (document.get('virtualStoreDirMaxLength') !== expectedLimit) {
     document.set('virtualStoreDirMaxLength', expectedLimit)
+    changed = true
+  }
+  // pnpm validates these three as well. A record missing them is accepted by the launcher
+  // but rejected by `pnpm install`, which is the failure this module exists to prevent.
+  if (missing('hoistPattern')) {
+    document.set('hoistPattern', [...PNPM_HOIST_PATTERN])
+    changed = true
+  }
+  if (missing('layoutVersion')) {
+    document.set('layoutVersion', PNPM_MODULES_LAYOUT_VERSION)
+    changed = true
+  }
+  if (missing('storeDir')) {
+    document.set('storeDir', expectedStore)
     changed = true
   }
   return changed ? document.toString() : undefined

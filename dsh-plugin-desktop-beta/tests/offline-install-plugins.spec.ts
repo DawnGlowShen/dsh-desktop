@@ -301,6 +301,38 @@ describe('writeProfilePnpmMetadata', () => {
       .toContain('virtualStoreDirMaxLength: 60')
   })
 
+  // pnpm 11 validates these fields too. A record missing one is rejected with a hint to
+  // run `pnpm install` — the install path that flattens the links written here.
+  it('records the layout fields pnpm validates', () => {
+    const location = locationWith([])
+
+    writeProfilePnpmMetadata(location.profileDir, 'darwin')
+
+    const contents = readFileSync(join(location.profileDir, 'node_modules', '.modules.yaml'), 'utf8')
+    expect(contents).toContain('hoistPattern: ["*"]')
+    expect(contents).toContain('layoutVersion: 5')
+    expect(contents).toContain('publicHoistPattern: []')
+    expect(contents).toMatch(/storeDir: "[^"]*store[/\\]v11"/)
+  })
+
+  // What earlier Desktop builds wrote: the launcher accepted it, pnpm rejected it.
+  it('fills in the layout fields an earlier record omitted', () => {
+    const location = locationWith([])
+    const modulesState = join(location.profileDir, 'node_modules', '.modules.yaml')
+    mkdirSync(dirname(modulesState), { recursive: true })
+    writeFileSync(modulesState, 'nodeLinker: hoisted\npackageManager: pnpm@11.8.0\nvirtualStoreDirMaxLength: 120\n')
+
+    const written = writeProfilePnpmMetadata(location.profileDir, 'darwin')
+
+    expect(written).toContain(modulesState)
+    const contents = readFileSync(modulesState, 'utf8')
+    expect(contents).toContain('hoistPattern:')
+    expect(contents).toMatch(/hoistPattern:\n\s+- "\*"/)
+    expect(contents).toContain('layoutVersion: 5')
+    expect(contents).toContain('storeDir:')
+    expect(contents).toContain('packageManager: pnpm@11.8.0')
+  })
+
   it('never overwrites metadata pnpm already wrote', () => {
     const location = locationWith([])
     const lockfile = join(location.profileDir, 'pnpm-lock.yaml')
@@ -327,6 +359,9 @@ describe('writeProfilePnpmMetadata', () => {
     expect(contents).toContain('nodeLinker: hoisted')
     expect(contents).toContain('packageManager: pnpm@11.8.0')
     expect(contents).toContain('virtualStoreDirMaxLength: 120')
+    expect(contents).toContain('hoistPattern:')
+    expect(contents).toContain('layoutVersion: 5')
+    expect(contents).toContain('storeDir:')
   })
 
   // The check reads three fields. Everything else in the record is pnpm's own account of
@@ -353,6 +388,8 @@ describe('writeProfilePnpmMetadata', () => {
     expect(contents).toContain('storeDir: /Users/someone/Library/pnpm/store/v11')
     expect(contents).toContain('virtualStoreDir: .pnpm')
     expect(contents).toContain('virtualStoreDirMaxLength: 120')
+    // Missing from the record, so it is filled in rather than left for pnpm to reject.
+    expect(contents).toContain('hoistPattern:')
   })
 
   it('leaves an acceptable module record untouched, down to its formatting', () => {
@@ -361,9 +398,12 @@ describe('writeProfilePnpmMetadata', () => {
     mkdirSync(dirname(modulesState), { recursive: true })
     const original = [
       '{',
+      '  "hoistPattern": ["*"],',
       '  "layoutVersion": 5,',
       '  "nodeLinker": "hoisted",',
       '  "packageManager": "pnpm@11.8.0",',
+      '  "publicHoistPattern": [],',
+      '  "storeDir": "/Users/someone/Library/pnpm/store/v11",',
       '  "virtualStoreDirMaxLength": 120',
       '}',
       '',
@@ -386,6 +426,9 @@ describe('writeProfilePnpmMetadata', () => {
 
     expect(written).toContain(modulesState)
     const contents = readFileSync(modulesState, 'utf8')
+    expect(contents).toContain('hoistPattern: ["*"]')
+    expect(contents).toContain('layoutVersion: 5')
+    expect(contents).toContain('storeDir:')
     expect(contents).toContain('packageManager: pnpm@11.8.0')
     expect(contents).toContain('virtualStoreDirMaxLength: 120')
   })
