@@ -22,7 +22,26 @@ function debArchive(): Buffer {
   return archive
 }
 
-function fixture(version = '2.0.0'): {
+/**
+ * The Evo identity renames the Linux executable, so the fixture deliberately
+ * uses a name that differs from Electron Builder's package-name fallback: a
+ * verifier that guesses `dsh-desktop` again would fail this test instead of
+ * passing on the fixture's own default.
+ */
+const LINUX_EXECUTABLE = 'dsh-desktop-evo'
+
+function manifest(version: string, executableName: string | undefined): string {
+  return JSON.stringify({
+    name: 'dsh-plugin-desktop',
+    version,
+    ...(executableName === undefined ? {} : { build: { linux: { executableName } } }),
+  })
+}
+
+function fixture(
+  version = '2.0.0',
+  executableName: string | undefined = LINUX_EXECUTABLE,
+): {
   readonly root: string
   readonly appImage: string
   readonly deb: string
@@ -35,7 +54,8 @@ function fixture(version = '2.0.0'): {
   mkdirSync(unpacked, { recursive: true })
   const appImagePath = join(dist, `${DESKTOP_ARTIFACT_STEM}-${version}-x86_64.AppImage`)
   const debPath = join(dist, `${DESKTOP_ARTIFACT_STEM}-${version}-amd64.deb`)
-  const application = join(unpacked, 'dsh-desktop')
+  const application = join(unpacked, executableName ?? 'dsh-plugin-desktop')
+  writeFileSync(join(root, 'package.json'), manifest(version, executableName))
   writeFileSync(appImagePath, appImage(), { mode: 0o755 })
   chmodSync(appImagePath, 0o755)
   writeFileSync(debPath, debArchive())
@@ -57,6 +77,13 @@ describe('Linux artifact verification', () => {
       debPath: value.deb,
       applicationPath: value.application,
     })
+  })
+
+  it('falls back to the package name when the manifest declares no executableName', () => {
+    const value = fixture('2.0.0', undefined)
+
+    expect(verifyLinuxArtifacts({ desktopRoot: value.root, version: '2.0.0' }).applicationPath)
+      .toBe(value.application)
   })
 
   it('rejects an AppImage from a different version', () => {

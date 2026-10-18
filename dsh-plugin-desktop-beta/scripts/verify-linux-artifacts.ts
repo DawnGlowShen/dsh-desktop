@@ -26,6 +26,8 @@ export interface LinuxArtifactVerificationOptions {
   readonly desktopRoot: string
   /** Product version embedded in the expected artifact names. */
   readonly version: string
+  /** Linux executable under `linux-unpacked`; read from the manifest when omitted. */
+  readonly executableName?: string
 }
 
 function readVersion(desktopRoot: string): string {
@@ -36,6 +38,26 @@ function readVersion(desktopRoot: string): string {
     throw new Error(`desktop package at ${desktopRoot} has no valid version`)
   }
   return manifest.version
+}
+
+/**
+ * Read the Linux executable name electron-builder produced.
+ *
+ * The name is not the package name in this repository: the Evo identity renames
+ * the executable to `dsh-desktop-evo` (and Beta to `dsh-desktop-beta`), so
+ * guessing `dsh-desktop` looks for a file the packaging step never wrote.
+ * @param desktopRoot - Desktop package root containing package.json.
+ */
+function readExecutableName(desktopRoot: string): string {
+  const manifest = JSON.parse(readFileSync(join(desktopRoot, 'package.json'), 'utf8')) as {
+    name?: unknown
+    build?: { linux?: { executableName?: unknown } }
+  }
+  const configured = manifest.build?.linux?.executableName
+  if (typeof configured === 'string' && configured.length > 0) return configured
+  // electron-builder falls back to the package name when executableName is unset.
+  if (typeof manifest.name === 'string' && manifest.name.length > 0) return manifest.name
+  throw new Error(`desktop package at ${desktopRoot} declares no Linux executable name`)
 }
 
 /**
@@ -134,7 +156,8 @@ export function verifyLinuxArtifacts(
   const distDir = join(options.desktopRoot, 'dist')
   const appImagePath = join(distDir, `${DESKTOP_ARTIFACT_STEM}-${options.version}-x86_64.AppImage`)
   const debPath = join(distDir, `${DESKTOP_ARTIFACT_STEM}-${options.version}-amd64.deb`)
-  const applicationPath = join(distDir, 'linux-unpacked', 'dsh-desktop-beta')
+  const executableName = options.executableName ?? readExecutableName(options.desktopRoot)
+  const applicationPath = join(distDir, 'linux-unpacked', executableName)
 
   assertAppImage(appImagePath, 'Linux AppImage')
   assertDebArchive(debPath, 'Linux Debian package')

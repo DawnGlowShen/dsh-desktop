@@ -105,8 +105,11 @@ Profile、把 CLI 解包并暴露到 `~/.dsh/bin`。全过程不联网。
 
 **其他**
 
-- **Windows 发布**：CI 在打包后发布 Release，提供可公开下载的安装包；
-  发布用构建改用压缩，安装包从 1.58 GB 降到约一半。
+- **三平台发布**：`desktop-package` 工作流在打包后发布 Release，同一个 tag
+  下提供可公开下载的 Windows 安装包、Linux deb 与 macOS DMG；
+  只有版本号相对上次发布有变更时才打包，纯代码提交不会多出一次重复构建。
+  三平台产物均未签名，release 说明里写明各自的放行方式。
+  发布用构建改用压缩，Windows 安装包从 1.58 GB 降到约一半。
 - **默认外观**：`build/dream-skin-default.json` 由
   `scripts/prepare-dream-skin-default.mjs` 从调好的状态文件生成，剔除
   `dsh-dream-skin:wallpaper-history`（壁纸尝试历史，非外观的一部分，

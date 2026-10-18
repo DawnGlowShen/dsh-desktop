@@ -1,0 +1,457 @@
+name: Desktop package
+
+# An unsigned Windows, Linux and macOS packaging run for the Evo branch, kept
+# separate from `CI` so it can be started by hand and so it can publish.
+#
+# `CI` triggers on master only and publishes nothing: its desktop jobs prove that
+# packaging still works and then discard the artifacts with the runner. A
+# distributable build needs a real installer and a public URL, which is what this
+# workflow produces. Each platform builds natively — macOS cannot be
+# cross-compiled from Linux, and the Linux packages link against the runner's
+# system libraries — so the three build jobs run in parallel and `publish`
+# collects their artifacts into one release.
+#
+# A push to `evo` packages only when the packaged version has moved past the last
+# release this workflow published. The version, not the commit, is what a tester
+# installs, so packaging a version that already has an installer only spends a
+# runner and publishes a duplicate. Two mechanisms enforce that: `paths` keeps a
+# code-only push from starting the workflow at all, and `version-gate` compares the
+# version itself, because a path filter can only see that a file changed. A manual
+# `workflow_dispatch` still packages on demand.
+#
+# None of these artifacts is signed. A Developer ID certificate exists only on a
+# credentialed machine, so macOS is an unsigned DMG and Windows an unsigned
+# installer; the release notes carry the bypass each one needs. Signing and
+# notarization stay a manual release step.
+#
+# The payload is the reason this exists at all. `vendor/offline-install/` holds the
+# CLI artifacts for every platform in one shared directory, and only a native
+# runner can prove that the matching artifacts reach the installer with the entry
+# points it looks for.
+
+on:
+  workflow_dispatch:
+    inputs:
+      workspace:
+        description: Workspace to package
+        required: true
+        default: both
+        type: choice
+        options: [both, dsh-plugin-desktop, dsh-plugin-desktop-beta]
+      compression:
+        description: electron-builder compression; a manual run is not published, so `store` is fine
+        required: true
+        default: store
+        type: choice
+        options: [store, normal, maximum]
+  push:
+    branches: [evo]
+    paths:
+      # Only the files that can carry a version bump. Everything else is
+      # deliberately absent: a code-only push that keeps the released version
+      # must not publish a second installer for it, so it should not even start
+      # this workflow. `version-gate` then compares the version string itself,
+      # because this filter can only see that the file changed.
+      - '.github/workflows/desktop-package.yml'
+      - 'dsh-plugin-desktop/package.json'
+      - 'dsh-plugin-desktop-beta/package.json'
+
+permissions:
+  # `contents: write` is what the release step needs. GitHub's artifact download
+  # requires being signed in, so a shared build has to be a release asset — which is
+  # the point of publishing here at all: installers someone else can fetch.
+  contents: write
+
+concurrency:
+  group: desktop-package-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DSH_TELEMETRY_DISABLED: '1'
+
+jobs:
+  # A push may reuse the version that already has an installer: that release must
+  # not be duplicated. `paths` already keeps most such pushes from starting the
+  # workflow, so this gate only decides the remaining case — a `package.json` edit
+  # that leaves the version unchanged — plus the ones a path filter cannot judge.
+  version-gate:
+    runs-on: ubuntu-latest
+    outputs:
+      package: ${{ steps.gate.outputs.package }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Compare the packaged version with the last release
+        id: gate
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          # A manual run is asking for a build, not for a version comparison.
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            echo "Manual run: packaging unconditionally."
+            echo "package=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # The stable workspace is the only one a push builds, so it is the only
+          # version a push can package.
+          current="$(node -p "require('./dsh-plugin-desktop/package.json').version")"
+          # Releases published here are tagged `evo-<version>-<short sha>`; a
+          # version may itself contain dashes, so the sha is the anchored tail and
+          # everything between is the version. `--limit` reaches past unrelated
+          # releases, and the tag shape is what excludes them: a release without
+          # this prefix belongs to another workflow and is not a baseline for this
+          # one.
+          previous="$(gh release list --repo "$REPOSITORY" --limit 100 --exclude-drafts \
+            --json tagName --jq '.[].tagName' \
+            | sed -n 's/^evo-\(.*\)-[0-9a-f]\{7,\}$/\1/p' | head -n 1)"
+          if [[ -z "$previous" ]]; then
+            # The first build of the line has no predecessor to compare against.
+            echo "No previous evo release: packaging once to record a baseline."
+            package=true
+          elif [[ "$current" == "$previous" ]]; then
+            echo "Version $current was already packaged as $previous; skipping."
+            package=false
+          else
+            echo "Version moved from $previous to $current; packaging."
+            package=true
+          fi
+          echo "package=$package" >> "$GITHUB_OUTPUT"
+
+  # The platform gates run first and on their own: each compiles the desktop
+  # package and runs the platform's packaging specs, so a regression there fails
+  # in minutes instead of after the packaging minutes below.
+  windows:
+    needs: version-gate
+    # A false gate leaves the run green and explicit instead of packaging a
+    # version that already has an installer.
+    if: needs.version-gate.outputs.package == 'true'
+    runs-on: windows-latest
+    # The package gate, then two electron-builder runs. `store` compression keeps
+    # the artifacts small to produce but not to download, so this is the slow part.
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        # A push builds the stable variant only: the beta workspace differs in
+        # packaging inputs this workflow does not exercise, and building both would
+        # double an already long job for no extra signal. `workflow_dispatch` can ask
+        # for beta, or for both.
+        workspace: ${{ fromJSON(
+          github.event_name != 'workflow_dispatch' && '["dsh-plugin-desktop"]'
+            || inputs.workspace == 'both' && '["dsh-plugin-desktop","dsh-plugin-desktop-beta"]'
+            || format('["{0}"]', inputs.workspace)
+          ) }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+          submodules: recursive
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22.23.2
+      - run: corepack enable
+      - name: Resolve Yarn cache folder
+        id: yarn-cache
+        run: echo "dir=$(yarn config get cacheFolder)" >> "$env:GITHUB_OUTPUT"
+      - uses: actions/cache@v6
+        with:
+          path: ${{ steps.yarn-cache.outputs.dir }}
+          key: yarn-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('yarn.lock', '.yarnrc.yml') }}
+      - run: yarn install --immutable
+
+      - name: Windows package gate
+        run: yarn workspace ${{ matrix.workspace }} check:win-package:platform
+
+      # Proves the CLI payload reached the build before electron-builder packs it.
+      # The gate above calls the same script, but a payload that failed to
+      # materialize would otherwise only show up as a missing `~/.dsh/bin` command
+      # on a user's machine.
+      - name: Report the offline CLI payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          manifest="vendor/offline-install/manifest.clis.win32-x64.json"
+          if [ ! -f "$manifest" ]; then
+            echo "::error::$manifest is missing; the Windows CLI payload was not prepared"
+            exit 1
+          fi
+          node -e '
+            const manifest = require("./" + process.argv[1])
+            if (manifest.target !== "win32-x64") throw new Error(`target is ${manifest.target}`)
+            if (manifest.clis.length === 0) throw new Error("no CLIs listed")
+            for (const cli of manifest.clis) {
+              console.log(`${cli.name} ${cli.version} -> ${cli.executable}`)
+              // The Windows entry points are the ones this run exists to verify.
+              if (!/\.(cmd|exe)$/u.test(cli.executable)) {
+                throw new Error(`${cli.name} does not name a Windows entry point: ${cli.executable}`)
+              }
+            }
+          ' "$manifest"
+
+      - name: Build Windows installer
+        env:
+          DSH_PACKAGE_CHECK_ALREADY_RAN: '1'
+          # A pushed build becomes a release asset, so it is compressed: `store`
+          # writes the application uncompressed, which is why the first published
+          # installer was 1.58 GB. A manual run is for checking the build, not for
+          # shipping it, so it keeps the caller's choice and defaults to `store`.
+          DSH_WINDOWS_PACKAGE_COMPRESSION: ${{ github.event_name == 'workflow_dispatch' && inputs.compression || 'maximum' }}
+        run: yarn workspace ${{ matrix.workspace }} dist:win
+
+      # Uploaded so `publish` can put every platform in one release, and so a
+      # manual run still leaves a copy someone can fetch from the run itself.
+      # v4 rather than a newer major: this repository has never used this action, and a
+      # version that does not resolve fails the whole run.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-${{ matrix.workspace }}-${{ github.sha }}
+          # `if-no-files-found: error` because a packaging run that produced
+          # nothing must not report success.
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            ${{ matrix.workspace }}/dist/*Setup*.exe
+
+  # A .deb is the only Linux artifact this workflow publishes. `dist:linux` also
+  # builds an AppImage — its verifier requires both files to exist — but the image
+  # stays on the runner: the distribution target is the Debian package alone.
+  linux:
+    needs: version-gate
+    if: needs.version-gate.outputs.package == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        workspace: ${{ fromJSON(
+          github.event_name != 'workflow_dispatch' && '["dsh-plugin-desktop"]'
+            || inputs.workspace == 'both' && '["dsh-plugin-desktop","dsh-plugin-desktop-beta"]'
+            || format('["{0}"]', inputs.workspace)
+          ) }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+          submodules: recursive
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22.23.2
+      - run: corepack enable
+      - name: Resolve Yarn cache folder
+        id: yarn-cache
+        run: echo "dir=$(yarn config get cacheFolder)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v6
+        with:
+          path: ${{ steps.yarn-cache.outputs.dir }}
+          key: yarn-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('yarn.lock', '.yarnrc.yml') }}
+      - run: yarn install --immutable
+
+      - name: Linux package gate
+        run: yarn workspace ${{ matrix.workspace }} check:linux-package:platform
+
+      - name: Build Linux Debian package
+        env:
+          DSH_PACKAGE_CHECK_ALREADY_RAN: '1'
+        # `dist:linux` builds the AppImage as well; its verifier refuses to pass
+        # without one. Only the .deb is uploaded below.
+        run: yarn workspace ${{ matrix.workspace }} dist:linux
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-${{ matrix.workspace }}-${{ github.sha }}
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            ${{ matrix.workspace }}/dist/*.deb
+
+  # `dist:mac-smoke` is the unsigned path: the signed, notarized DMG needs a
+  # Developer ID certificate and stays a manual release step. The universal target
+  # exercises both Intel and Apple Silicon packaging in the one artifact that ships.
+  macos:
+    needs: version-gate
+    if: needs.version-gate.outputs.package == 'true'
+    runs-on: macos-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        workspace: ${{ fromJSON(
+          github.event_name != 'workflow_dispatch' && '["dsh-plugin-desktop"]'
+            || inputs.workspace == 'both' && '["dsh-plugin-desktop","dsh-plugin-desktop-beta"]'
+            || format('["{0}"]', inputs.workspace)
+          ) }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+          submodules: recursive
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22.23.2
+      - run: corepack enable
+      - name: Resolve Yarn cache folder
+        id: yarn-cache
+        run: echo "dir=$(yarn config get cacheFolder)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v6
+        with:
+          path: ${{ steps.yarn-cache.outputs.dir }}
+          key: yarn-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('yarn.lock', '.yarnrc.yml') }}
+      - run: yarn install --immutable
+
+      - name: macOS package gate
+        run: yarn workspace ${{ matrix.workspace }} check:mac-package:platform
+
+      - name: Build macOS DMG
+        env:
+          DSH_PACKAGE_CHECK_ALREADY_RAN: '1'
+          # The universal merge alone takes 9-17 minutes. A published DMG is worth
+          # it because one file then serves both CPU families.
+          DSH_MAC_SMOKE_ARCH: universal
+        run: yarn workspace ${{ matrix.workspace }} dist:mac-smoke
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-${{ matrix.workspace }}-${{ github.sha }}
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            ${{ matrix.workspace }}/dist/mac-smoke/*.dmg
+
+  # One release per build, tagged with the commit: a rolling tag would keep the
+  # link stable but silently replace the files, so a hash quoted in a bug report
+  # would no longer be the hash of what the link serves. Every platform is
+  # collected here rather than published by its own job so the release is created
+  # once, with one set of notes and no upload race between three runners.
+  publish:
+    needs: [version-gate, windows, linux, macos]
+    # A manual run is a build check, not a release; it keeps its artifacts on the
+    # run. A failed platform skips this job, so a release never ships with a
+    # missing platform's file silently absent.
+    if: github.event_name == 'push' && needs.version-gate.outputs.package == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      # Full history: the release notes list the commits between this build and
+      # the previous one, which the default single-commit checkout cannot see.
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+          # The baseline is a release tag, and tags are not fetched by default —
+          # without this the comparison below silently finds nothing to compare
+          # against.
+          fetch-tags: true
+      # No `name`, so every artifact of the run is downloaded; the layout is
+      # `artifacts/<count>_<name>/...` and `find` flattens it below.
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Publish this build
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # Collected without `mapfile`: this runs on the runner's bash 5, but a
+          # loop is portable to the bash 3.2 a maintainer has locally, so the
+          # same script can be verified before it reaches CI.
+          assets=()
+          while IFS= read -r asset; do
+            assets+=("$asset")
+          done < <(find artifacts -type f | sort)
+          if (( ${#assets[@]} == 0 )); then
+            echo "::error::no artifacts were downloaded; refusing to publish an empty release"
+            exit 1
+          fi
+          printf 'asset: %s\n' "${assets[@]}"
+
+          version=$(node -p "require('./dsh-plugin-desktop/package.json').version")
+          short=$(echo "${{ github.sha }}" | cut -c1-8)
+          tag="evo-${version}-${short}"
+          # The tag is derived from the commit, so an existing one is a re-run of the
+          # same build; uploading would fail on the name, so it is skipped with a note
+          # rather than treated as an error.
+          if gh release view "$tag" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            echo "::notice::release $tag already exists; leaving it untouched"
+            exit 0
+          fi
+          # What changed since the last build, so a tester can tell two builds apart
+          # without reading the commit graph themselves.
+          #
+          # The baseline is the previous release tag when there is one, because releases
+          # here are per-build rather than per-version: `version` stays at 2.0.17 while the
+          # commit moves, so the version alone cannot separate two builds. The first
+          # build of the line has no predecessor to compare against, so it falls back to
+          # master — the upstream commit this branch starts from.
+          previous=$(gh release list --repo "${{ github.repository }}" \
+            --limit 100 --exclude-drafts --json tagName --jq '.[].tagName' \
+            | grep -E '^evo-.+-[0-9a-f]{7,}$' | head -n 1 || true)
+          # Resolved to a commit rather than used as a tag name: a missing tag would make
+          # `git log` fail and quietly fall back to an empty list, hiding a real regression
+          # behind "nothing changed".
+          baseline=""
+          baseline_label=""
+          if [ -n "$previous" ] && git rev-parse --verify --quiet "${previous}^{commit}" >/dev/null; then
+            baseline=$(git rev-parse "${previous}^{commit}")
+            baseline_label="上次构建 ${previous}"
+          else
+            # The first build of the line has no predecessor, so the baseline is this
+            # repository's own master — the upstream commit the branch starts from, not the
+            # upstream project's master.
+            #
+            # `origin/master` first: `actions/checkout` fetches into remote-tracking refs
+            # and leaves the job on a detached HEAD, so a local `master` branch does not
+            # exist there. Reading only `master` would pass in a developer's clone and
+            # silently produce no changelog in CI — the one place it is needed.
+            for candidate in origin/master master; do
+              if git rev-parse --verify --quiet "${candidate}^{commit}" >/dev/null; then
+                baseline=$(git rev-parse "${candidate}^{commit}")
+                baseline_label="master（首个构建）"
+                break
+              fi
+            done
+          fi
+          if [ -n "$baseline" ]; then
+            commits=$(git log --no-merges --format='- %s (`%h`)' "${baseline}..${GITHUB_SHA}" 2>/dev/null || true)
+          else
+            baseline_label="无法确定（未能解析出基准提交）"
+            commits=""
+          fi
+          if [ -z "$commits" ]; then
+            commits='- 与基线无差异'
+          fi
+          count=$(printf '%s\n' "$commits" | grep -c '^- ' || true)
+
+          {
+            echo "未签名构建，由 desktop-package 工作流产出。所有安装包都没有代码签名。"
+            echo
+            echo "- Windows x64：\`DSH-Desktop-Evo-*-Setup.exe\`。首次运行会给出 SmartScreen 提示，"
+            echo "  选择「更多信息」，再选择「仍要运行」。"
+            echo "- Linux x64：\`*.deb\`，用 \`sudo dpkg -i\` 安装；缺依赖时再执行"
+            echo "  \`sudo apt install -f\`。"
+            echo "- macOS universal：\`*.dmg\`。未签名，首次打开需要右键 → 打开；"
+            echo "  若系统提示「已损坏」，先执行 \`xattr -dr com.apple.quarantine /Applications/DSH\\ Desktop\\ Evo.app\` 再试。"
+            echo
+            echo "## 本次变更"
+            echo
+            echo "对比基线：${baseline_label}，共 ${count} 个提交。"
+            echo
+            printf '%s\n' "$commits"
+          } > release-notes.md
+
+          gh release create "$tag" \
+            --repo "${{ github.repository }}" \
+            --target "${{ github.sha }}" \
+            --title "DSH Desktop Evo ${version} (${short})" \
+            --notes-file release-notes.md \
+            "${assets[@]}"
