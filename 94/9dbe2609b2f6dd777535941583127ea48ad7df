@@ -1,11 +1,23 @@
 dsh-plugin-desktop-beta/src/offline-install-configure.ts
   s_71cec2c8d51075::t_9edb71be3303d9 1-210
+  s_71cec2c8d51075::t_b58d8ae4434a18 1-210
+  s_71cec2c8d51075::t_444f8713f9f012 1-210
+  s_71cec2c8d51075::t_a959332c0c77e3 1-210
 dsh-plugin-desktop-beta/tests/offline-install-configure.spec.ts
   s_71cec2c8d51075::t_5f5d4606d979d1 1-263
+  s_71cec2c8d51075::t_6a36e67d269e1f 1-263
+  s_71cec2c8d51075::t_44097219f50ad2 1-263
+  s_71cec2c8d51075::t_f9b328203d2a5e 1-263
 dsh-plugin-desktop/src/offline-install-configure.ts
   s_71cec2c8d51075::t_dbe6d109e6ff03 1-210
+  s_71cec2c8d51075::t_319a2c5c4bfbcf 1-210
+  s_71cec2c8d51075::t_c3f1e3cc65c387 1-210
+  s_71cec2c8d51075::t_49b14711cd34dd 1-210
 dsh-plugin-desktop/tests/offline-install-configure.spec.ts
   s_71cec2c8d51075::t_97ac834421ace6 1-182
+  s_71cec2c8d51075::t_0d288a6bdab9a4 1-10,12-182
+  s_71cec2c8d51075::t_2e3c9ac001c065 1-10,12-165
+  s_71cec2c8d51075::t_87d23a96b07f90 1-10,12-14,15-165
 ---
 {
   "schema_version": "authorship/3.0.0",
