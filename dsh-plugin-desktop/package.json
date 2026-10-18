@@ -368,8 +368,8 @@
     "vitest": "4.1.8"
   },
   "build": {
-    "appId": "ai.deepseek.dsh.desktop",
-    "productName": "DSH Desktop",
+    "appId": "ai.deepseek.dsh.desktop.evo",
+    "productName": "DSH Desktop Evo",
     "asar": false,
     "afterPack": "./scripts/verify-packaged-runtime.ts",
     "afterAllArtifactBuild": "./scripts/verify-electron-fuses.ts",
@@ -431,6 +431,7 @@
       ],
       "icon": "build/app-icon.icon",
       "mergeASARs": false,
+      "artifactName": "DSH-Desktop-Evo-${version}-${arch}.${ext}",
       "notarize": true,
       "signIgnore": [
         "\\.(?:pak|dat|wasm)$",
@@ -464,7 +465,7 @@
           ]
         }
       ],
-      "artifactName": "DSH-Desktop-${version}-${arch}-Portable.${ext}",
+      "artifactName": "DSH-Desktop-Evo-${version}-${arch}-Portable.${ext}",
       "icon": "build/app-icon.ico"
     },
     "nsis": {
@@ -478,10 +479,10 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "differentialPackage": false,
-      "shortcutName": "DSH Desktop",
+      "shortcutName": "DSH Desktop Evo",
       "uninstallerIcon": "build/app-icon.ico",
       "useZip": false,
-      "artifactName": "DSH-Desktop-${version}-${arch}-Setup.${ext}"
+      "artifactName": "DSH-Desktop-Evo-${version}-${arch}-Setup.${ext}"
     },
     "linux": {
       "target": [
@@ -499,16 +500,16 @@
         }
       ],
       "icon": "build/icons",
-      "artifactName": "DSH-Desktop-${version}-${arch}.${ext}",
+      "artifactName": "DSH-Desktop-Evo-${version}-${arch}.${ext}",
       "category": "Development",
       "synopsis": "Agentic coding desktop for the DeepSeek Harness",
       "maintainer": "DeepSeek <dsh-desktop@deepseek.com>",
-      "executableName": "dsh-desktop",
+      "executableName": "dsh-desktop-evo",
       "syncDesktopName": true,
       "asar": false
     },
     "deb": {
-      "packageName": "dsh-desktop",
+      "packageName": "dsh-desktop-evo",
       "packageCategory": "devel",
       "priority": "optional"
     },

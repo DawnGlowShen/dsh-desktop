@@ -27,10 +27,11 @@ import {
 import {
   DESKTOP_PACKAGE_NAME,
   DESKTOP_PACKAGE_NAMES,
+  DESKTOP_PROFILE_NAME,
 } from './product-identity.ts'
 
 const BIN_NAME = DESKTOP_PACKAGE_NAME
-const DEFAULT_PROFILE_NAME = 'desktop'
+const DEFAULT_PROFILE_NAME = DESKTOP_PROFILE_NAME
 const BASE_BUNDLE_NAME = '@deepseek-ai/dsh-base'
 const WEB_BUNDLE_NAME = '@deepseek-ai/dsh-web-app'
 const PROFILE_MANIFEST_FILENAME = 'package.json'

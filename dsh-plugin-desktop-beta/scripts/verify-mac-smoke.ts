@@ -5,6 +5,7 @@ import { existsSync, mkdtempSync, readdirSync, rmdirSync, statSync } from 'node:
 import { tmpdir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { DESKTOP_PRODUCT_NAME } from '../src/product-identity.ts'
 import {
   MACOS_UNIVERSAL_NATIVE_ENTRIES,
   macSmokeArchitecture,
@@ -62,7 +63,7 @@ function defaultOptions(): MacSmokeVerificationOptions {
     distDir: process.argv[2] === undefined
       ? join(packageRoot, 'dist', 'mac-smoke')
       : resolve(process.argv[2]),
-    productName: 'DSH Desktop Beta',
+    productName: DESKTOP_PRODUCT_NAME,
     executableSlices: macSmokeExecutableSlices(macSmokeArchitecture(process.env)),
     listDmgs,
     makeMountPoint: () => mkdtempSync(join(tmpdir(), 'dsh-desktop-dmg-smoke-')),

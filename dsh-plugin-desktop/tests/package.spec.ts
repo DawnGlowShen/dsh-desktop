@@ -17,6 +17,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 import { runInNewContext } from 'node:vm'
 import sharp from 'sharp'
 import { describe, expect, it } from 'vitest'
+import { DESKTOP_APP_ID, DESKTOP_ARTIFACT_STEM, DESKTOP_PRODUCT_NAME } from '../src/product-identity.ts'
 
 const packageRoot = new URL('../', import.meta.url)
 const workspaceRoot = new URL('../', packageRoot)
@@ -815,8 +816,8 @@ describe('published package surface', () => {
   it('fixes the installed application identity', () => {
     expect(workspaceManifest.version).toBeUndefined()
     expect(manifest.version).toBe('2.0.17')
-    expect(manifest.build?.productName).toBe('DSH Desktop')
-    expect(manifest.build?.appId).toBe('ai.deepseek.dsh.desktop')
+    expect(manifest.build?.productName).toBe(DESKTOP_PRODUCT_NAME)
+    expect(manifest.build?.appId).toBe(DESKTOP_APP_ID)
     expect(manifest.build?.asar).toBe(false)
     expect(manifest.build).not.toHaveProperty('asarUnpack')
     for (const platform of ['mac', 'win', 'linux'] as const) {
@@ -859,7 +860,7 @@ describe('published package surface', () => {
       target: 'nsis',
       arch: ['x64'],
     }])
-    expect(manifest.build?.win?.artifactName).toBe('DSH-Desktop-${version}-${arch}-Portable.${ext}')
+    expect(manifest.build?.win?.artifactName).toBe(`${DESKTOP_ARTIFACT_STEM}-` + '${version}-${arch}-Portable.${ext}')
     expect(manifest.build?.nsis).toEqual({
       include: 'installer.nsh',
       installerIcon: 'build/app-icon.ico',
@@ -871,10 +872,10 @@ describe('published package surface', () => {
       createDesktopShortcut: true,
       createStartMenuShortcut: true,
       differentialPackage: false,
-      shortcutName: 'DSH Desktop',
+      shortcutName: DESKTOP_PRODUCT_NAME,
       uninstallerIcon: 'build/app-icon.ico',
       useZip: false,
-      artifactName: 'DSH-Desktop-${version}-${arch}-Setup.${ext}',
+      artifactName: `${DESKTOP_ARTIFACT_STEM}-` + '${version}-${arch}-Setup.${ext}',
     })
     expect(manifest.build?.linux?.icon).toBe('build/icons')
     expect(manifest.build?.linux?.synopsis).toBe('Agentic coding desktop for the DeepSeek Harness')
@@ -886,7 +887,7 @@ describe('published package surface', () => {
     expect(manifest.desktopName).toBe('dsh-desktop.desktop')
     expect(manifest.build?.linux?.syncDesktopName).toBe(true)
     expect(manifest.build?.deb).toEqual({
-      packageName: 'dsh-desktop',
+      packageName: 'dsh-desktop-evo',
       packageCategory: 'devel',
       priority: 'optional',
     })

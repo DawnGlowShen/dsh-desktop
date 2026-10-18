@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { verifyLinuxArtifacts } from '../scripts/verify-linux-artifacts.ts'
+import { DESKTOP_ARTIFACT_STEM } from '../src/product-identity.ts'
 
 const temporaryRoots: string[] = []
 
@@ -32,8 +33,8 @@ function fixture(version = '2.0.0'): {
   const dist = join(root, 'dist')
   const unpacked = join(dist, 'linux-unpacked')
   mkdirSync(unpacked, { recursive: true })
-  const appImagePath = join(dist, `DSH-Desktop-${version}-x86_64.AppImage`)
-  const debPath = join(dist, `DSH-Desktop-${version}-amd64.deb`)
+  const appImagePath = join(dist, `${DESKTOP_ARTIFACT_STEM}-${version}-x86_64.AppImage`)
+  const debPath = join(dist, `${DESKTOP_ARTIFACT_STEM}-${version}-amd64.deb`)
   const application = join(unpacked, 'dsh-desktop')
   writeFileSync(appImagePath, appImage(), { mode: 0o755 })
   chmodSync(appImagePath, 0o755)
@@ -62,7 +63,7 @@ describe('Linux artifact verification', () => {
     const value = fixture('1.9.0')
 
     expect(() => verifyLinuxArtifacts({ desktopRoot: value.root, version: '2.0.0' }))
-      .toThrow('DSH-Desktop-2.0.0-x86_64.AppImage')
+      .toThrow(`${DESKTOP_ARTIFACT_STEM}-2.0.0-x86_64.AppImage`)
   })
 
   it('rejects an AppImage without the AppImage magic', () => {

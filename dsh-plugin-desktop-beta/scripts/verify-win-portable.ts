@@ -3,6 +3,7 @@
 import { readFileSync, statSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { DESKTOP_ARTIFACT_STEM, DESKTOP_PRODUCT_NAME } from '../src/product-identity.ts'
 import AdmZip from 'adm-zip'
 import { assertPortableExecutableBuffer } from './verify-win-installer.ts'
 
@@ -35,7 +36,7 @@ export function verifyWindowsPortable(
   const portablePath = join(
     options.desktopRoot,
     'dist',
-    `DSH-Desktop-Beta-${options.version}-x64-Portable.zip`,
+    `${DESKTOP_ARTIFACT_STEM}-${options.version}-x64-Portable.zip`,
   )
   const stat = statSync(portablePath)
   if (!stat.isFile() || stat.size === 0) {
@@ -43,9 +44,9 @@ export function verifyWindowsPortable(
   }
   const archive = new AdmZip(portablePath)
   const entries = archive.getEntries().filter(entry => !entry.isDirectory)
-  const executable = entries.find(entry => entry.entryName.replaceAll('\\', '/') === 'DSH Desktop Beta.exe')
+  const executable = entries.find(entry => entry.entryName.replaceAll('\\', '/') === `${DESKTOP_PRODUCT_NAME}.exe`)
   if (executable === undefined) {
-    throw new Error(`Windows portable archive is missing DSH Desktop Beta.exe: ${portablePath}`)
+    throw new Error(`Windows portable archive is missing ${DESKTOP_PRODUCT_NAME}.exe: ${portablePath}`)
   }
   if (!entries.some(entry => entry.entryName.replaceAll('\\', '/') === 'resources/app/package.json')) {
     throw new Error(`Windows portable archive is missing resources/app/package.json: ${portablePath}`)
@@ -53,7 +54,7 @@ export function verifyWindowsPortable(
   assertPortableExecutableBuffer(
     executable.getData(),
     'Windows portable application',
-    `${portablePath}:DSH Desktop Beta.exe`,
+    `${portablePath}:${DESKTOP_PRODUCT_NAME}.exe`,
   )
   return portablePath
 }

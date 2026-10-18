@@ -2,6 +2,7 @@ import { existsSync, mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
+import { DESKTOP_PRODUCT_NAME } from '../src/product-identity.ts'
 import AdmZip from 'adm-zip'
 import {
   defaultDesktopUserDataDirectory,
@@ -53,9 +54,9 @@ describe('desktop npm launcher', () => {
 
   it('resolves the packaged Desktop user-data directory without Electron', () => {
     expect(defaultDesktopUserDataDirectory('win32', { APPDATA: 'C:\\Users\\Example\\AppData\\Roaming' }, 'ignored'))
-      .toBe('C:\\Users\\Example\\AppData\\Roaming\\DSH Desktop')
+      .toBe(`C:\\Users\\Example\\AppData\\Roaming\\${DESKTOP_PRODUCT_NAME}`)
     expect(defaultDesktopUserDataDirectory('darwin', {}, '/Users/example'))
-      .toBe('/Users/example/Library/Application Support/DSH Desktop')
+      .toBe(`/Users/example/Library/Application Support/${DESKTOP_PRODUCT_NAME}`)
   })
 
   it('exports diagnostics without launching Electron', async () => {

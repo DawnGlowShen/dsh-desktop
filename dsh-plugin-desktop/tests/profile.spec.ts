@@ -12,6 +12,7 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { afterEach, describe, expect, it } from 'vitest'
+import { DESKTOP_PROFILE_NAME } from '../src/product-identity.ts'
 import {
   composeEntries,
   initProfile,
@@ -66,7 +67,7 @@ function installWebClient(
 }
 
 function installBundle(home: string, packageName: string, patch: string, version = '1.0.0'): string {
-  const bundleDir = join(home, 'profiles', 'desktop', 'node_modules', packageName)
+  const bundleDir = join(home, 'profiles', DESKTOP_PROFILE_NAME, 'node_modules', packageName)
   mkdirSync(bundleDir, { recursive: true })
   writeFileSync(join(bundleDir, 'package.json'), JSON.stringify({
     name: packageName,
@@ -434,7 +435,7 @@ virtualStoreDirMaxLength: 60
       undefined,
       home,
       'darwin',
-      'desktop',
+      DESKTOP_PROFILE_NAME,
       undefined,
       undefined,
       { lanAddresses: ['192.168.1.5', '10.0.0.7', '10.0.0.7'] },
@@ -478,7 +479,7 @@ virtualStoreDirMaxLength: 60
       undefined,
       invalidAddressHome,
       'darwin',
-      'desktop',
+      DESKTOP_PROFILE_NAME,
       undefined,
       undefined,
       { lanAddresses: ['desktop.internal'] },
@@ -501,7 +502,7 @@ virtualStoreDirMaxLength: 60
 
   it('inserts the community Market as one canonical row only after explicit selection', () => {
     const home = temporaryHome()
-    const prepared = prepareDesktopProfile(undefined, home, 'darwin', 'desktop', undefined, {
+    const prepared = prepareDesktopProfile(undefined, home, 'darwin', DESKTOP_PROFILE_NAME, undefined, {
       requested: 'community-market',
       effective: 'community-market',
       legacyDefaulted: false,
@@ -530,7 +531,7 @@ virtualStoreDirMaxLength: 60
     }
     profileManifest.dsh.profile.bundles.push(DESKTOP_MARKET_IDENTITIES.dshMarket.packageName)
     writeFileSync(profileManifestPath, JSON.stringify(profileManifest) + '\n')
-    const prepared = prepareDesktopProfile(undefined, home, 'darwin', 'desktop', undefined, {
+    const prepared = prepareDesktopProfile(undefined, home, 'darwin', DESKTOP_PROFILE_NAME, undefined, {
       requested: 'dsh-market',
       effective: 'dsh-market',
       legacyDefaulted: false,
@@ -563,7 +564,7 @@ virtualStoreDirMaxLength: 60
     profileManifest.dsh.profile.bundles.push(DESKTOP_MARKET_IDENTITIES.dshMarket.packageName)
     writeFileSync(profileManifestPath, `${JSON.stringify(profileManifest)}\n`)
 
-    const prepared = prepareDesktopProfile(undefined, home, 'darwin', 'desktop', undefined, {
+    const prepared = prepareDesktopProfile(undefined, home, 'darwin', DESKTOP_PROFILE_NAME, undefined, {
       requested: 'dsh-market',
       effective: 'dsh-market',
       legacyDefaulted: false,
@@ -591,14 +592,14 @@ virtualStoreDirMaxLength: 60
     mkdirSync(dirname(managementStatePath), { recursive: true })
     writeFileSync(managementStatePath, JSON.stringify({
       version: 1,
-      profiles: [{ profileName: 'desktop', disabledBundles: [packageName] }],
+      profiles: [{ profileName: DESKTOP_PROFILE_NAME, disabledBundles: [packageName] }],
     }) + '\n')
 
     const external = prepareDesktopProfile(
       undefined,
       home,
       'darwin',
-      'desktop',
+      DESKTOP_PROFILE_NAME,
       managementStatePath,
       { requested: 'dsh-market', effective: 'dsh-market', legacyDefaulted: false },
     )
@@ -610,7 +611,7 @@ virtualStoreDirMaxLength: 60
       undefined,
       home,
       'darwin',
-      'desktop',
+      DESKTOP_PROFILE_NAME,
       managementStatePath,
       { requested: 'community-market', effective: 'community-market', legacyDefaulted: false },
     )
@@ -634,14 +635,14 @@ virtualStoreDirMaxLength: 60
     mkdirSync(dirname(recoveryStatePath), { recursive: true })
     writeFileSync(recoveryStatePath, JSON.stringify({
       version: 1,
-      profiles: [{ profileName: 'desktop', disabledBundles: [packageName] }],
+      profiles: [{ profileName: DESKTOP_PROFILE_NAME, disabledBundles: [packageName] }],
     }) + '\n')
 
     const prepared = prepareDesktopProfile(
       undefined,
       home,
       'darwin',
-      'desktop',
+      DESKTOP_PROFILE_NAME,
       managementStatePath,
       { requested: 'dsh-market', effective: 'dsh-market', legacyDefaulted: false },
     )
@@ -672,7 +673,7 @@ virtualStoreDirMaxLength: 60
     const home = temporaryHome()
     writeFileSync(join(home, 'cordis.patch.yml'), `- insert:\n    - id: community-market\n      name: dsh-community-market\n`)
 
-    const prepared = prepareDesktopProfile(undefined, home, 'darwin', 'desktop', undefined, {
+    const prepared = prepareDesktopProfile(undefined, home, 'darwin', DESKTOP_PROFILE_NAME, undefined, {
       requested: 'community-market',
       effective: 'community-market',
       legacyDefaulted: false,
@@ -1328,7 +1329,7 @@ virtualStoreDirMaxLength: 60
       '',
     ].join('\n')
     installBundle(home, packageName, bundlePatch)
-    const profileDir = join(home, 'profiles', 'desktop')
+    const profileDir = join(home, 'profiles', DESKTOP_PROFILE_NAME)
     writeFileSync(join(profileDir, 'package.json'), JSON.stringify({
       name: 'dsh-profile-desktop',
       private: true,
@@ -1550,7 +1551,7 @@ describe('bundled Agents Anywhere', () => {
 describe('desktop profile composition and the recovery deselection ledger', () => {
   function selectionBootstrap(home: string) {
     return {
-      profileName: 'desktop',
+      profileName: DESKTOP_PROFILE_NAME,
       homeDir: home,
       statePath: join(home, 'user-data', 'plugin-management', 'state.json'),
     }
@@ -1582,7 +1583,7 @@ describe('desktop profile composition and the recovery deselection ledger', () =
     writeFileSync(manifestPath, JSON.stringify(manifest, undefined, 2) + '\n')
 
     for (const provider of ['dsh-market', 'community-market'] as const) {
-      const prepared = prepareDesktopProfile(undefined, home, 'darwin', 'desktop', undefined, {
+      const prepared = prepareDesktopProfile(undefined, home, 'darwin', DESKTOP_PROFILE_NAME, undefined, {
         requested: provider,
         effective: provider,
         legacyDefaulted: false,
@@ -1612,13 +1613,13 @@ describe('desktop profile composition and the recovery deselection ledger', () =
       dependencies: Record<string, string>
     }
     expect(manifest.dependencies[packageName]).toBe('1.0.0')
-    expect(existsSync(join(home, 'profiles', 'desktop', 'node_modules', packageName, 'package.json'))).toBe(true)
+    expect(existsSync(join(home, 'profiles', DESKTOP_PROFILE_NAME, 'node_modules', packageName, 'package.json'))).toBe(true)
   })
 
   it('lets a deselected bundle whose package directory has no manifest stop breaking startup', async () => {
     const home = temporaryHome()
     const packageName = 'half-written-plugin'
-    mkdirSync(join(home, 'profiles', 'desktop', 'node_modules', packageName), { recursive: true })
+    mkdirSync(join(home, 'profiles', DESKTOP_PROFILE_NAME, 'node_modules', packageName), { recursive: true })
     declareBundle(home, packageName)
     expect(() => prepareDesktopProfile(undefined, home, 'darwin')).toThrow()
 

@@ -3,6 +3,7 @@
 import { closeSync, openSync, readFileSync, readSync, statSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { DESKTOP_ARTIFACT_STEM } from '../src/product-identity.ts'
 
 const ELF_HEADER_BYTES = 4
 const APPIMAGE_MAGIC_OFFSET = 8
@@ -131,8 +132,8 @@ export function verifyLinuxArtifacts(
   options: LinuxArtifactVerificationOptions = defaultOptions(),
 ): LinuxArtifacts {
   const distDir = join(options.desktopRoot, 'dist')
-  const appImagePath = join(distDir, `DSH-Desktop-${options.version}-x86_64.AppImage`)
-  const debPath = join(distDir, `DSH-Desktop-${options.version}-amd64.deb`)
+  const appImagePath = join(distDir, `${DESKTOP_ARTIFACT_STEM}-${options.version}-x86_64.AppImage`)
+  const debPath = join(distDir, `${DESKTOP_ARTIFACT_STEM}-${options.version}-amd64.deb`)
   const applicationPath = join(distDir, 'linux-unpacked', 'dsh-desktop')
 
   assertAppImage(appImagePath, 'Linux AppImage')

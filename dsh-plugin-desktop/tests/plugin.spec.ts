@@ -9,6 +9,7 @@ import type { LocaleId } from '@deepseek-ai/dsh-client-locale'
 import type { WebRoute } from '@deepseek-ai/dsh-host-webserver'
 import type { ThemePreference } from '@deepseek-ai/dsh-client-ui-theme'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { DESKTOP_PRODUCT_NAME } from '../src/product-identity.ts'
 import {
   apply,
   Config,
@@ -463,7 +464,7 @@ describe('desktop Host plugin', () => {
       mode: 'compatibility',
       url: 'http://127.0.0.1:43120/?dsh-desktop-mode=compatibility&dsh-desktop-platform=darwin&dsh-desktop-version=2.0.0&dsh-desktop-material=transparent&dsh-desktop-titlebar-inset=36',
       authenticationUrl: 'http://127.0.0.1:43120/?token=test-token',
-      productName: 'DSH Desktop',
+      productName: DESKTOP_PRODUCT_NAME,
       windowTitle: 'DeepSeek Harness Desktop',
       rendererAccessHeader: {
         name: 'x-dsh-desktop-renderer',

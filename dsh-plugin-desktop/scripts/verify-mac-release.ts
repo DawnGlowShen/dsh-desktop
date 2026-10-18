@@ -5,6 +5,7 @@ import { mkdtempSync, readdirSync, rmdirSync, statSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { DESKTOP_PRODUCT_NAME } from '../src/product-identity.ts'
 import { MACOS_UNIVERSAL_NATIVE_ENTRIES } from './mac-universal.ts'
 import { verifyMacEntitlements } from './verify-mac-entitlements.ts'
 import { verifyDesktopMacRuntime } from './verify-mac-runtime.ts'
@@ -54,7 +55,7 @@ function defaultOptions(): MacReleaseVerificationOptions {
     distDir: process.argv[2] === undefined
       ? join(packageRoot, 'dist', 'mac-release')
       : resolve(process.argv[2]),
-    productName: 'DSH Desktop',
+    productName: DESKTOP_PRODUCT_NAME,
     listDmgs,
     makeMountPoint: () => mkdtempSync(join(tmpdir(), 'dsh-desktop-dmg-')),
     run,

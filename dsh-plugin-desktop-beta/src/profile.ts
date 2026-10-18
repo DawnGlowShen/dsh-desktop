@@ -49,6 +49,7 @@ import type { DesktopShellMode } from './runtime.ts'
 import {
   DESKTOP_PACKAGE_NAME,
   DESKTOP_PACKAGE_NAMES,
+  DESKTOP_PROFILE_NAME,
 } from './product-identity.ts'
 import {
   DEFAULT_MACOS_WINDOW_MATERIAL,
@@ -75,7 +76,7 @@ import {
 import { DesktopShellConfig } from './settings-bridge.ts'
 
 /** Persistent profile managed by the desktop launcher and the ordinary dsh plugin command. */
-export const DESKTOP_PROFILE_NAME = 'desktop'
+export { DESKTOP_PROFILE_NAME }
 
 /** Standalone package name inserted through the launcher-owned desktop layer. */
 export { DESKTOP_PACKAGE_NAME } from './product-identity.ts'

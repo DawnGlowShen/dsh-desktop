@@ -3,9 +3,10 @@ export const DESKTOP_RELEASE_IDENTITIES = Object.freeze({
   stable: Object.freeze({
     releaseChannel: 'stable' as const,
     packageName: 'dsh-plugin-desktop',
-    productName: 'DSH Desktop',
-    appId: 'ai.deepseek.dsh.desktop',
+    productName: 'DSH Desktop Evo',
+    appId: 'ai.deepseek.dsh.desktop.evo',
     homeDirectoryName: '.dsh',
+    profileName: 'desktop-evo',
   }),
   beta: Object.freeze({
     releaseChannel: 'beta' as const,
@@ -13,6 +14,7 @@ export const DESKTOP_RELEASE_IDENTITIES = Object.freeze({
     productName: 'DSH Desktop Beta',
     appId: 'ai.deepseek.dsh.desktop.beta',
     homeDirectoryName: '.dsh-beta',
+    profileName: 'desktop',
   }),
 })
 
@@ -27,6 +29,14 @@ export const DESKTOP_PRODUCT_NAME = DESKTOP_PRODUCT_IDENTITY.productName
 export const DESKTOP_APP_ID = DESKTOP_PRODUCT_IDENTITY.appId
 export const DESKTOP_RELEASE_CHANNEL = DESKTOP_PRODUCT_IDENTITY.releaseChannel
 export const DESKTOP_HOME_DIRECTORY_NAME = DESKTOP_PRODUCT_IDENTITY.homeDirectoryName
+export const DESKTOP_PROFILE_NAME = DESKTOP_PRODUCT_IDENTITY.profileName
+
+/**
+ * Stem of the electron-builder artifact names, which is fixed in
+ * `build.win/nsis.artifactName` and therefore cannot be derived from
+ * `productName` at runtime. `tests/package.spec.ts` asserts the two agree.
+ */
+export const DESKTOP_ARTIFACT_STEM = 'DSH-Desktop-Evo'
 
 /** Both Desktop package identities are launcher-owned, never Profile plugins. */
 export const DESKTOP_PACKAGE_NAMES: ReadonlySet<string> = new Set([

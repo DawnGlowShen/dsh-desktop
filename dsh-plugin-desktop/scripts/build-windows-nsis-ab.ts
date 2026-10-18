@@ -14,6 +14,7 @@ import {
 import { createRequire } from 'node:module'
 import { delimiter, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { DESKTOP_ARTIFACT_STEM } from '../src/product-identity.ts'
 import { withoutWindowsSigningSecrets } from './package-win.ts'
 import { assertPortableExecutable } from './verify-win-installer.ts'
 import {
@@ -305,7 +306,7 @@ export function buildWindowsNsisAb(options: WindowsNsisAbBuildOptions): WindowsN
     )
   }
 
-  const installerName = `DSH-Desktop-${version}-x64-Setup.exe`
+  const installerName = `${DESKTOP_ARTIFACT_STEM}-${version}-x64-Setup.exe`
   const directInstaller = join(directOutput, installerName)
   const stagedInstaller = join(stagedOutput, installerName)
   assertPortableExecutable(directInstaller, 'direct-extract NSIS installer')
