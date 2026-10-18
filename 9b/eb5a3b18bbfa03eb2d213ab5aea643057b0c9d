@@ -1,0 +1,36 @@
+dsh-plugin-desktop-beta/build/dream-skin-default.json
+  h_00830f4b5426b8 1
+dsh-plugin-desktop-beta/package.json
+  h_00830f4b5426b8 3
+dsh-plugin-desktop-beta/src/offline-install-config-dream-skin.ts
+  h_00830f4b5426b8 1-133
+dsh-plugin-desktop-beta/tests/offline-install-config-dream-skin.spec.ts
+  h_00830f4b5426b8 1-252
+dsh-plugin-desktop-beta/tests/package.spec.ts
+  h_00830f4b5426b8 94,868
+dsh-plugin-desktop/build/dream-skin-default.json
+  h_00830f4b5426b8 1
+dsh-plugin-desktop/package.json
+  h_00830f4b5426b8 3
+dsh-plugin-desktop/src/offline-install-config-dream-skin.ts
+  h_00830f4b5426b8 1-133
+dsh-plugin-desktop/tests/offline-install-config-dream-skin.spec.ts
+  h_00830f4b5426b8 1-252
+dsh-plugin-desktop/tests/package.spec.ts
+  h_00830f4b5426b8 818
+scripts/prepare-dream-skin-default.mjs
+  h_00830f4b5426b8 1-86
+vendor/offline-install/manifest.json
+  h_00830f4b5426b8 38-42
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9beb5a3b18bbfa03eb2d213ab5aea643057b0c9d",
+  "prompts": {},
+  "humans": {
+    "h_00830f4b5426b8": {
+      "author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
