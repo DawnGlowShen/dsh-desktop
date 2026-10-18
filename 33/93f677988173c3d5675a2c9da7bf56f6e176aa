@@ -1,0 +1,39 @@
+.agents/notes/implemented/architecture/2026-10-15-offline-payload-configuration.i18n.yaml
+  s_71cec2c8d51075::t_fa388e201996c7 1-5
+.agents/notes/implemented/architecture/2026-10-15-offline-payload-configuration.md
+  s_71cec2c8d51075::t_54dc2461157033 1-67
+.agents/notes/implemented/architecture/2026-10-15-offline-payload-configuration.zh.md
+  s_71cec2c8d51075::t_969e9d7c3652cc 1-67
+dsh-plugin-desktop-beta/package.json
+  s_71cec2c8d51075::t_2d810b0358b558 3
+dsh-plugin-desktop-beta/tests/package.spec.ts
+  s_71cec2c8d51075::t_cf6a7748a7949a 94,868
+dsh-plugin-desktop/package.json
+  s_71cec2c8d51075::t_1eb1e749ca2277 3
+dsh-plugin-desktop/tests/package.spec.ts
+  s_71cec2c8d51075::t_1a59b641a4e223 818
+vendor/offline-install/manifest.clis.darwin-universal.json
+  s_71cec2c8d51075::t_5a3346b4660a9e 11-16
+vendor/offline-install/manifest.clis.linux-x64.json
+  s_71cec2c8d51075::t_b20d4c034bc2e0 11-16
+vendor/offline-install/manifest.clis.win32-x64.json
+  s_71cec2c8d51075::t_6ca93a3b5830dd 11-16
+vendor/offline-install/manifest.json
+  s_71cec2c8d51075::t_a54b0ebb06e557 43-47
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3393f677988173c3d5675a2c9da7bf56f6e176aa",
+  "prompts": {},
+  "sessions": {
+    "s_71cec2c8d51075": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-102a6f64-bf60-476c-b114-098620f17ef7",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
