@@ -1,0 +1,33 @@
+dsh-plugin-desktop-beta/package.json
+  s_71cec2c8d51075::t_692933630d776c 3
+dsh-plugin-desktop-beta/tests/package.spec.ts
+  s_71cec2c8d51075::t_b60b1dbb72d58d 94
+dsh-plugin-desktop/package.json
+  s_71cec2c8d51075::t_3fb388787c3b1b 3
+dsh-plugin-desktop/tests/package.spec.ts
+  s_71cec2c8d51075::t_39b0fe1be740aa 817
+vendor/offline-install/manifest.clis.darwin-universal.json
+  s_71cec2c8d51075::t_9528b475cc2367 6-9
+vendor/offline-install/manifest.clis.linux-x64.json
+  s_71cec2c8d51075::t_e614f94809a419 6-9
+vendor/offline-install/manifest.clis.win32-x64.json
+  s_71cec2c8d51075::t_1ae4ff9b99aa60 6-9
+vendor/offline-install/manifest.json
+  s_71cec2c8d51075::t_2376ea61a47c86 9-11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "cf62a688e6ade7fc9ff3137a5ef279dc1bc8bae3",
+  "prompts": {},
+  "sessions": {
+    "s_71cec2c8d51075": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-102a6f64-bf60-476c-b114-098620f17ef7",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
