@@ -1,0 +1,19 @@
+.github/workflows/windows-package.yml
+  s_71cec2c8d51075::t_fbe7b9f83bc85c 34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "aacc74136e637a7149fd1ff8a373d4fda6845e59",
+  "prompts": {},
+  "sessions": {
+    "s_71cec2c8d51075": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-102a6f64-bf60-476c-b114-098620f17ef7",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
