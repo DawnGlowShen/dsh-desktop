@@ -1,0 +1,21 @@
+.gitignore
+  s_71cec2c8d51075::t_ca77a45a3f8fda 11,24-45
+CHANGELOG.md
+  s_71cec2c8d51075::t_f5b5a9254a3c16 1-155
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9aa4e43ae618ec490cfe48399f18c49548828e2d",
+  "prompts": {},
+  "sessions": {
+    "s_71cec2c8d51075": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-102a6f64-bf60-476c-b114-098620f17ef7",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
