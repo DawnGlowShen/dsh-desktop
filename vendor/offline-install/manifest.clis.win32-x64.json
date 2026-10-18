@@ -9,6 +9,12 @@
       "executable": "bin/codegraph.cmd"
     },
     {
+      "name": "git-ai",
+      "version": "1.7.5",
+      "tarball": "git-ai-1.7.5-win32-x64.tgz",
+      "executable": "bin/git-ai.exe"
+    },
+    {
       "name": "mnemon",
       "version": "0.2.9",
       "tarball": "mnemon-0.2.9-win32-x64.tgz",

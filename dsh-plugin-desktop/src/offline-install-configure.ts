@@ -63,6 +63,7 @@
  */
 
 import { dreamSkinConfiguration } from './offline-install-config-dream-skin.ts'
+import { gitAiTrace2Configuration } from './offline-install-config-git-ai.ts'
 
 /** What a configuration did, in the terms the caller reports. */
 export type ConfigureAction =
@@ -166,6 +167,7 @@ export interface PayloadConfiguration {
  * of what an earlier one did.
  */
 export const PAYLOAD_CONFIGURATIONS: readonly PayloadConfiguration[] = [
+  gitAiTrace2Configuration,
   dreamSkinConfiguration,
 ]
 

@@ -9,6 +9,12 @@
       "executable": "bin/codegraph"
     },
     {
+      "name": "git-ai",
+      "version": "1.7.5",
+      "tarball": "git-ai-1.7.5-darwin-universal.tgz",
+      "executable": "bin/git-ai"
+    },
+    {
       "name": "mnemon",
       "version": "0.2.9",
       "tarball": "mnemon-0.2.9-darwin-universal.tgz",
