@@ -1,0 +1,21 @@
+dsh-plugin-desktop-beta/build/dream-skin-default.json
+  s_4f84bcf361946b::t_fe2c83e24df87a 1
+dsh-plugin-desktop/build/dream-skin-default.json
+  s_4f84bcf361946b::t_fe2c83e24df87a 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "440d0bfadba151648da07d8fd2313674d0d1783a",
+  "prompts": {},
+  "sessions": {
+    "s_4f84bcf361946b": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-2f067785-5b19-4b3f-8fd4-fa7879039401",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
