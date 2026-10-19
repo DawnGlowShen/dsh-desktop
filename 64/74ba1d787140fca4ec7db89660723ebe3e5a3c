@@ -1,0 +1,19 @@
+CHANGELOG.md
+  s_381ea64cc8f014::t_7a126a4fcef2be 47
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6474ba1d787140fca4ec7db89660723ebe3e5a3c",
+  "prompts": {},
+  "sessions": {
+    "s_381ea64cc8f014": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-42f9613a-daaa-47c2-bcc5-1e33d0dc1c1d",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
