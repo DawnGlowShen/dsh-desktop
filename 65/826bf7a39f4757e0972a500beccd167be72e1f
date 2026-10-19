@@ -1,0 +1,36 @@
+.github/workflows/desktop-package.yml
+  s_f86ffa727fb2f0::t_6c2d6918348fb4 313-316
+  s_f86ffa727fb2f0::t_2cc3ce1961b130 373-376,382-383
+  s_f86ffa727fb2f0::t_96e51a6eb4fe99 426
+  s_f86ffa727fb2f0::t_7225b833eb00e8 149
+  s_f86ffa727fb2f0::t_203b8505b3497a 25-28
+  s_f86ffa727fb2f0::t_83305d2c603ba2 143-148
+  s_f86ffa727fb2f0::t_b93c466031f760 91
+  s_f86ffa727fb2f0::t_78d2329858750e 424-425,427-432
+  s_f86ffa727fb2f0::t_f1e2acdf2fd052 492-501
+  s_f86ffa727fb2f0::t_ac06b7f0c6ea25 56-58
+  s_f86ffa727fb2f0::t_e6b1d68512b3ad 22-24,29
+  s_f86ffa727fb2f0::t_886f2ff5ee9926 103,107-117
+  s_f86ffa727fb2f0::t_36d6ccf4682c3c 257-260
+  s_f86ffa727fb2f0::t_0ef859faef56b8 377-381
+dsh-plugin-desktop/tests/package.spec.ts
+  s_f86ffa727fb2f0::t_5d42e64ff785e7 818
+dsh-plugin-desktop/package.json
+  s_f86ffa727fb2f0::t_4d21bd3c1a3c42 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "65826bf7a39f4757e0972a500beccd167be72e1f",
+  "prompts": {},
+  "sessions": {
+    "s_f86ffa727fb2f0": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-c44656fc-5e2e-480b-b569-7b5ce6ffbd11",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": null
+    }
+  }
+}
