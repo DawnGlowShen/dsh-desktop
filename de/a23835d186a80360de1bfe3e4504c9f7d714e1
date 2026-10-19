@@ -1,0 +1,55 @@
+CHANGELOG.md
+  s_50f9358511ae07::t_bddcaa5cc4296b 94-95
+  s_50f9358511ae07::t_62e344533faddb 54
+  s_50f9358511ae07::t_69d075c8a227a9 132-133
+  s_50f9358511ae07::t_e967cdb0d92299 105-107
+  s_50f9358511ae07::t_026fd86edc5b0e 78,84-86
+  s_50f9358511ae07::t_cf97114468e35c 87
+dsh-plugin-desktop/tests/offline-install-run.spec.ts
+  s_50f9358511ae07::t_de4f62c0afce39 225-227,239,256
+dsh-plugin-desktop/src/offline-install-configure.ts
+  s_50f9358511ae07::t_de4f62c0afce39 4-7,18-19,21-22,31-34,86-87
+dsh-plugin-desktop-beta/tests/desktop-settings-api.spec.ts
+  s_50f9358511ae07::t_1ddc94234871ef 891,907
+dsh-plugin-desktop-beta/tests/offline-install-end-to-end.spec.ts
+  s_50f9358511ae07::t_23076a20125e6a 14-15
+  s_50f9358511ae07::t_2bfe7a80d34b37 145
+  s_50f9358511ae07::t_131a02f0b6090a 167
+  s_50f9358511ae07::t_57e760013a3354 188
+  s_50f9358511ae07::t_d5ad2019cfab68 41-42
+dsh-plugin-desktop/tests/desktop-settings-api.spec.ts
+  s_50f9358511ae07::t_de4f62c0afce39 891,907
+dsh-plugin-desktop-beta/tests/offline-install-configure.spec.ts
+  s_50f9358511ae07::t_506c7b13ef91f9 153,155
+  s_50f9358511ae07::t_380123feb31933 141
+dsh-plugin-desktop-beta/src/offline-install-configure.ts
+  s_50f9358511ae07::t_8c742447580055 4-7
+  s_50f9358511ae07::t_0401ef041822d1 31-34
+  s_50f9358511ae07::t_99c7c06d3dd535 18-19,21-22
+  s_50f9358511ae07::t_034f73a1d04612 86-87
+dsh-plugin-desktop-beta/tests/offline-install-run.spec.ts
+  s_50f9358511ae07::t_1444dffe99b1e8 256
+  s_50f9358511ae07::t_9c88c0bc080756 225-227,239
+dsh-plugin-desktop/tests/offline-install-configure.spec.ts
+  s_50f9358511ae07::t_de4f62c0afce39 141,153,155
+dsh-plugin-desktop/tests/offline-install-end-to-end.spec.ts
+  s_50f9358511ae07::t_de4f62c0afce39 14-15,41-42,145,167,188
+vendor/offline-install/manifest.json
+  s_50f9358511ae07::t_af599af34805dd 45-46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "dea23835d186a80360de1bfe3e4504c9f7d714e1",
+  "prompts": {},
+  "sessions": {
+    "s_50f9358511ae07": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-10423326-0c8b-4cf0-8fa1-8fa44f64255d",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
