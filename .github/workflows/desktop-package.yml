@@ -19,6 +19,14 @@ name: Desktop package
 # version itself, because a path filter can only see that a file changed. A manual
 # `workflow_dispatch` still packages on demand.
 #
+# A hotfix branch — any push that is not `evo` — packages Windows only. It exists to
+# ship one platform's fix, and rebuilding Linux and macOS would publish files that
+# differ from the release already out in nothing but the tag. `version-gate` reports
+# the platform set it chose, and `publish` accepts a release that carries only the
+# platforms the branch actually built. A hotfix release is tagged `fix-` rather than
+# `evo-`, which keeps it out of the version baseline: the same version is published
+# in full, under `evo-`, once the branch reaches `evo`.
+#
 # None of these artifacts is signed. A Developer ID certificate exists only on a
 # credentialed machine, so macOS is an unsigned DMG and Windows an unsigned
 # installer; the release notes carry the bypass each one needs. Signing and
@@ -45,7 +53,9 @@ on:
         type: choice
         options: [store, normal, maximum]
   push:
-    branches: [evo]
+    # `evo` packages every platform. A hotfix branch packages Windows only, so a
+    # fix for one platform's installer never republishes the other two.
+    branches: [evo, fix/git-ai-trace2-windows-startup]
     paths:
       # Only the files that can carry a version bump. Everything else is
       # deliberately absent: a code-only push that keeps the released version
@@ -78,6 +88,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       package: ${{ steps.gate.outputs.package }}
+      platforms: ${{ steps.gate.outputs.platforms }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -89,9 +100,21 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
           REPOSITORY: ${{ github.repository }}
         run: |
           set -euo pipefail
+          # Which platforms this run builds. Only `evo` ships all three: a hotfix
+          # branch exists for one platform's fix, and rebuilding the rest would
+          # publish files identical to the release already out.
+          if [[ "$EVENT_NAME" == "workflow_dispatch" || "$REF_NAME" == "evo" ]]; then
+            platforms=all
+          else
+            platforms=windows
+            echo "Hotfix branch $REF_NAME: packaging Windows only."
+          fi
+          echo "platforms=$platforms" >> "$GITHUB_OUTPUT"
+
           # A manual run is asking for a build, not for a version comparison.
           if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
             echo "Manual run: packaging unconditionally."
@@ -116,6 +139,13 @@ jobs:
             package=true
           elif [[ "$current" == "$previous" ]]; then
             echo "Version $current was already packaged as $previous; skipping."
+            package=false
+          elif [[ "$previous" == "$current".* ]]; then
+            # A hotfix version is the release it patches plus a suffix
+            # (`2.0.17-evo.7` → `2.0.17-evo.7.fix.1`), so publishing the base
+            # version again would ship an installer whose fix is already out under
+            # the patched tag.
+            echo "Version $current is already covered by $previous; skipping."
             package=false
           else
             echo "Version moved from $previous to $current; packaging."
@@ -224,7 +254,10 @@ jobs:
   # stays on the runner: the distribution target is the Debian package alone.
   linux:
     needs: version-gate
-    if: needs.version-gate.outputs.package == 'true'
+    # A hotfix branch is Windows-only, so the gate decides whether this job runs at all.
+    if: >-
+      needs.version-gate.outputs.package == 'true'
+      && needs.version-gate.outputs.platforms == 'all'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     strategy:
@@ -277,7 +310,10 @@ jobs:
   # exercises both Intel and Apple Silicon packaging in the one artifact that ships.
   macos:
     needs: version-gate
-    if: needs.version-gate.outputs.package == 'true'
+    # A hotfix branch is Windows-only, so the gate decides whether this job runs at all.
+    if: >-
+      needs.version-gate.outputs.package == 'true'
+      && needs.version-gate.outputs.platforms == 'all'
     runs-on: macos-latest
     timeout-minutes: 90
     strategy:
@@ -334,9 +370,17 @@ jobs:
   publish:
     needs: [version-gate, windows, linux, macos]
     # A manual run is a build check, not a release; it keeps its artifacts on the
-    # run. A failed platform skips this job, so a release never ships with a
-    # missing platform's file silently absent.
-    if: github.event_name == 'push' && needs.version-gate.outputs.package == 'true'
+    # run. `always()` because a hotfix branch skips Linux and macOS: a skipped need
+    # would otherwise skip the job that publishes the one artifact it did build.
+    # The platform set decides which results have to be successes, so a release
+    # never ships with a missing platform's file silently absent.
+    if: >-
+      always() && !cancelled()
+      && github.event_name == 'push'
+      && needs.version-gate.outputs.package == 'true'
+      && needs.windows.result == 'success'
+      && (needs.version-gate.outputs.platforms == 'windows'
+        || (needs.linux.result == 'success' && needs.macos.result == 'success'))
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -377,7 +421,15 @@ jobs:
 
           version=$(node -p "require('./dsh-plugin-desktop/package.json').version")
           short=$(echo "${{ github.sha }}" | cut -c1-8)
-          tag="evo-${version}-${short}"
+          # `evo-` tags are the version baseline `version-gate` compares against, so a
+          # Windows-only hotfix release uses `fix-`: the same version is published in
+          # full, under `evo-`, once the branch reaches `evo`.
+          platforms="${{ needs.version-gate.outputs.platforms }}"
+          if [ "$platforms" = "windows" ]; then
+            tag="fix-${version}-${short}"
+          else
+            tag="evo-${version}-${short}"
+          fi
           # The tag is derived from the commit, so an existing one is a re-run of the
           # same build; uploading would fail on the name, so it is skipped with a note
           # rather than treated as an error.
@@ -437,10 +489,16 @@ jobs:
             echo
             echo "- Windows x64：\`DSH-Desktop-Evo-*-Setup.exe\`。首次运行会给出 SmartScreen 提示，"
             echo "  选择「更多信息」，再选择「仍要运行」。"
-            echo "- Linux x64：\`*.deb\`，用 \`sudo dpkg -i\` 安装；缺依赖时再执行"
-            echo "  \`sudo apt install -f\`。"
-            echo "- macOS universal：\`*.dmg\`。未签名，首次打开需要右键 → 打开；"
-            echo "  若系统提示「已损坏」，先执行 \`xattr -dr com.apple.quarantine /Applications/DSH\\ Desktop\\ Evo.app\` 再试。"
+            if [ "$platforms" = "all" ]; then
+              echo "- Linux x64：\`*.deb\`，用 \`sudo dpkg -i\` 安装；缺依赖时再执行"
+              echo "  \`sudo apt install -f\`。"
+              echo "- macOS universal：\`*.dmg\`。未签名，首次打开需要右键 → 打开；"
+              echo "  若系统提示「已损坏」，先执行 \`xattr -dr com.apple.quarantine /Applications/DSH\\ Desktop\\ Evo.app\` 再试。"
+            else
+              echo
+              echo "这是热修复分支的验证构建：只有 Windows，用于确认修复有效。"
+              echo "同一版本合并回 \`evo\` 后会发布完整的三平台安装包。"
+            fi
             echo
             echo "## 本次变更"
             echo
