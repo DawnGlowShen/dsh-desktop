@@ -113,6 +113,37 @@ const GIT_CONFIG_ENVIRONMENT_KEYS = [
   'GIT_CONFIG_COUNT',
 ] as const
 
+/**
+ * Environment keys that would point the child `git` at a Trace2 sink of its own.
+ *
+ * This module *writes* `trace2.eventTarget`, so a child that honoured the file it is reading
+ * would try to reach the very pipe this run is about to configure. On Windows a stale named
+ * pipe blocks the open, and the synchronous spawn then freezes startup for whole timeouts.
+ */
+const GIT_TRACE2_ENVIRONMENT_KEYS = [
+  'GIT_TRACE2',
+  'GIT_TRACE2_EVENT',
+  'GIT_TRACE2_PERF',
+  'GIT_TRACE2_DST',
+] as const
+
+/**
+ * Build the environment for the child `git`.
+ *
+ * Inherited redirections are removed so the run reports on the file it actually touches,
+ * and Trace2 is switched off so reading that file can never depend on the sink it declares.
+ *
+ * @param source - The environment the Electron process was started with.
+ * @returns A copy safe to hand to `spawnSync`.
+ */
+export function gitChildEnvironment(source: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  const environment = { ...source }
+  for (const key of GIT_CONFIG_ENVIRONMENT_KEYS) delete environment[key]
+  for (const key of GIT_TRACE2_ENVIRONMENT_KEYS) delete environment[key]
+  environment.GIT_TRACE2 = '0'
+  return environment
+}
+
 /** Minimal logging surface, satisfied by the Electron logger used at startup. */
 export interface DesktopGitAiConfigLogger {
   /** Record an informational summary of what this run changed. */
@@ -312,8 +343,7 @@ export function ensureDesktopGitAiTrace2Config(
  * @returns a runner invoking the `git` on `PATH`.
  */
 function defaultGitRunner(): DesktopGitAiGitRunner {
-  const environment = { ...process.env }
-  for (const key of GIT_CONFIG_ENVIRONMENT_KEYS) delete environment[key]
+  const environment = gitChildEnvironment(process.env)
   return {
     run: (args) => {
       const result = spawnSync('git', [...args], {
