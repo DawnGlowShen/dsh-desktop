@@ -17,6 +17,7 @@ import {
   ensureDesktopGitAiTrace2Config,
   gitAiTrace2EventTarget,
   gitAiTrace2Configuration,
+  gitChildEnvironment,
   type DesktopGitAiConfigResult,
   type DesktopGitAiGitRunner,
 } from '../src/offline-install-config-git-ai.ts'
@@ -100,6 +101,34 @@ function run(
 
 afterEach(() => {
   while (roots.length > 0) rmSync(roots.pop() as string, { recursive: true, force: true })
+})
+
+describe('gitChildEnvironment', () => {
+  it('strips redirections and turns Trace2 off', () => {
+    const environment = gitChildEnvironment({
+      PATH: '/usr/bin',
+      GIT_CONFIG_GLOBAL: '/elsewhere/gitconfig',
+      GIT_CONFIG_COUNT: '1',
+      GIT_TRACE2_EVENT: '/tmp/events',
+      GIT_TRACE2: '/tmp/plain',
+    })
+
+    expect(environment.PATH).toBe('/usr/bin')
+    expect(environment.GIT_CONFIG_GLOBAL).toBeUndefined()
+    expect(environment.GIT_CONFIG_COUNT).toBeUndefined()
+    expect(environment.GIT_TRACE2_EVENT).toBeUndefined()
+    // Reading the gitconfig must not depend on the sink that gitconfig declares: on Windows a
+    // stale named pipe would otherwise block the child, and startup with it.
+    expect(environment.GIT_TRACE2).toBe('0')
+  })
+
+  it('leaves the environment it was handed untouched', () => {
+    const source = { GIT_TRACE2: '1' }
+
+    gitChildEnvironment(source)
+
+    expect(source.GIT_TRACE2).toBe('1')
+  })
 })
 
 describe('gitAiTrace2EventTarget', () => {
