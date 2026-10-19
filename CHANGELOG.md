@@ -44,7 +44,7 @@ Profile、把 CLI 解包并暴露到 `~/.dsh/bin`。全过程不联网。
 
 | 插件 | 版本 | 来源 |
 |------|------|------|
-| `@edan/edan-spec` | 1.0.1 | vendor tarball |
+| `@edan/edan-spec` | 1.1.1 | vendor tarball |
 | `@huanlin/dsh-plugin-better-sidebar-plugin-office` | 0.2.0 | npm |
 | `@hyzyn/dsh-codegraph` | 0.6.6 | npm |
 | `@linxin666/dsh-client-ui-git-graph` | 0.4.5 | npm |
