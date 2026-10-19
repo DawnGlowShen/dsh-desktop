@@ -14,7 +14,6 @@ import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { configureDreamSkin } from '../src/offline-install-config-dream-skin.ts'
-import { configureGitAiTrace2 } from '../src/offline-install-config-git-ai.ts'
 import {
   applyPayloadConfigurations,
   type ConfigureContext,
@@ -135,14 +134,12 @@ describe('applyPayloadConfigurations', () => {
     })
 
     const outcomes = applyPayloadConfigurations(context(), [
-      named('git-ai'),
       named('dream-skin'),
       named('something-new'),
     ])
 
-    expect(seen).toEqual(['git-ai', 'dream-skin', 'something-new'])
+    expect(seen).toEqual(['dream-skin', 'something-new'])
     expect(outcomes).toEqual([
-      { name: 'git-ai', action: 'configured' },
       { name: 'dream-skin', action: 'configured' },
       { name: 'something-new', action: 'configured' },
     ])
@@ -153,9 +150,9 @@ describe('applyPayloadConfigurations', () => {
     // executor hands the same object to everyone and never writes to it.
     const received: ConfigureContext[] = []
     const capture: PayloadConfiguration = {
-      name: 'git-ai',
+      name: 'capture',
       mode: 'seed',
-      apply: (given) => { received.push(given); return { name: 'git-ai', action: 'configured' } },
+      apply: (given) => { received.push(given); return { name: 'capture', action: 'configured' } },
     }
     const shared = context()
     const snapshot = { ...shared }
@@ -214,32 +211,6 @@ describe('目标路径不来自载荷（架构不变量）', () => {
       // test did not think to guess.
       const after = readdirSync(resourcesPath, { recursive: true }).map(String)
       expect(after.filter(entry => !before.has(entry))).toEqual([])
-    } finally {
-      rmSync(root, { recursive: true, force: true })
-    }
-  })
-
-  it('targets the user home gitconfig for git-ai, not the DSH home', () => {
-    // The other half of the invariant: git-ai's target is a fixed name under the user's
-    // home. Asserted by running it, so a future change that derived the path from anything
-    // payload-shaped would show up as a file appearing somewhere else.
-    const root = mkdtempSync(join(tmpdir(), 'config-target-gitai-'))
-    try {
-      const homeDir = join(root, 'dsh')
-      const userHomeDir = join(root, 'user')
-      mkdirSync(userHomeDir, { recursive: true })
-
-      configureGitAiTrace2({
-        homeDir,
-        userHomeDir,
-        platform: 'darwin',
-        resourcesPath: join(root, 'resources'),
-        binName: 'dsh-test',
-        logger: { error: () => {} },
-      })
-
-      expect(existsSync(join(userHomeDir, '.gitconfig'))).toBe(true)
-      expect(existsSync(join(homeDir, '.gitconfig'))).toBe(false)
     } finally {
       rmSync(root, { recursive: true, force: true })
     }

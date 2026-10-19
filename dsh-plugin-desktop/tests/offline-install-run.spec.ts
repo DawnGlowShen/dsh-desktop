@@ -222,9 +222,9 @@ describe('runOfflineInstall', () => {
   })
 
   it('runs every registered configuration and reports one outcome each', () => {
-    // The shipped registry writes the user's gitconfig for git-ai. It runs on a manifest
-    // install rather than only on a fresh machine: that is how a gitconfig edited by hand
-    // is brought back into line on the next launch.
+    // The shipped registry seeds the dream-skin appearance. It runs on a manifest install
+    // rather than only on a fresh machine: that is how a configuration is applied without
+    // overwriting a choice the user made after the first run.
     const result = run({
       manifest: {
         version: 1,
@@ -236,7 +236,7 @@ describe('runOfflineInstall', () => {
     // A literal, not a read-back of the registry: comparing the report against the
     // registry it came from is true by construction and would not notice a configuration
     // being dropped — which is the documented way to disable one.
-    expect(result.report.configurations.map(outcome => outcome.name)).toEqual(['git-ai', 'dream-skin'])
+    expect(result.report.configurations.map(outcome => outcome.name)).toEqual(['dream-skin'])
     expect(result.report.configurations.every(outcome => outcome.action !== 'failed')).toBe(true)
     expect(result.errors).toEqual([])
   })
@@ -253,6 +253,6 @@ describe('runOfflineInstall', () => {
     })
 
     expect(result.report.clis[0]).toEqual(expect.objectContaining({ action: 'failed' }))
-    expect(result.report.configurations.map(outcome => outcome.name)).toEqual(['git-ai', 'dream-skin'])
+    expect(result.report.configurations.map(outcome => outcome.name)).toEqual(['dream-skin'])
   })
 })

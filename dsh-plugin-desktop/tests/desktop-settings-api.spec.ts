@@ -888,7 +888,7 @@ describe('offline restore controller', () => {
         installed: ['a'],
         skipped: ['b'],
         failed: ['c'],
-        configured: ['git-ai'],
+        configured: ['some-config'],
         configurationSkipped: ['dream-skin'],
         configurationFailed: ['broken-config'],
       }),
@@ -904,7 +904,7 @@ describe('offline restore controller', () => {
       installed: ['a'],
       skipped: ['b'],
       failed: ['c'],
-      configured: ['git-ai'],
+      configured: ['some-config'],
       configurationSkipped: ['dream-skin'],
       configurationFailed: ['broken-config'],
     })

@@ -11,12 +11,10 @@
  * synthetic one would be the author's idea of the payload rather than the shipped one.
  * Tarballs there may be split across `part-` files; the reader under test rejoins them.
  *
- * Everything runs against a temporary home. The shipped configurations write into
- * `~/.dsh` and the user's own `~/.gitconfig`, so a test that used the real home would
- * edit the machine running it.
+ * Everything runs against a temporary home. The shipped configuration writes into
+ * `~/.dsh`, so a test that used the real home would edit the machine running it.
  */
 
-import { spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
@@ -40,8 +38,8 @@ const created: string[] = []
 /**
  * A home and the application facts pointing at the real payload.
  *
- * `userHomeDir` is inside the temporary root on purpose: the git-ai configuration writes
- * the user's `.gitconfig`, and a test must never touch the developer's own.
+ * `userHomeDir` is inside the temporary root on purpose: a configuration may target the
+ * user's home, and a test must never touch the developer's own.
  */
 function makeHarness(
   /**
@@ -144,33 +142,10 @@ describe.skipIf(!payloadPresent)('offline install end to end', () => {
     // the report against the registry it came from is true by construction, so dropping a
     // configuration from the registry would not fail anything. That matters because
     // removing a registry entry is the documented way to disable a configuration.
-    expect(report.configurations.map(outcome => outcome.name)).toEqual(['git-ai', 'dream-skin'])
+    expect(report.configurations.map(outcome => outcome.name)).toEqual(['dream-skin'])
     // Nothing about a correct run is an error. A failure here means a stage disagreed
     // with another about a path or a format, which is the whole point of this spec.
     expect(errors).toEqual([])
-  }, PAYLOAD_TIMEOUT_MS)
-
-  it('points the user gitconfig at the git-ai daemon socket', () => {
-    const { options } = makeHarness()
-
-    const report = runOfflineInstall(options)
-
-    const gitConfigPath = join(options.userHomeDir, '.gitconfig')
-    expect(existsSync(gitConfigPath)).toBe(true)
-    // Read through Git rather than by matching text: the module writes with `git config`,
-    // so the file's spelling is Git's business and the value is the contract. This also
-    // fails loudly rather than silently if the write went to the wrong file.
-    const written = spawnSync('git', ['config', '--file', gitConfigPath, '--get', 'trace2.eventTarget'], {
-      encoding: 'utf8',
-    })
-    expect(written.status).toBe(0)
-    // The socket the daemon will listen on. Under the *user's* home, because git-ai takes
-    // its location from `$HOME`; a build whose DSH home differs from `$HOME` would
-    // otherwise record a target nothing listens on, and attribution would fail silently.
-    expect(options.homeDir).not.toBe(options.userHomeDir)
-    expect(written.stdout).toContain(join(options.userHomeDir, '.git-ai', 'internal', 'daemon', 'trace2.sock'))
-    const gitAi = report.configurations.find(outcome => outcome.name === 'git-ai')
-    expect(gitAi?.action).toBe('configured')
   }, PAYLOAD_TIMEOUT_MS)
 
   it('reports every configuration as unchanged on a second run', () => {
@@ -189,36 +164,10 @@ describe.skipIf(!payloadPresent)('offline install end to end', () => {
     // empty collection passes without running its body even once, so a registry that
     // silently lost its entries — which is the documented way to disable a configuration —
     // would leave this test green while it checked nothing.
-    expect(report.configurations.map(outcome => outcome.name)).toEqual(['git-ai', 'dream-skin'])
+    expect(report.configurations.map(outcome => outcome.name)).toEqual(['dream-skin'])
     for (const outcome of report.configurations) {
       expect(outcome.action, `${outcome.name} on a second run`).not.toBe('configured')
     }
-  }, PAYLOAD_TIMEOUT_MS)
-
-  it('still reports every payload when a configuration fails', () => {
-    // R3-S2: a configuration that cannot be applied must not withhold the payloads, and
-    // must not stop the run. Reached for real by making the gitconfig unwritable — a
-    // directory where the file goes — rather than by stubbing, so the failure travels the
-    // same path a real one would.
-    const { options, infos } = makeHarness()
-    mkdirSync(join(options.userHomeDir, '.gitconfig'), { recursive: true })
-
-    const report = runOfflineInstall(options)
-
-    expect(report.ran).toBe(true)
-    // The payload stages still ran and still reported.
-    expect(report.clis.length + report.plugins.length).toBeGreaterThan(0)
-    // Reported rather than thrown, and named. `skipped`, not `failed`: since the write goes
-    // through `git config`, an unusable gitconfig is a file Git declines to touch, and the
-    // configuration reports that it stood aside rather than that it broke.
-    const gitAi = report.configurations.find(outcome => outcome.name === 'git-ai')
-    expect(gitAi?.action).toBe('skipped')
-    expect(gitAi?.reason).toContain('.gitconfig')
-    // And it reached the log at info, which is what makes it visible without being noise.
-    // Not error: Git refusing an unparseable gitconfig is the ordinary outcome for a file
-    // the user keeps encrypted, and reporting that on every launch would train a reader to
-    // ignore the channel that real failures use.
-    expect(infos.join('\n')).toContain('git-ai')
   }, PAYLOAD_TIMEOUT_MS)
 
   it('leaves a user-edited dream-skin appearance alone on a second run', () => {
@@ -236,7 +185,7 @@ describe.skipIf(!payloadPresent)('offline install end to end', () => {
     const report = runOfflineInstall(second.options)
 
     // `seed` means the user's own appearance survives a restore, whatever the payload
-    // ships. That is the difference between this configuration and git-ai's.
+    // ships. That is what makes the file the user's own rather than the product's.
     expect(JSON.parse(readFileSync(statePath, 'utf8'))).toEqual(chosen)
     // `toBeDefined` first: without it the assertion below is vacuous when the
     // configuration is absent from the registry — `undefined !== 'failed'` is true, so a

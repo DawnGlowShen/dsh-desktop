@@ -1,16 +1,10 @@
 /**
  * The offline payload's configuration stage: what a payload writes after it is installed.
  *
- * Installing a plugin or a CLI is not always enough for it to work. Two shipped payloads
- * prove the point, from opposite directions:
- *
- * - `git-ai` attributes edits from Git's Trace2 events, which Git only emits when
- *   `trace2.eventTarget` points at the daemon's socket. Without that key a checkpoint
- *   still succeeds, but every later commit reads back as `untracked` — the feature fails
- *   silently.
- * - `dsh-dream-skin` keeps its appearance in `$DSH_HOME/dream-skin.json` and falls back
- *   to its own factory look when that file is absent. Without a seeded file a fresh
- *   installation opens with the plugin's stock look rather than the prepared one.
+ * Installing a plugin or a CLI is not always enough for it to work. The shipped payload
+ * proves the point: `dsh-dream-skin` keeps its appearance in `$DSH_HOME/dream-skin.json`
+ * and falls back to its own factory look when that file is absent. Without a seeded file a
+ * fresh installation opens with the plugin's stock look rather than the prepared one.
  *
  * ## Why a registry rather than a branch per payload
  *
@@ -21,11 +15,11 @@
  *
  * ## Why each configuration declares its own mode
  *
- * The two shipped configurations above answer "what if I run twice?" in opposite ways,
- * and both answers are right:
+ * The shipped configuration answers "what if I run twice?" with `seed`. The other mode is
+ * still part of the contract, for a target this product owns, and both answers are right:
  *
- * - `converge` — {@link ConfigureMode} for a file this product owns. The gitconfig block
- *   is rewritten on every launch so Trace2 stays pointed at the live socket.
+ * - `converge` — for a file this product owns. Rewritten on every launch so the value
+ *   tracks whatever moved since the last one.
  * - `seed` — for a file the user owns. An existing `dream-skin.json` is the user's chosen
  *   appearance and is never touched.
  *
@@ -34,10 +28,10 @@
  *
  * ## Failure semantics
  *
- * One configuration failing must cost only itself: a broken gitconfig writer cannot be
- * allowed to withhold the dream-skin seed, and neither may stop the application from
- * reaching a window. Every outcome is therefore reported rather than thrown, matching the
- * contract {@link installOfflineManifest} already gives its callers.
+ * One configuration failing must cost only itself: a broken writer cannot be allowed to
+ * withhold the dream-skin seed, and neither may stop the application from reaching a
+ * window. Every outcome is therefore reported rather than thrown, matching the contract
+ * {@link installOfflineManifest} already gives its callers.
  *
  * ## Adding a configuration
  *
@@ -63,7 +57,6 @@
  */
 
 import { dreamSkinConfiguration } from './offline-install-config-dream-skin.ts'
-import { gitAiTrace2Configuration } from './offline-install-config-git-ai.ts'
 
 /** What a configuration did, in the terms the caller reports. */
 export type ConfigureAction =
@@ -90,8 +83,8 @@ export type ConfigureMode =
    * Bring the target to the wanted state on every run.
    *
    * For settings this product owns and a stale value would break. Rewriting is the point:
-   * a socket path can move between launches, and a configuration that only ever wrote
-   * once would leave Git pointing at a socket that no longer exists.
+   * a path can move between launches, and a configuration that only ever wrote once would
+   * leave its consumer pointing at a location that no longer exists.
    */
   | 'converge'
   /**
@@ -167,7 +160,6 @@ export interface PayloadConfiguration {
  * of what an earlier one did.
  */
 export const PAYLOAD_CONFIGURATIONS: readonly PayloadConfiguration[] = [
-  gitAiTrace2Configuration,
   dreamSkinConfiguration,
 ]
 
