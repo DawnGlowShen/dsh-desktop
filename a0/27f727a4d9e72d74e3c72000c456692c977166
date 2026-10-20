@@ -1,0 +1,23 @@
+CHANGELOG.md
+  s_b7b0f1f527f52a::t_6e0d420e85bb3b 105-109
+  s_b7b0f1f527f52a::t_3fb7d2b594b0bd 84
+  s_b7b0f1f527f52a::t_939c584911b113 54
+dsh-plugin-desktop/package.json
+  s_b7b0f1f527f52a::t_ee38abfebafa66 4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a027f727a4d9e72d74e3c72000c456692c977166",
+  "prompts": {},
+  "sessions": {
+    "s_b7b0f1f527f52a": {
+      "agent_id": {
+        "tool": "deepseek-harness",
+        "id": "session-52d16686-ff78-46ac-8e13-53152e44e4e0",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "jimmy <shenh1986@163.com>"
+    }
+  }
+}
