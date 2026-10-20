@@ -51,7 +51,7 @@ Profile、把 CLI 解包并暴露到 `~/.dsh/bin`。全过程不联网。
 | `billion-context` | 0.1.197 | npm |
 | `dsh-better-sidebar` | 0.24.1 | npm |
 | `dsh-dream-skin` | 10.8.1 | vendor tarball（官方原版，未打补丁） |
-| `dsh-git-ai` | 0.1.3-evo | vendor tarball |
+| `dsh-git-ai` | 0.1.4-evo | vendor tarball |
 | `dsh-mnemon` | 0.5.24 | npm |
 | `dsh-rewind-plugin` | 0.15.1 | npm |
 | `dsh-session-manager` | 0.6.2 | npm |
@@ -81,7 +81,7 @@ Profile、把 CLI 解包并暴露到 `~/.dsh/bin`。全过程不联网。
 |---|---|---|
 | `dream-skin` | `$DSH_HOME/dream-skin.json` | 全新安装打开是插件出厂外观，而非定制外观 |
 
-`git-ai` 的 `[trace2]` 配置不在这里：它随 `dsh-git-ai` 0.1.3-evo 迁入插件自身的
+`git-ai` 的 `[trace2]` 配置不在这里：它随 `dsh-git-ai` 0.1.4-evo 迁入插件自身的
 `apply`。插件活跃时才需要 Git 归因，禁用插件即停止写入；已写入的键保留，避免
 与用户自设的值混淆。
 
@@ -102,9 +102,11 @@ Profile、把 CLI 解包并暴露到 `~/.dsh/bin`。全过程不联网。
   新增配置无论如何仍要重新打包。既然都要重新打包，受类型检查、审查与测试
   覆盖的模块更好。
 
-`git-ai` 的 trace2 写入由插件自带实现（0.1.3-evo），保留了 `evo` 分支在其
-初版之后修掉的两个 Windows 缺陷（命名管道拼写、gitconfig 值转义）；只取初版
-会在 Windows 上重新引入静默归因失效。
+`git-ai` 的 trace2 写入由插件自带实现（0.1.4-evo），保留了 `evo` 分支在其
+初版之后修掉的 gitconfig 值转义缺陷；0.1.4-evo 另行修正了命名管道名的计算：
+0.1.3-evo 哈希的是 home 相对路径，而 daemon 哈希的是绝对 internal 目录，两边
+算出的管道名对不上，Git 打不开后静默丢弃事件，Windows 上的归因因此失效。
+只取初版会在 Windows 上重新引入这一静默失效。
 
 **其他**
 

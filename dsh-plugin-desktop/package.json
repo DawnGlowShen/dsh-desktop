@@ -1,7 +1,7 @@
 {
   "name": "dsh-plugin-desktop",
   "version": "2.0.17-evo.9",
-  "description": "DSH Desktop: an Electron shell composed as a DeepSeek Harness Cordis plugin",
+  "description": "DSH Desktop Evo: an Electron shell composed as a DeepSeek Harness Cordis plugin",
   "desktopName": "dsh-desktop.desktop",
   "license": "MIT",
   "publishConfig": {
